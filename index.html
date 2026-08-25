@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ecommoda StyleBox Products Linking</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   §CSS-VARS — Tier M (1200px) — الأداة فيها جدول سجل حقيقي (data-table-standard §9)
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --bg:             #f3f4f6;
+  --surface:        #ffffff;
+  --surface-2:      #f9fafb;
+  --border:         #e5e7eb;
+  --border-strong:  #d1d5db;
+  --text-primary:   #111827;
+  --text-secondary: #6b7280;
+  --text-muted:     #6b7280;
+  --accent:         #2563eb;
+  --accent-light:   #eff6ff;
+  --accent-dark:    #1d4ed8;
+  --green:          #16a34a;
+  --green-light:    #f0fdf4;
+  --green-border:   #86efac;
+  --red:            #dc2626;
+  --red-light:      #fef2f2;
+  --red-border:     #fca5a5;
+  --amber:          #d97706;
+  --amber-light:    #fffbeb;
+  --purple:         #7c3aed;
+  --purple-light:   #f5f3ff;
+  --purple-border:  #c4b5fd;
+  --radius:         12px;
+  --radius-sm:      8px;
+  --shadow:         0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+  --font-body:      'Noto Sans Arabic', -apple-system, sans-serif;
+  --font-mono:      'Noto Sans Arabic', -apple-system, sans-serif; /* موحّد — IBM Plex Mono أُلغي 19-08-2026 */
+  --container-max:  1200px; /* Tier M — الأداة فيها Log Tab بجدول حقيقي (data-table-standard §9) */
+}
+
+/* ══ Base ══════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--text-primary); min-height: 100vh; padding: 12px; direction: rtl; }
+.container { max-width: var(--container-max); margin: 0 auto; }
+
+/* ══ Main Tabs ═══════════════════════════════════════════════ */
+.main-tabs-bar { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.main-tab-btn { flex: 1; padding: 9px 10px; border: 2px solid transparent; background: transparent; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.main-tab-btn:hover { background: var(--surface-2); color: var(--text-primary); }
+.main-tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(37,99,235,.25); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ══ Header ════════════════════════════════════════════════════ */
+.app-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; margin-bottom: 12px; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.app-title { display: flex; align-items: center; gap: 10px; }
+.app-icon { font-size: 22px; }
+.app-title-text h1 { font-size: 15px; font-weight: 700; line-height: 1.2; }
+.app-title-text span { font-size: 11px; color: var(--text-muted); }
+.app-header-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.hbtn { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border: 1.5px solid var(--border-strong); background: var(--surface); border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all .15s; white-space: nowrap; }
+.hbtn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.hbtn:disabled { opacity: .5; cursor: not-allowed; }
+.hbtn.settings-configured { border-color: var(--green); color: var(--green); background: var(--green-light); }
+.hbtn.ver-btn { border-color: #bfdbfe; color: #1d4ed8; background: #eff6ff; font-family: var(--font-mono); font-weight: 700; }
+.hbtn.ver-btn:hover { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+.hbtn.active-user { border-color: var(--green); color: var(--green); background: var(--green-light); }
+.hbtn.active-user:hover { border-color: var(--red); color: var(--red); background: var(--red-light); }
+
+/* ══ Settings Modal ════════════════════════════════════════════ */
+.settings-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 600; display: none; align-items: center; justify-content: center; padding: 20px; }
+.settings-overlay.open { display: flex; }
+.settings-modal { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,.18); animation: modalIn .2s ease; overflow: hidden; }
+@keyframes modalIn { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.settings-modal-hdr { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 15px; font-weight: 700; }
+.modal-close-x { background: var(--red-light); border: 1.5px solid var(--red-border); color: var(--red); font-size: 14px; font-weight: 700; line-height: 1; padding: 4px 11px; border-radius: var(--radius-sm); font-family: inherit; cursor: pointer; transition: all .15s; }
+.modal-close-x:hover { background: var(--red); color: #fff; border-color: var(--red); }
+.settings-modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.settings-field { display: flex; flex-direction: column; gap: 5px; }
+.settings-label { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px; }
+.settings-input { border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 11px; font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); outline: none; width: 100%; direction: ltr; background: var(--surface); transition: border-color .15s; }
+.settings-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+.settings-modal-ftr { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+.btn-modal-cancel { padding: 8px 14px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; cursor: pointer; }
+.btn-modal-cancel:hover { color: var(--text-primary); }
+.btn-modal-save { padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s; }
+.btn-modal-save:hover { background: var(--accent-dark); }
+.btn-outline { padding: 7px 14px; background: var(--surface); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.btn-sm { padding: 6px 12px; font-size: 11.5px; }
+
+/* ══ Modal Shell — About / Changelog ══════════════════════════ */
+.eco-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 600; display: none; align-items: center; justify-content: center; padding: 20px; }
+.eco-overlay.open { display: flex; }
+.eco-modal { background: var(--surface); border-radius: var(--radius); width: 90%; max-width: calc(var(--container-max) * .9); max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.18); overflow: hidden; }
+.eco-modal-hdr { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 700; background: var(--surface); flex-shrink: 0; }
+.eco-modal-body { overflow-y: auto; padding: 16px 20px; flex: 1; }
+
+/* ── Changelog ── */
+.cl-version-block { margin-bottom: 4px; }
+.cl-version-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.cl-ver-badge { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; direction: ltr; }
+.cl-ver-badge.old { background: var(--surface-2); color: var(--text-secondary); border-color: var(--border-strong); }
+.cl-ver-date { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); direction: ltr; }
+.cl-items { list-style: none; display: flex; flex-direction: column; gap: 5px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.cl-version-block:last-child .cl-items { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.cl-item { display: flex; gap: 8px; font-size: 13px; align-items: flex-start; }
+.cl-tag { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; align-self: flex-start; margin-top: 2px; }
+.cl-tag.new { background: #f0fdf4; color: #15803d; }
+.cl-tag.fix { background: #fef2f2; color: #dc2626; }
+.cl-tag.change { background: #fffbeb; color: #92400e; }
+
+/* ── About ── */
+.about-sec { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; overflow: hidden; }
+.about-sec > summary { padding: 11px 14px; font-weight: 700; font-size: 14px; background: var(--surface-2); cursor: pointer; user-select: none; }
+.about-sec-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.75; }
+.about-sec-body h4 { font-size: 12px; font-weight: 700; color: var(--accent); margin-top: 4px; }
+.about-sec-body ol, .about-sec-body ul { padding-inline-start: 20px; display: flex; flex-direction: column; gap: 4px; }
+.about-sec-body code { font-family: var(--font-mono); font-size: 11px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; direction: ltr; display: inline-block; }
+.about-sec-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.about-sec-body th, .about-sec-body td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: right; }
+
+/* ══ Toast ═══════════════════════════════════════════════════ */
+.toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.2); animation: toastIn .3s ease; max-width: 320px; }
+@keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+.toast-success { background: var(--green); }
+.toast-error { background: var(--red); }
+.toast-neutral { background: #1a1d27; }
+
+/* ══════════════════════════════════════════════════════════════
+   §LOGIN-CSS — Universal D1 Auth (18-08-2026 template, verbatim)
+   ══════════════════════════════════════════════════════════════ */
+.login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-overlay.hidden { display: none; }
+.login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 22px 70px rgba(0,0,0,.22); width: 100%; max-width: 420px; padding: 28px 26px 24px; position: relative; animation: loginIn .18s ease; }
+@keyframes loginIn { from { transform: translateY(6px) scale(.985); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+.login-settings-btn { position: absolute; top: 16px; left: 16px; display: inline-flex; align-items: center; gap: 5px; min-height: 38px; padding: 8px 12px; border-radius: 9px; border: 1.5px solid; background: var(--surface); font-family: var(--font-body); font-size: 12px; font-weight: 800; cursor: pointer; transition: all .15s; white-space: nowrap; }
+.login-settings-btn.ready { border-color: var(--green); color: var(--green); background: var(--green-light); }
+.login-settings-btn.missing { border-color: var(--red); color: var(--red); background: var(--red-light); }
+.login-settings-btn:hover { transform: translateY(-1px); }
+.login-version { position: absolute; top: 58px; left: 17px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: .2px; user-select: none; }
+.login-top { padding-top: 12px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.login-icon { font-size: 34px; line-height: 1; margin-bottom: 14px; }
+.login-title { font-size: 19px; font-weight: 900; letter-spacing: -.1px; }
+.login-desc { font-size: 13px; color: var(--text-secondary); font-weight: 600; margin-top: 5px; }
+.login-sub { min-height: 22px; margin-top: 4px; color: var(--text-muted); font-size: 12px; font-weight: 600; text-align: center; line-height: 1.7; }
+.login-body { margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
+.login-field { display: flex; flex-direction: column; gap: 7px; }
+.login-field label { display: block; font-size: 11px; font-weight: 800; color: var(--text-secondary); letter-spacing: .3px; }
+.login-field select { width: 100%; height: 58px; border: 1.5px solid var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--text-primary); font-family: var(--font-body); font-size: 14px; font-weight: 600; outline: none; padding: 0 14px; transition: border-color .15s, box-shadow .15s; }
+.login-field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+.login-field select:disabled { opacity: .68; cursor: not-allowed; background: var(--surface-2); }
+.login-status { min-height: 18px; font-size: 12px; font-weight: 700; color: var(--text-muted); line-height: 1.5; }
+.login-status.info { color: var(--accent); }
+.login-status.warn { color: var(--amber); }
+.login-status.error { color: var(--red); }
+.pin-zone { display: none; flex-direction: column; gap: 12px; animation: pinZoneIn .16s ease; }
+.pin-zone.visible { display: flex; }
+@keyframes pinZoneIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.pin-label { font-size: 12px; font-weight: 800; color: var(--text-secondary); text-align: right; margin-top: 2px; }
+.pin-slots { display: flex; justify-content: center; gap: 9px; direction: ltr; }
+.pin-slot { width: 48px; height: 48px; border-radius: 10px; border: 1.5px solid var(--border-strong); background: var(--surface-2); display: grid; place-items: center; font-family: var(--font-mono); font-size: 22px; font-weight: 800; color: var(--accent); transition: all .15s; user-select: none; }
+.pin-slot.empty::before { content: '_'; transform: translateY(-2px); color: var(--accent); opacity: .75; font-size: 18px; }
+.pin-slot.filled { background: var(--accent-light); border-color: var(--accent); }
+.pin-slot.filled::before { content: '●'; font-size: 17px; transform: translateY(-1px); color: var(--accent); opacity: 1; }
+.pin-slot.error { border-color: var(--red); background: var(--red-light); }
+.pin-slot.error::before { color: var(--red); }
+.pin-slots.shake { animation: pinShake .34s ease; }
+@keyframes pinShake { 0%,100% { transform: translateX(0); } 22% { transform: translateX(-5px); } 44% { transform: translateX(5px); } 66% { transform: translateX(-3px); } 88% { transform: translateX(3px); } }
+.pin-keypad { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 1px 0 0; }
+.pin-key { min-height: 49px; border-radius: 10px; border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--text-primary); font-family: var(--font-mono); font-size: 18px; font-weight: 800; cursor: pointer; transition: background .12s, color .12s, border-color .12s, transform .06s; display: flex; align-items: center; justify-content: center; }
+.pin-key:hover:not(:disabled) { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+.pin-key:active:not(:disabled) { transform: translateY(1px); }
+.pin-key.utility { color: var(--red); background: var(--red-light); border-color: var(--red-border); font-family: var(--font-body); font-size: 13px; font-weight: 900; }
+.pin-key.utility:hover:not(:disabled) { background: var(--red); color: #fff; border-color: var(--red); }
+.pin-key:disabled { opacity: .55; cursor: not-allowed; }
+.login-alert { display: none; min-height: 38px; border-radius: 10px; border: 1px solid var(--red-border); background: var(--red-light); color: var(--red); padding: 9px 12px; font-size: 12px; font-weight: 800; text-align: center; line-height: 1.6; }
+.login-alert.visible { display: block; }
+.login-primary { display: none; align-items: center; justify-content: center; gap: 7px; width: 100%; min-height: 58px; margin-top: 1px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-family: var(--font-body); font-size: 15px; font-weight: 900; cursor: pointer; transition: background .15s, opacity .15s, transform .06s; }
+.login-primary.visible { display: inline-flex; }
+.login-primary:hover:not(:disabled) { background: var(--accent-dark); }
+.login-primary:active:not(:disabled) { transform: translateY(1px); }
+.login-primary:disabled { opacity: .56; cursor: not-allowed; }
+.login-secondary { display: none; align-items: center; justify-content: center; width: 100%; min-height: 42px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-secondary); font-family: var(--font-body); font-size: 12px; font-weight: 800; cursor: pointer; transition: all .15s; }
+.login-secondary.visible { display: inline-flex; }
+.login-secondary:hover { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+
+/* ══════════════════════════════════════════════════════════════
+   §SYNC-CSS — تاب "ربط منتج"
+   ══════════════════════════════════════════════════════════════ */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px; }
+.card h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+.field-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; max-width: 340px; }
+.field-row label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.field-input { border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--font-mono); font-size: 14px; color: var(--text-primary); background: var(--surface); outline: none; width: 100%; direction: ltr; transition: border-color .15s; }
+.field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+.checkbox-row { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.6; cursor: pointer; max-width: 520px; }
+.checkbox-row input { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.btn-primary { display: flex; align-items: center; gap: 6px; padding: 10px 22px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; margin-top: 4px; }
+.btn-primary:hover { background: var(--accent-dark); }
+.btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+.mini-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
+.result-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.result-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.result-row:last-child { border-bottom: none; }
+.result-row span:first-child { color: var(--text-secondary); flex-shrink: 0; }
+.result-row span:last-child { font-weight: 600; text-align: left; }
+.result-note { font-size: 11.5px; color: var(--text-secondary); line-height: 1.7; background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px 10px; margin-top: 6px; }
+.result-note.warn { background: var(--amber-light); color: #92400e; }
+.result-note.err { background: var(--red-light); color: var(--red); }
+
+.badge-success { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.badge-warn { background: var(--amber-light); color: var(--amber); border: 1px solid #fde68a; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.badge-danger { background: var(--red-light); color: var(--red); border: 1px solid var(--red-border); padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.badge-ok { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.badge-skip { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+
+.variant-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.variant-table th { text-align: center; padding: 8px; background: var(--surface-2); border-bottom: 2px solid var(--border-strong); font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+.variant-table td { padding: 8px; border-bottom: 1px solid var(--border); text-align: center; }
+.variant-table th, .variant-table td { border-inline-start: 1px solid var(--border); }
+.variant-table th:first-child, .variant-table td:first-child { border-inline-start: none; }
+.variant-table td.mono { font-family: var(--font-mono); direction: ltr; }
+.variant-table td.right { text-align: right; }
+
+/* ══════════════════════════════════════════════════════════════
+   §DATA-TABLE-CSS — القسم الموحّد (فلاتر + جدول) — تاب سجل العمليات
+   data-table-standard.md + multi-select-filter.md — نسخة حرفية
+   ══════════════════════════════════════════════════════════════ */
+.unified-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 16px; }
+.section-divider { border-top: 1px solid var(--border); }
+
+.flt-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: var(--surface-2); cursor: pointer; user-select: none; transition: background .12s; border-radius: var(--radius) var(--radius) 0 0; }
+.flt-header:hover { background: #f0f4f8; }
+.flt-header-right { display: flex; align-items: center; gap: 10px; }
+.flt-icon { width: 34px; height: 22.5px; color: var(--text-muted); transition: color .2s; flex-shrink: 0; }
+.flt-icon.active { color: var(--accent); }
+.flt-toggle { font-size: 13px; color: var(--text-muted); transition: transform .25s; }
+.flt-toggle.open { transform: rotate(180deg); }
+.flt-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.flt-body.collapsed { display: none; }
+.flt-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.flt-g { display: flex; flex-direction: column; gap: 3px; }
+.flt-label { font-size: 10px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+
+.clear-btn { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s; white-space: nowrap; height: 34px; border: 1px solid var(--red-border); color: var(--red); background: var(--red-light); }
+.clear-btn:hover { background: var(--red); color: #fff; border-color: var(--red); }
+.clear-btn.inactive { border-color: var(--border); color: var(--text-muted); background: var(--surface-2); cursor: not-allowed; opacity: .6; }
+.clear-btn.inactive:hover { background: var(--surface-2); color: var(--text-muted); border-color: var(--border); }
+
+.search-wrap { position: relative; max-width: 300px; flex: 1; min-width: 220px; }
+.search-input { width: 100%; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 8px 12px 8px 34px; font-family: inherit; font-size: 13px; height: 36px; box-sizing: border-box; outline: none; transition: border-color .15s, background .15s; background: var(--surface); }
+.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
+.search-input.has-value { border-color: var(--accent); background: var(--accent-light); }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text-muted); pointer-events: none; }
+
+.ms-wrap { position: relative; }
+.ms-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 180px; height: 34px; padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-primary); cursor: pointer; transition: all .15s; white-space: nowrap; }
+.ms-btn:hover { border-color: var(--accent); }
+.ms-btn.has-selection { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-light); }
+.ms-btn.open { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
+.ms-btn .ms-count { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 20px; padding: 1px 7px; min-width: 18px; text-align: center; }
+.ms-btn .ms-arrow { font-size: 9px; color: var(--text-muted); transition: transform .2s; flex-shrink: 0; }
+.ms-btn.open .ms-arrow { transform: rotate(180deg); }
+
+.ms-menu { position: absolute; top: calc(100% + 4px); right: 0; z-index: 200; width: 260px; max-width: 85vw; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: 0 8px 28px rgba(0,0,0,.14); display: none; flex-direction: column; overflow: hidden; }
+.ms-menu.open { display: flex; }
+.ms-ftr-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.ms-ftr-clear { font-size: 11.5px; font-weight: 700; color: var(--red); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 5px; }
+.ms-ftr-clear:hover { background: var(--red-light); }
+.ms-ftr-count { font-size: 11px; color: var(--text-muted); }
+.ms-modes { display: flex; border-bottom: 1px solid var(--border); }
+.ms-mode-btn { flex: 1; padding: 7px 4px; font-family: inherit; font-size: 11px; font-weight: 700; color: var(--text-secondary); background: var(--surface-2); border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all .15s; }
+.ms-mode-btn.active { color: var(--accent-dark); background: var(--surface); border-bottom-color: var(--accent); }
+.ms-mode-panel { display: none; }
+.ms-mode-panel.active { display: block; }
+.ms-search-wrap { padding: 8px; border-bottom: 1px solid var(--border); }
+.ms-search { width: 100%; height: 32px; border: 1px solid var(--border-strong); border-radius: 6px; padding: 0 10px; font-family: inherit; font-size: 12px; outline: none; background: var(--surface-2); }
+.ms-search:focus { border-color: var(--accent); background: var(--surface); }
+.ms-selectall-row { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 12px; font-weight: 700; cursor: pointer; user-select: none; }
+.ms-selectall-row:hover { background: #f0f4f8; }
+.ms-list { max-height: 210px; overflow-y: auto; padding: 4px; }
+.ms-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; font-size: 12.5px; cursor: pointer; user-select: none; transition: background .1s; }
+.ms-item:hover { background: var(--surface-2); }
+.ms-item.checked { background: var(--accent-light); }
+.ms-item input[type=checkbox], .ms-selectall-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0; }
+.ms-item .ms-item-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-item .ms-item-mono { font-family: var(--font-mono); direction: ltr; }
+.ms-empty { padding: 16px; text-align: center; font-size: 12px; color: var(--text-muted); }
+
+.ms-range-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.ms-range-row { display: flex; gap: 8px; align-items: center; }
+.ms-range-g { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.ms-range-lbl { font-size: 10px; font-weight: 600; color: var(--text-secondary); }
+.ms-range-input { width: 100%; height: 32px; border: 1px solid var(--border-strong); border-radius: 6px; padding: 0 8px; font-family: var(--font-mono); direction: ltr; text-align: center; font-size: 12.5px; outline: none; }
+.ms-range-input:focus { border-color: var(--accent); }
+.ms-range-hint { font-size: 10.5px; color: var(--text-muted); line-height: 1.5; }
+.ms-range-clear { align-self: flex-start; font-size: 11px; font-weight: 700; color: var(--red); background: none; border: none; cursor: pointer; padding: 2px 4px; }
+
+.ms-chips-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ms-chips-row:empty { display: none; }
+.chips-label { font-size: 11.5px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; }
+.ms-chip { display: flex; align-items: center; gap: 5px; background: var(--accent-light); color: var(--accent-dark); border: 1px solid #bfdbfe; border-radius: 20px; padding: 3px 6px 3px 10px; font-size: 11.5px; font-weight: 600; }
+.ms-chip button { border: none; background: rgba(37,99,235,.15); color: var(--accent-dark); width: 16px; height: 16px; border-radius: 50%; font-size: 11px; cursor: pointer; line-height: 1; }
+.ms-chip button:hover { background: var(--accent); color: #fff; }
+
+.range-preset-wrap { position: relative; }
+.range-preset-btn { display: flex; align-items: center; gap: 6px; height: 34px; padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.range-preset-btn.has-preset { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-light); }
+.range-preset-menu { position: absolute; top: calc(100% + 4px); right: 0; z-index: 200; width: 175px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: 0 8px 28px rgba(0,0,0,.14); display: none; padding: 4px; }
+.range-preset-menu.open { display: block; }
+.range-preset-clear-row { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.range-preset-clear-row button { font-size: 11.5px; font-weight: 700; color: var(--red); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 5px; }
+.range-preset-clear-row button:hover { background: var(--red-light); }
+.range-preset-item { display: flex; justify-content: space-between; padding: 7px 10px; font-size: 12px; border-radius: 6px; cursor: pointer; }
+.range-preset-item:hover { background: var(--surface-2); }
+.range-preset-item.active { background: var(--accent-light); color: var(--accent-dark); font-weight: 700; }
+.range-preset-item .pr-check { display: none; color: var(--accent); }
+.range-preset-item.active .pr-check { display: inline; }
+.range-preset-sep { height: 1px; background: var(--border); margin: 4px 2px; }
+.range-date-wrap input[type=date] { width: 150px; height: 34px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 10px; font-family: inherit; font-size: 12px; outline: none; cursor: pointer; }
+
+.tbl-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; background: var(--surface-2); cursor: pointer; user-select: none; transition: background .12s; flex-wrap: wrap; }
+.tbl-bar:hover { background: #f0f4f8; }
+.tbl-bar-right, .tbl-bar-left { display: flex; align-items: center; gap: 8px; }
+.results-wrap { display: flex; align-items: center; gap: 8px; }
+.results-label { font-size: 14px; font-weight: 800; color: var(--text-primary); white-space: nowrap; }
+.results-count { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 34px; padding: 0 10px; font-family: var(--font-mono); font-size: 17px; font-weight: 800; color: var(--purple); background: var(--purple-light); border: 1.5px solid var(--purple-border); border-radius: var(--radius-sm); }
+.tbl-toggle { font-size: 13px; color: var(--text-muted); transition: transform .25s; }
+.tbl-toggle.open { transform: rotate(180deg); }
+.act-btn { display: flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s; white-space: nowrap; border: none; }
+.act-btn.refresh { background: var(--surface); border: 1px solid var(--border-strong); color: var(--text-primary); }
+.act-btn.refresh:hover { border-color: var(--accent); color: var(--accent); }
+.act-btn.export { background: var(--green-light); border: 1px solid var(--green-border); color: var(--green); }
+.act-btn.export:hover { background: var(--green); color: #fff; }
+.act-btn.export:disabled { opacity: .5; cursor: not-allowed; }
+
+.tbl-body-wrap { max-height: 2000px; overflow: hidden; transition: max-height .3s ease; border-radius: 0 0 var(--radius) var(--radius); }
+.tbl-body-wrap.collapsed { max-height: 0; }
+.tbl-scroll { overflow-x: auto; border-radius: 0 0 var(--radius) var(--radius); }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.data-table thead th { text-align: center; background: var(--surface-2); color: var(--text-secondary); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; padding: 10px 8px; border-bottom: 2px solid var(--border-strong); white-space: nowrap; }
+.sortable-th { cursor: pointer; user-select: none; transition: background .12s, color .12s; }
+.sortable-th:hover { background: var(--accent-light); color: var(--accent-dark); }
+.sortable-th.sorted { background: var(--accent-light); color: var(--accent-dark); }
+.sort-icon { display: inline-block; font-size: 10px; color: var(--accent); font-weight: 900; }
+.sort-icon.active { margin-inline-start: 4px; }
+.data-table tbody td { text-align: center; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+.data-table thead th, .data-table tbody td { border-inline-start: 1px solid var(--border); }
+.data-table thead th:first-child, .data-table tbody td:first-child { border-inline-start: none; }
+.data-table tbody tr:hover { background: var(--surface-2); }
+.col-num { font-family: var(--font-mono); direction: ltr; white-space: nowrap; }
+.empty-row td { padding: 40px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.log-type-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.log-type-meta { background: var(--purple-light); color: var(--purple); border: 1px solid var(--purple-border); }
+.log-type-synced { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); }
+.log-type-error { background: var(--red-light); color: var(--red); border: 1px solid var(--red-border); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ══ Header — الترتيب الإلزامي: [أيقونة+عنوان] | [تحديث نسخة*][👤][ℹ️][vX.Y.Z][⚙️] ══ -->
+  <div class="app-header">
+    <div class="app-title">
+      <div class="app-icon">🔗</div>
+      <div class="app-title-text">
+        <h1>Ecommoda StyleBox Products Linking</h1>
+        <span>ربط ومزامنة منتج WooCommerce ↔ Shopify — stylebox-products-linking-worker</span>
+      </div>
+    </div>
+    <div class="app-header-btns">
+      <button class="hbtn" id="verMismatchBtn" style="display:none;border-color:var(--amber);color:var(--amber);background:var(--amber-bg,var(--amber-light));" onclick="showVersionMismatch()">⚠️ نسخة الـ Worker مختلفة</button>
+      <button class="hbtn active-user" id="activeUserBtn" onclick="doLogout()">👤 —</button>
+      <button class="hbtn" id="aboutBtn" onclick="openAbout()">ℹ️ عن الأداة</button>
+      <button class="hbtn ver-btn" id="verBtn" onclick="openChangelog()"></button>
+      <button class="hbtn" id="settingsBtn" onclick="openSettings()">⚙️ الإعدادات</button>
+    </div>
+  </div>
+
+  <!-- ══ Main Tabs ═══════════════════════════════════════════ -->
+  <div class="main-tabs-bar">
+    <button class="main-tab-btn active" id="mainTabSync" onclick="switchMainTab('sync')">🔗 ربط منتج</button>
+    <button class="main-tab-btn" id="mainTabLog" onclick="switchMainTab('log')">📜 سجل العمليات</button>
+  </div>
+
+  <!-- ══ Sync Tab ════════════════════════════════════════════ -->
+  <div class="tab-panel active" id="panelSync">
+
+    <div class="card">
+      <h3>🔗 ربط منتج WooCommerce ↔ Shopify</h3>
+
+      <div class="field-row">
+        <label>WooCommerce Product ID</label>
+        <input type="number" class="field-input" id="wpProductId" inputmode="numeric" />
+      </div>
+
+      <!-- ⚠️ الخيار الأصلي "تخطي فرض مسودة + إضافة ⭐" اتقسم لخيارين مستقلين تمامًا (25-08-2026) -->
+      <label class="checkbox-row">
+        <input type="checkbox" id="skipDraft" />
+        <span>
+          <strong>تخطي فرض حالة "مسودة" (Draft)</strong> — استخدمها للمنتجات اللي لازم تفضل
+          Active على شوبيفاي. مستقل تمامًا عن خيار العنوان تحت — تفعيله وحده مايأثرش على ⭐.
+        </span>
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" id="skipStar" />
+        <span>
+          <strong>تخطي إضافة ⭐ لعنوان المنتج</strong> — استخدمها لو مش عايز العنوان يتغيّر. مستقل
+          تمامًا عن خيار حالة "مسودة" فوق. باقي الخطوات (Tag <code>stylebox</code>، الـ metafield
+          <code>wordpress_id</code>، مزامنة الـ SKU/المخزون لكل Variation) بتشتغل عادي في كل الحالات.
+        </span>
+      </label>
+
+      <button class="btn-primary" id="syncBtn" onclick="runSync()">▶ تشغيل الربط</button>
+    </div>
+
+    <div id="syncResultWrap" style="display:none;"></div>
+
+  </div>
+
+  <!-- ══ Log Tab — القسم الموحّد (فلاتر + جدول) — data-table-standard.md ══ -->
+  <div class="tab-panel" id="panelLog">
+
+    <div class="unified-section">
+
+      <!-- ══ FILTERS ══ -->
+      <div class="flt-header" onclick="toggleFilters()">
+        <div class="flt-header-right">
+          <span class="flt-toggle open" id="fltToggleIcon">▲</span>
+          <svg class="flt-icon" id="fltIcon" viewBox="0 0 36 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="2 3 13 3 8.3 10.2 8.3 19 6.7 19 6.7 10.2 2 3"></polygon>
+            <line x1="18" y1="5" x2="33" y2="5"></line>
+            <line x1="18" y1="11" x2="29" y2="11"></line>
+            <line x1="18" y1="17" x2="25" y2="17"></line>
+          </svg>
+        </div>
+        <button class="clear-btn inactive" id="clearAllBtn" onclick="event.stopPropagation(); clearAllFilters();">✕ مسح كل الفلاتر</button>
+      </div>
+
+      <div class="flt-body" id="fltBody">
+
+        <!-- صف 1: فلاتر الاختيار المتعدد -->
+        <div class="flt-row">
+
+          <div class="flt-g">
+            <span class="flt-label">نوع العملية</span>
+            <div class="ms-wrap" id="msWrap-type">
+              <button class="ms-btn" id="msBtn-type" onclick="msToggle('type')">
+                <span id="msBtnLabel-type">كل العمليات</span><span class="ms-arrow">▾</span>
+              </button>
+              <div class="ms-menu" id="msMenu-type">
+                <div class="ms-ftr-top">
+                  <button class="ms-ftr-clear" onclick="msClear('type')">مسح الاختيار</button>
+                  <span class="ms-ftr-count" id="msFtrCount-type"></span>
+                </div>
+                <div class="ms-selectall-row" onclick="msToggleSelectAll('type')">
+                  <input type="checkbox" id="msSelectAll-type" onclick="event.stopPropagation()" onchange="msToggleSelectAll('type', this.checked)">
+                  <span id="msSelectAllLabel-type">تحديد الكل</span>
+                </div>
+                <div class="ms-list" id="msList-type"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flt-g">
+            <span class="flt-label">عدد مرات الظهور (SKU)</span>
+            <div class="ms-wrap" id="msWrap-count">
+              <button class="ms-btn" id="msBtn-count" onclick="msToggle('count')">
+                <span id="msBtnLabel-count">الكل</span><span class="ms-arrow">▾</span>
+              </button>
+              <div class="ms-menu" id="msMenu-count">
+                <div class="ms-ftr-top">
+                  <button class="ms-ftr-clear" onclick="msClear('count')">مسح الاختيار</button>
+                  <span class="ms-ftr-count" id="msFtrCount-count"></span>
+                </div>
+                <div class="ms-modes">
+                  <button class="ms-mode-btn active" id="msModeBtn-count-list" onclick="msSwitchMode('count','list')">☰ قائمة قيم</button>
+                  <button class="ms-mode-btn" id="msModeBtn-count-range" onclick="msSwitchMode('count','range')">↔ نطاق من-إلى</button>
+                </div>
+                <div class="ms-mode-panel active" id="msPanel-count-list">
+                  <div class="ms-selectall-row" onclick="msToggleSelectAll('count')">
+                    <input type="checkbox" id="msSelectAll-count" onclick="event.stopPropagation()" onchange="msToggleSelectAll('count', this.checked)">
+                    <span id="msSelectAllLabel-count">تحديد الكل</span>
+                  </div>
+                  <div class="ms-list" id="msList-count"></div>
+                </div>
+                <div class="ms-mode-panel" id="msPanel-count-range">
+                  <div class="ms-range-body">
+                    <div class="ms-range-row">
+                      <div class="ms-range-g"><span class="ms-range-lbl">من</span><input type="number" class="ms-range-input" id="msRangeFrom-count" oninput="msRangeChanged('count')" placeholder="0"></div>
+                      <div class="ms-range-g"><span class="ms-range-lbl">إلى</span><input type="number" class="ms-range-input" id="msRangeTo-count" oninput="msRangeChanged('count')" placeholder="∞"></div>
+                    </div>
+                    <div class="ms-range-hint">النطاق يُلغي أي قيم مختارة من القائمة تلقائيًا.</div>
+                    <button class="ms-range-clear" onclick="msRangeClear('count')">✕ مسح النطاق</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- صف 2: بحث ← فترة ← من ← إلى ← الموظف -->
+        <div class="flt-row">
+          <div class="flt-g" style="min-width:240px;">
+            <span class="flt-label">بحث بالـ SKU / المنتج / الملاحظات</span>
+            <div class="search-wrap">
+              <input type="text" class="search-input" id="searchInput" oninput="onSearchInput(this)" />
+              <span class="search-icon">🔍</span>
+            </div>
+          </div>
+
+          <div class="flt-g">
+            <span class="flt-label">فترة سريعة</span>
+            <div class="range-preset-wrap" id="rangePresetWrap">
+              <button class="range-preset-btn" id="rangePresetBtn" onclick="toggleRangePresetMenu(event)">
+                <span id="rangePresetLabel">⚡ اختار فترة</span><span>▾</span>
+              </button>
+              <div class="range-preset-menu" id="rangePresetMenu">
+                <div class="range-preset-clear-row">
+                  <button onclick="clearRangePreset()">✕ مسح الاختيار</button>
+                </div>
+                <div class="range-preset-item" data-preset="today" onclick="applyRangePreset('today')"><span>اليوم</span><span class="pr-check">✓</span></div>
+                <div class="range-preset-item" data-preset="yesterday" onclick="applyRangePreset('yesterday')"><span>أمس</span><span class="pr-check">✓</span></div>
+                <div class="range-preset-sep"></div>
+                <div class="range-preset-item" data-preset="last7" onclick="applyRangePreset('last7')"><span>آخر 7 أيام</span><span class="pr-check">✓</span></div>
+                <div class="range-preset-item" data-preset="last30" onclick="applyRangePreset('last30')"><span>آخر 30 يوم</span><span class="pr-check">✓</span></div>
+                <div class="range-preset-sep"></div>
+                <div class="range-preset-item" data-preset="thisMonth" onclick="applyRangePreset('thisMonth')"><span>الشهر الحالي</span><span class="pr-check">✓</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="flt-g">
+            <span class="flt-label">من تاريخ</span>
+            <div class="range-date-wrap"><input type="date" id="rangeDateFrom" onclick="this.showPicker&&this.showPicker();" onchange="onDateChanged()"></div>
+          </div>
+          <div class="flt-g">
+            <span class="flt-label">إلى تاريخ</span>
+            <div class="range-date-wrap"><input type="date" id="rangeDateTo" onclick="this.showPicker&&this.showPicker();" onchange="onDateChanged()"></div>
+          </div>
+
+          <div class="flt-g">
+            <span class="flt-label">الموظف</span>
+            <div class="ms-wrap" id="msWrap-emp">
+              <button class="ms-btn" id="msBtn-emp" onclick="msToggle('emp')">
+                <span id="msBtnLabel-emp">كل الموظفين</span><span class="ms-arrow">▾</span>
+              </button>
+              <div class="ms-menu" id="msMenu-emp">
+                <div class="ms-ftr-top">
+                  <button class="ms-ftr-clear" onclick="msClear('emp')">مسح الاختيار</button>
+                  <span class="ms-ftr-count" id="msFtrCount-emp"></span>
+                </div>
+                <div class="ms-selectall-row" onclick="msToggleSelectAll('emp')">
+                  <input type="checkbox" id="msSelectAll-emp" onclick="event.stopPropagation()" onchange="msToggleSelectAll('emp', this.checked)">
+                  <span id="msSelectAllLabel-emp">تحديد الكل</span>
+                </div>
+                <div class="ms-list" id="msList-emp"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chips — سطر منفصل لكل فلتر -->
+        <div class="ms-chips-row" id="chipsRow-type"></div>
+        <div class="ms-chips-row" id="chipsRow-count"></div>
+        <div class="ms-chips-row" id="chipsRow-emp"></div>
+
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- ══ TABLE ══ -->
+      <div class="tbl-bar" onclick="toggleTable()">
+        <div class="tbl-bar-right">
+          <span class="tbl-toggle open" id="tblToggleIcon">▲</span>
+          <div class="results-wrap">
+            <span class="results-label">النتائج:</span>
+            <span class="results-count" id="filteredCount">—</span>
+          </div>
+        </div>
+        <div class="tbl-bar-left">
+          <button class="act-btn refresh" onclick="event.stopPropagation(); loadLog();">↺ تحديث</button>
+          <button class="act-btn export" id="exportBtn" onclick="event.stopPropagation(); exportLog();">⬇ تصدير XLSX</button>
+        </div>
+      </div>
+
+      <div class="tbl-body-wrap" id="tblBodyWrap">
+        <div class="tbl-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th class="sortable-th" data-sort-key="date" onclick="toggleSort('date')">التاريخ<span class="sort-icon" data-sort-key="date"></span></th>
+              <th class="sortable-th" data-sort-key="employee" onclick="toggleSort('employee')">الموظف<span class="sort-icon" data-sort-key="employee"></span></th>
+              <th class="sortable-th" data-sort-key="type" onclick="toggleSort('type')">نوع العملية<span class="sort-icon" data-sort-key="type"></span></th>
+              <th class="sortable-th" data-sort-key="sku" onclick="toggleSort('sku')">SKU<span class="sort-icon" data-sort-key="sku"></span></th>
+              <th class="sortable-th" data-sort-key="product" onclick="toggleSort('product')">المنتج<span class="sort-icon" data-sort-key="product"></span></th>
+              <th>التفاصيل</th>
+              <th class="sortable-th" data-sort-key="count" onclick="toggleSort('count')">عدد مرات الظهور<span class="sort-icon" data-sort-key="count"></span></th>
+              <th>الملاحظات</th>
+            </tr></thead>
+            <tbody id="logTblBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ══ Settings Modal ══════════════════════════════════════ -->
+  <div class="settings-overlay" id="settingsOverlay" onclick="closeSettingsOnBackdrop(event)">
+    <div class="settings-modal">
+      <div class="settings-modal-hdr">
+        ⚙️ الإعدادات
+        <button class="modal-close-x" onclick="closeSettings()">✕</button>
+      </div>
+      <div class="settings-modal-body">
+        <div class="settings-field">
+          <label class="settings-label">WORKER URL</label>
+          <input type="text" class="settings-input" id="cfgUrl" />
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">WORKER SECRET</label>
+          <input type="password" class="settings-input" id="cfgSecret" />
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">ADMIN WORKER URL</label>
+          <input type="text" class="settings-input" id="cfgAdminUrl" />
+        </div>
+
+        <!-- Step 3C — زرار الفحص الذاتي، إلزامي لأي أداة بتكتب -->
+        <div class="settings-field" style="border-top:1.5px solid var(--border-light,var(--border));padding-top:12px;">
+          <label class="settings-label">فحص النظام</label>
+          <button class="btn-outline btn-sm" id="diagBtn" onclick="runDiag()">🩺 افحص الأداة والاتصالات</button>
+          <div id="diagResult" style="margin-top:10px;font-size:12px;line-height:1.7;"></div>
+        </div>
+      </div>
+      <div class="settings-modal-ftr">
+        <button class="btn-modal-cancel" onclick="closeSettings()">إلغاء</button>
+        <button class="btn-modal-save" onclick="saveSettings()">حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Changelog Modal ═════════════════════════════════════ -->
+  <div class="eco-overlay" id="changelogOverlay" onclick="if(event.target===this)closeChangelog()">
+    <div class="eco-modal">
+      <div class="eco-modal-hdr">
+        <span>📋 سجل التحديثات</span>
+        <button class="modal-close-x" onclick="closeChangelog()">✕</button>
+      </div>
+      <div class="eco-modal-body">
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+            <span class="cl-ver-date">25-08-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>إعادة تسمية الأداة بالكامل من "مزامنة Shopify ↔ WooCommerce" إلى <strong>Ecommoda StyleBox Products Linking</strong> — راجع تاب "🔧 تشريح الكود" في About للتفاصيل الكاملة.</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>إضافة شاشة تسجيل دخول (Universal D1 Auth) — الأداة كانت استثناء موثّق بدون Login، الاستثناء اتشال بطلب صاحب الأداة.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>خيار "تخطي فرض مسودة + إضافة ⭐" اتقسم لخيارين مستقلين تمامًا: تخطي حالة Draft، وتخطي إضافة ⭐ للعنوان — كل واحد بيتفعّل/يتخطّى لوحده.</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>إصلاح CORS الصامت — <code>ALLOWED_ORIGINS</code> كان لسه على الدومين المهجور <code>ecommoda24.github.io</code>، اتحدّث لـ <code>ecommoda-dev.github.io</code>.</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>تصليح باج صامت حقيقي: نتيجة تحديث <code>wordpress_variation_id</code> على كل Variation ما كانتش بتتفحص خالص — أي فشل كان بيعدّي وكأنه نجح. دلوقتي بيتفحص ويتحوّل الـ Variation لحالة "تحذير" لو فشل.</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>حماية كل نداءات شوبيفاي (<code>shopifyGQL</code>) بفحص كامل (HTTP + JSON + errors + data) بدل الاكتفاء بـ <code>resp.json()</code> بلا تحقق.</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>عرض نتيجة العملية بـ 3 حالات (نجاح / تحذير / فشل) بدل ثنائية نجح/فشل — يشمل بيانات المنتج وكل Variation على حدة.</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>إضافة <code>?action=diag</code> (فحص ذاتي كامل) و<code>?action=get_config</code> (كشف اختلاف نسخة الـ Worker عن الواجهة).</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>تاب "سجل العمليات" اتبنى بالكامل من جديد بمعيار الجدول الموحّد (فلاتر اختيار متعدد + ترتيب على الأعمدة + صف نتائج) بدل شكل البطاقات القديم.</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>إزالة خط IBM Plex Mono المهجور — خط واحد فقط (Noto Sans Arabic) في كل الأداة.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v1.0.0</span>
+            <span class="cl-ver-date">15-08-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>إطلاق الأداة تحت اسم "مزامنة Shopify ↔ WooCommerce" — بدون تسجيل دخول موظفين (استثناء موثّق وقتها).</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ About Modal ═════════════════════════════════════════ -->
+  <div class="eco-overlay" id="aboutOverlay" onclick="if(event.target===this)closeAbout()">
+    <div class="eco-modal">
+      <div class="eco-modal-hdr">
+        <span>ℹ️ About — Ecommoda StyleBox Products Linking</span>
+        <button class="modal-close-x" onclick="closeAbout()">✕</button>
+      </div>
+      <div class="eco-modal-body">
+
+        <details class="about-sec" open>
+          <summary>📋 وصف الأداة</summary>
+          <div class="about-sec-body">
+            <p><strong>الهدف:</strong> واجهة لتشغيل <code>stylebox-products-linking-worker</code> يدويًا — منتج
+            واحد لكل تشغيلة — بدل استخدام Postman مباشرة. بتربط وتزامن منتج WooCommerce متغيّر
+            (variable product) مربوط بمنتج Shopify عن طريق حقل <code>global_unique_id</code>
+            على مستوى المنتج في ووكومرس.</p>
+            <p><strong>المستخدمون المستهدفون:</strong> أي موظف مسجّل دخول في نظام EcomModa — الأداة
+            دلوقتي زي أي أداة تانية في الستاك، مفيش استثناء "بدون Login" (كان موجود في v1.0.0، اتشال).</p>
+
+            <h4>إيه اللي بيتزامن في كل تشغيلة</h4>
+            <ul>
+              <li><strong>على مستوى المنتج (Shopify):</strong> Tag <code>stylebox</code> (دائمًا) +
+              metafield <code>custom.wordpress_id</code> (دائمًا) + فرض الحالة <code>DRAFT</code> وإضافة
+              "⭐ " لبداية العنوان — كل واحد فيهم مستقل، حسب الخيارين تحت</li>
+              <li><strong>على مستوى المنتج (WooCommerce):</strong> تحديث <code>meta_data._shopify_product_id</code>
+              (الحقل القديم legacy، بيعكس <code>global_unique_id</code>)</li>
+              <li><strong>لكل Variation:</strong> مطابقة بالمقاس (<code>Shoe size</code> / <code>Size</code> /
+              <code>size</code>) بين الاتنين، ثم مزامنة SKU + المخزون (<code>inventoryQuantity</code>) من
+              شوبيفاي لووكومرس، وتحديث <code>custom.wordpress_variation_id</code> على شوبيفاي</li>
+            </ul>
+
+            <h4>كيف تعمل — Workflow</h4>
+            <ol>
+              <li>سجّل دخولك من شاشة الدخول</li>
+              <li>حط الـ WooCommerce Product ID للمنتج المتغيّر المطلوب ربطه</li>
+              <li>لو المنتج ده لازم يفضل Active على شوبيفاي (مش Draft) → فعّل "تخطي فرض مسودة"</li>
+              <li>لو مش عايز العنوان يتغيّر → فعّل "تخطي إضافة ⭐" (مستقل عن الخيار السابق)</li>
+              <li>اضغط "تشغيل الربط" — هتتنفذ مباشرة (single call، مفيش sync_all)</li>
+              <li>راجع نتيجة بيانات المنتج + جدول الـ Variations اللي اتزامنت أو اتخطّت (مع السبب)</li>
+              <li>أي تفاصيل أو أخطاء إضافية اتسجلت في تاب "سجل العمليات"</li>
+            </ol>
+
+            <h4>⚙️ إجراءات كل خيار</h4>
+            <table>
+              <tr><th>الخيار</th><th>التأثير عند التفعيل (تخطي)</th></tr>
+              <tr><td>تخطي فرض حالة "مسودة"</td><td><code>productUpdate</code> ميبعتش <code>status: DRAFT</code> — حالة المنتج على شوبيفاي تفضل زي ما هي</td></tr>
+              <tr><td>تخطي إضافة ⭐ للعنوان</td><td><code>productUpdate</code> ميبعتش <code>title</code> — عنوان المنتج على شوبيفاي يفضل زي ما هو</td></tr>
+              <tr><td>(بدون تفعيل أي خيار)</td><td>الاتنين يتنفذوا: الحالة تتفرض DRAFT + "⭐ " تتضاف لبداية العنوان (idempotent — مايتكررش لو موجود بالفعل)</td></tr>
+              <tr><td>(في كل الحالات)</td><td>Tag <code>stylebox</code> + metafield <code>wordpress_id</code> + مزامنة كل الـ SKU/المخزون لكل Variation — مالهاش علاقة بالخيارين، بتشتغل دايمًا</td></tr>
+            </table>
+
+            <h4>الـ Endpoints الرئيسية</h4>
+            <table>
+              <tr><th>action</th><th>الوصف</th></tr>
+              <tr><td><code>check_employee</code></td><td>GET — هل الموظف مسجّل وعنده PIN ونشط؟</td></tr>
+              <tr><td><code>register_pin</code></td><td>POST — تسجيل PIN لأول مرة</td></tr>
+              <tr><td><code>verify_employee</code></td><td>POST — تسجيل الدخول</td></tr>
+              <tr><td><code>log_logout</code></td><td>GET — تسجيل خروج</td></tr>
+              <tr><td><code>get_employees</code></td><td>GET — قائمة الموظفين النشطين</td></tr>
+              <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>skip_draft</code> / <code>skip_star</code> اختياريين)</td></tr>
+              <tr><td><code>diag</code></td><td>GET — فحص ذاتي كامل (env، صلاحيات شوبيفاي، اتصال WooCommerce، D1) بدون كتابة</td></tr>
+              <tr><td><code>get_config</code></td><td>GET — يرجّع نسخة الـ Worker لمقارنتها بنسخة الواجهة</td></tr>
+              <tr><td><code>get_logs</code></td><td>GET — سجل مُقسّم صفحات (حتى 100 لكل صفحة)</td></tr>
+              <tr><td><code>get_logs_count</code></td><td>GET — إجمالي عدد سجلات هذه الأداة</td></tr>
+              <tr><td><code>get_logs_export</code></td><td>GET — حتى 2000 سجل دفعة واحدة، مصدر بيانات تاب السجل</td></tr>
+            </table>
+          </div>
+        </details>
+
+        <details class="about-sec">
+          <summary>🔧 تشريح الكود</summary>
+          <div class="about-sec-body">
+
+            <h4>FEATURE MAP</h4>
+            <ul>
+              <li><code>§AUTH</code> — Universal D1 Auth كاملة (اتضافت 25-08-2026 — الأداة كانت استثناء بدون Login)</li>
+              <li><code>§TOOL-JS::sync</code> — تاب "ربط منتج": نموذج تشغيل <code>sync_product</code> + عرض نتيجة 3 حالات (نجاح/تحذير/فشل)</li>
+              <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
+              <li><code>§LOG-ENDPOINTS</code> — get_logs / get_logs_count / get_logs_export (v2، بدون تغيير في العقد)</li>
+            </ul>
+
+            <h4>KEY VARIABLES</h4>
+            <ul>
+              <li><code>currentEmployee</code> — { username, displayName } في الذاكرة فقط، مش localStorage</li>
+              <li><code>LS_URL = 'stylebox_link_worker_url'</code> · <code>LS_SECRET = 'stylebox_link_worker_secret'</code> — تغيّرت بريفكس المفاتيح مع إعادة التسمية (كانت <code>wcsync_worker_*</code>)</li>
+              <li><code>TOOL_NAME = 'stylebox_products_linking'</code> — قيمة <code>tool</code> في جدول <code>logs</code> (كانت <code>shopify_woo_sync</code> قبل الرينيم)</li>
+              <li><code>ALLOWED_SIZE_ATTRIBUTE_NAMES = ['Shoe size','Size','size']</code> — مصدر الحقيقة لمطابقة المقاس بين المنصتين (في الـ Worker)</li>
+            </ul>
+
+            <h4>NOTES</h4>
+            <ul>
+              <li>الأداة manual-only بالتصميم — مفيش <code>sync_all</code> ومفيش Cron، تشغيلة واحدة = منتج واحد (Worker Builder Step 5A + woocommerce-sync-helper Step 6)</li>
+              <li>فشل الخطوة على مستوى المنتج (metafield/tag/draft/title) بيتسجل في اللوج كـ <code>error</code> لكن ما بيوقفش مزامنة الـ Variations</li>
+              <li>الحقل <code>global_unique_id</code> على مستوى المنتج في ووكومرس هو اللي بيربط المنتجين — لو فاضي، الـ Worker بيرجّع خطأ فورًا</li>
+              <li>سجلات D1 القديمة تحت اسم <code>shopify_woo_sync</code> (523 صف حتى 25-08-2026) اتنقلت لـ <code>stylebox_products_linking</code> — راجع ملخّص التسليم لتوقيت الـ SQL بالظبط</li>
+            </ul>
+          </div>
+        </details>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Login Overlay ═══════════════════════════════════════ -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <button class="login-settings-btn missing" id="loginSettingsBtn" onclick="openSettings()">⚙️ الإعدادات</button>
+      <div class="login-version" id="loginVersionText"></div>
+
+      <div class="login-top">
+        <div class="login-icon">🔗</div>
+        <div class="login-title">Ecommoda StyleBox Products Linking</div>
+        <div class="login-desc">ربط ومزامنة منتج WooCommerce ↔ Shopify</div>
+        <div class="login-sub" id="loginSub">اختر اسمك للمتابعة</div>
+      </div>
+
+      <div class="login-body">
+        <div class="login-field">
+          <label for="loginSelect">الموظف</label>
+          <select id="loginSelect" onchange="handleEmployeeChange()" disabled>
+            <option value="">— اختر —</option>
+          </select>
+          <div class="login-status warn" id="loginStatus">الإعدادات غير مكتملة — افتح الإعدادات أولاً.</div>
+        </div>
+
+        <div class="login-alert" id="loginAlert"></div>
+
+        <div class="pin-zone" id="pinZone">
+          <div class="pin-label" id="pinLabel">أدخل الـ PIN</div>
+          <div class="pin-slots" id="pinSlots">
+            <div class="pin-slot empty" id="pinSlot0"></div>
+            <div class="pin-slot empty" id="pinSlot1"></div>
+            <div class="pin-slot empty" id="pinSlot2"></div>
+            <div class="pin-slot empty" id="pinSlot3"></div>
+          </div>
+          <div class="pin-keypad" id="pinKeypad">
+            <button class="pin-key" onclick="pressPinKey('1')">1</button>
+            <button class="pin-key" onclick="pressPinKey('2')">2</button>
+            <button class="pin-key" onclick="pressPinKey('3')">3</button>
+            <button class="pin-key" onclick="pressPinKey('4')">4</button>
+            <button class="pin-key" onclick="pressPinKey('5')">5</button>
+            <button class="pin-key" onclick="pressPinKey('6')">6</button>
+            <button class="pin-key" onclick="pressPinKey('7')">7</button>
+            <button class="pin-key" onclick="pressPinKey('8')">8</button>
+            <button class="pin-key" onclick="pressPinKey('9')">9</button>
+            <button class="pin-key utility" onclick="pressPinKey('clear')">مسح</button>
+            <button class="pin-key" onclick="pressPinKey('0')">0</button>
+            <button class="pin-key utility" onclick="pressPinKey('back')">←</button>
+          </div>
+          <button class="login-primary visible" id="loginPrimaryBtn" onclick="handlePrimaryLoginAction()" disabled>دخول</button>
+          <button class="login-secondary" id="loginSecondaryBtn" onclick="restartNewPinFlow()">الرجوع لإدخال PIN جديد</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     §JS
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+// ══════════════════════════════════════════════════════════════
+// §CONFIG
+// ══════════════════════════════════════════════════════════════
+const TOOL_VERSION = 'v2.0.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const LS_URL       = 'stylebox_link_worker_url';
+const LS_SECRET    = 'stylebox_link_worker_secret';
+const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
+
+function getConfig() {
+  return {
+    workerUrl:    localStorage.getItem(LS_URL)    || '',
+    workerSecret: localStorage.getItem(LS_SECRET) || '',
+    adminUrl:     localStorage.getItem(LS_ADMIN_URL) || '',
+  };
+}
+function isConfigured() {
+  const c = getConfig();
+  return c.workerUrl.startsWith('http') && c.workerSecret.length > 0;
+}
+
+// ══════════════════════════════════════════════════════════════
+// §SHELL-JS — Main Tabs
+// ══════════════════════════════════════════════════════════════
+function switchMainTab(tab) {
+  const isSync = tab === 'sync';
+  document.getElementById('mainTabSync').classList.toggle('active', isSync);
+  document.getElementById('mainTabLog').classList.toggle('active', !isSync);
+  document.getElementById('panelSync').classList.toggle('active', isSync);
+  document.getElementById('panelLog').classList.toggle('active', !isSync);
+  if (!isSync && !logLoaded) loadLog();
+}
+
+// ══════════════════════════════════════════════════════════════
+// §SHELL-JS — Settings
+// ══════════════════════════════════════════════════════════════
+function openSettings() {
+  const c = getConfig();
+  document.getElementById('cfgUrl').value      = c.workerUrl    || '';
+  document.getElementById('cfgSecret').value   = c.workerSecret || '';
+  document.getElementById('cfgAdminUrl').value = c.adminUrl     || '';
+  document.getElementById('settingsOverlay').classList.add('open');
+}
+function closeSettings()            { document.getElementById('settingsOverlay').classList.remove('open'); }
+function closeSettingsOnBackdrop(e) { if (e.target === e.currentTarget) closeSettings(); }
+
+function saveSettings() {
+  const url      = document.getElementById('cfgUrl').value.trim();
+  const secret   = document.getElementById('cfgSecret').value.trim();
+  const adminUrl = document.getElementById('cfgAdminUrl').value.trim();
+  if (!url || !secret) { showToast('الرجاء إدخال الـ URL والـ Secret', 'error'); return; }
+
+  localStorage.setItem(LS_URL,       url.replace(/\/$/, ''));
+  localStorage.setItem(LS_SECRET,    secret);
+  localStorage.setItem(LS_ADMIN_URL, adminUrl.replace(/\/$/, ''));
+
+  updateSettingsBtn();
+  updateLoginSettingsBtn();
+  closeSettings();
+  showToast('تم حفظ الإعدادات ✓', 'success');
+  loadEmployeesList();
+}
+function updateSettingsBtn() {
+  document.getElementById('settingsBtn').classList.toggle('settings-configured', isConfigured());
+}
+
+// ══════════════════════════════════════════════════════════════
+// §SHELL-JS — Version (مصدر واحد: TOOL_VERSION)
+// ══════════════════════════════════════════════════════════════
+function renderVersionUI() {
+  const verBtn = document.getElementById('verBtn');
+  if (verBtn) verBtn.textContent = `${TOOL_VERSION} 📋`;
+  const clBadge = document.getElementById('clLatestVerBadge');
+  if (clBadge) clBadge.textContent = TOOL_VERSION;
+  const loginVer = document.getElementById('loginVersionText');
+  if (loginVer) loginVer.textContent = TOOL_VERSION;
+}
+
+let workerVersion = null;
+async function checkWorkerVersion() {
+  try {
+    const d = await apiGet('get_config');
+    workerVersion = d.version || null;
+    const btn = document.getElementById('verMismatchBtn');
+    if (btn) btn.style.display = (workerVersion && workerVersion !== TOOL_VERSION) ? '' : 'none';
+  } catch { /* الإعدادات ممكن تكون لسه مش مضبوطة */ }
+}
+function showVersionMismatch() {
+  showToast(`نسخة الواجهة ${TOOL_VERSION} ≠ نسخة الـ Worker ${workerVersion || '—'} — راجع الـ Promote في Cloudflare`, 'error', 5000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// §SHELL-JS — Changelog / About
+// ══════════════════════════════════════════════════════════════
+function openChangelog()  { document.getElementById('changelogOverlay').classList.add('open'); }
+function closeChangelog() { document.getElementById('changelogOverlay').classList.remove('open'); }
+function openAbout()  { document.getElementById('aboutOverlay').classList.add('open'); }
+function closeAbout() { document.getElementById('aboutOverlay').classList.remove('open'); }
+
+// ══════════════════════════════════════════════════════════════
+// §SHELL-JS — Toast
+// ══════════════════════════════════════════════════════════════
+function showToast(msg, type = 'neutral', duration = 3000) {
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => t.remove(), duration);
+}
+
+// ══════════════════════════════════════════════════════════════
+// §SHELL-JS — Date/Time — الصيغة الموحّدة 📅 DD/MM/YYYY 🕐 HH:MM صباحاً/مساءً
+// ══════════════════════════════════════════════════════════════
+function toCairo(iso) { return new Date(new Date(iso).getTime() + 3 * 60 * 60 * 1000); }
+function formatDateTime(iso) {
+  if (!iso) return '—';
+  const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  let h = d.getUTCHours();
+  const ampm = h >= 12 ? 'مساءً' : 'صباحاً';
+  h = h % 12 || 12;
+  return `📅 ${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} 🕐 ${pad(h)}:${pad(d.getUTCMinutes())} ${ampm}`;
+}
+function formatDatePlain(iso) { // بدون إيموجي — لعمود التاريخ في XLSX export فقط (استثناء موثّق)
+  if (!iso) return '';
+  const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()}`;
+}
+function formatTimePlain(iso) {
+  if (!iso) return '';
+  const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  let h = d.getUTCHours();
+  const ampm = h >= 12 ? 'مساءً' : 'صباحاً';
+  h = h % 12 || 12;
+  return `${pad(h)}:${pad(d.getUTCMinutes())} ${ampm}`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// §SHELL-JS — API Helpers (apiRequest بتفرّق أنواع الفشل بدل رسالة غامضة واحدة)
+// ══════════════════════════════════════════════════════════════
+async function apiRequest(url, opts) {
+  let resp;
+  try {
+    resp = await fetch(url, opts);
+  } catch (e) {
+    throw new Error(`تعذّر الوصول للـ Worker — راجع الـ URL في الإعدادات أو نطاق الصفحة (CORS): ${e.message}`);
+  }
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch { throw new Error(`رد غير متوقع من الـ Worker (HTTP ${resp.status}): ${text.slice(0, 160)}`); }
+  if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+  return data;
+}
+async function apiPost(action, body = {}) {
+  if (!isConfigured()) { openSettings(); throw new Error('الإعدادات غير مكتملة'); }
+  const { workerUrl, workerSecret } = getConfig();
+  return apiRequest(`${workerUrl.replace(/\/$/, '')}?action=${action}`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${workerSecret}` },
+    body:    JSON.stringify(body),
+  });
+}
+async function apiGet(action, params = {}) {
+  if (!isConfigured()) { openSettings(); throw new Error('الإعدادات غير مكتملة'); }
+  const { workerUrl, workerSecret } = getConfig();
+  const qs = new URLSearchParams({ action, ...params });
+  return apiRequest(`${workerUrl.replace(/\/$/, '')}?${qs}`, {
+    headers: { 'Authorization': `Bearer ${workerSecret}` },
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// §DIAG-JS — Step 3C: زرار الفحص الذاتي
+// ══════════════════════════════════════════════════════════════
+async function runDiag() {
+  const box = document.getElementById('diagResult');
+  box.innerHTML = 'جارٍ الفحص...';
+  try {
+    const d = await apiGet('diag');
+    const lines = [];
+    lines.push(`<div>${d.env.every(e => e.present) ? '✅' : '❌'} المتغيرات: ${d.env.map(e => `${e.key}${e.present ? '('+e.length+')' : ' ❌ ناقص'}`).join('، ')}</div>`);
+    lines.push(`<div>${d.shopify.error ? '❌' : '✅'} شوبيفاي: ${d.shopify.error || (d.shopify.scopes || []).join(', ')}</div>`);
+    lines.push(`<div>${d.woocommerce.ok ? '✅' : '❌'} WooCommerce: ${d.woocommerce.error || 'متاح'}</div>`);
+    lines.push(`<div>${d.d1.ok ? '✅' : '❌'} D1: ${d.d1.error || 'متاح'}</div>`);
+    lines.push(`<div>${d.origin.allowed ? '✅' : '❌'} Origin: ${d.origin.received || '—'}</div>`);
+    box.innerHTML = lines.join('');
+  } catch (e) {
+    box.innerHTML = `<div style="color:var(--red);">⚠️ ${e.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// §AUTH-JS — Universal D1 Auth (من قالب 22_login-screen.html)
+// ⚠️ تصحيح: القالبين الأصليين فيهم تعارض تسمية — App Shell بينادي
+// updateLoginSettingsBtn() لكن قالب اللوجن كان معرّفها updateLoginSettingsBtnState().
+// اتوحّد الاسم هنا على updateLoginSettingsBtn() في الاتنين.
+// ══════════════════════════════════════════════════════════════
+let currentEmployee  = null;
+let loginMode        = 'employee';
+let pinDigits        = [];
+let pendingNewPin    = '';
+let isLoginBusy      = false;
+let autoLoginTimer   = null;
+let cachedEmployees  = []; // ← يتاح كمان لبناء فلتر "الموظف" في تاب السجل
+
+if (typeof playBeep === 'undefined') {
+  let _audioCtx = null;
+  window.playBeep = function(type) {
+    try {
+      if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = _audioCtx.createOscillator(), gain = _audioCtx.createGain();
+      osc.connect(gain); gain.connect(_audioCtx.destination);
+      if (type === 'success') {
+        osc.frequency.setValueAtTime(880,  _audioCtx.currentTime);
+        osc.frequency.setValueAtTime(1100, _audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.3, _audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.25);
+        osc.start(_audioCtx.currentTime); osc.stop(_audioCtx.currentTime + 0.25);
+      } else {
+        osc.frequency.setValueAtTime(300, _audioCtx.currentTime);
+        osc.frequency.setValueAtTime(200, _audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.4, _audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.35);
+        osc.start(_audioCtx.currentTime); osc.stop(_audioCtx.currentTime + 0.35);
+      }
+    } catch {}
+  };
+}
+
+async function loadEmployeesList() {
+  const sel    = document.getElementById('loginSelect');
+  const status = document.getElementById('loginStatus');
+  clearLoginAlert();
+  sel.innerHTML = '<option value="">— اختر —</option>';
+  sel.disabled  = true;
+
+  if (!isConfigured()) {
+    status.className   = 'login-status warn';
+    status.textContent = 'الإعدادات غير مكتملة — افتح الإعدادات أولاً.';
+    renderLoginMode('employee');
+    return;
+  }
+
+  status.className   = 'login-status info';
+  status.textContent = 'جارٍ تحميل قائمة الموظفين...';
+
+  try {
+    const data      = await apiGet('get_employees');
+    const employees = data.employees || [];
+    cachedEmployees = employees;
+
+    employees.forEach(e => {
+      const o = document.createElement('option');
+      o.value = e.username; o.textContent = e.display_name;
+      sel.appendChild(o);
+    });
+
+    sel.disabled       = false;
+    status.className   = employees.length ? 'login-status info' : 'login-status warn';
+    status.textContent = employees.length ? 'اختر الموظف للمتابعة.' : 'لا يوجد موظفون نشطون.';
+
+    // ← تخصيص: تعبئة فلتر "الموظف" في تاب السجل من نفس القائمة (multi-select-filter.md §6)
+    msState.emp.items = employees.map(e => ({ value: e.username, label: e.display_name }));
+    msRenderList('emp');
+  } catch (err) {
+    status.className   = 'login-status error';
+    status.textContent = 'تعذّر تحميل قائمة الموظفين.';
+    showLoginAlert(err.message || 'تعذّر تحميل قائمة الموظفين.');
+  }
+}
+
+async function handleEmployeeChange() {
+  if (isLoginBusy) return;
+  clearTimeout(autoLoginTimer);
+  clearLoginAlert();
+  resetPinState();
+
+  const sel      = document.getElementById('loginSelect');
+  const username = sel.value || '';
+
+  if (!username) { renderLoginMode('employee'); return; }
+
+  renderLoginMode('employee');
+  document.getElementById('loginSub').textContent = 'جارٍ التحقق من الحساب...';
+
+  try {
+    const data = await apiGet('check_employee', { username });
+    if (!data.exists) {
+      showLoginAlert('المستخدم غير موجود');
+      sel.value = ''; renderLoginMode('employee'); playBeep('error'); return;
+    }
+    if (!data.isActive) {
+      showLoginAlert('الحساب موقوف — تواصل مع المسؤول');
+      sel.value = ''; renderLoginMode('employee'); playBeep('error'); return;
+    }
+    renderLoginMode(data.hasPin ? 'existing' : 'new');
+  } catch (err) {
+    showLoginAlert(err.message || 'تعذّر التحقق من الحساب');
+    sel.value = ''; renderLoginMode('employee'); playBeep('error');
+  }
+}
+
+function renderLoginMode(mode) {
+  loginMode = mode;
+  const pinZone   = document.getElementById('pinZone');
+  const pinLabel  = document.getElementById('pinLabel');
+  const primary   = document.getElementById('loginPrimaryBtn');
+  const secondary = document.getElementById('loginSecondaryBtn');
+
+  pinZone.classList.toggle('visible', mode !== 'employee');
+  primary.classList.toggle('visible', mode !== 'employee');
+  secondary.classList.toggle('visible', mode === 'confirm');
+  resetPinState(false);
+  clearLoginAlert();
+
+  const sub = document.getElementById('loginSub');
+  if (mode === 'employee') { sub.textContent = 'اختر اسمك للمتابعة'; pinLabel.textContent = 'أدخل الـ PIN'; primary.textContent = 'دخول'; primary.disabled = true; return; }
+  if (mode === 'existing')  { sub.textContent = 'أدخل الـ PIN'; pinLabel.textContent = 'أدخل الـ PIN'; primary.textContent = 'دخول'; primary.disabled = true; return; }
+  if (mode === 'new')       { sub.textContent = 'أول مرة؟ أنشئ PIN من 4 أرقام'; pinLabel.textContent = 'أنشئ PIN جديد'; primary.textContent = 'متابعة'; primary.disabled = true; return; }
+  if (mode === 'confirm')   { sub.textContent = 'أعد إدخال الـ PIN للتأكيد'; pinLabel.textContent = 'تأكيد الـ PIN'; primary.textContent = 'تأكيد وتسجيل الدخول'; primary.disabled = true; }
+}
+function restartNewPinFlow() { pendingNewPin = ''; renderLoginMode('new'); }
+
+function pressPinKey(key) {
+  if (isLoginBusy || loginMode === 'employee') return;
+  clearTimeout(autoLoginTimer);
+  if      (key === 'clear') pinDigits = [];
+  else if (key === 'back')  pinDigits.pop();
+  else if (/^\d$/.test(key) && pinDigits.length < 4) pinDigits.push(key);
+  clearLoginAlert();
+  renderPinSlots();
+  updatePrimaryLoginState();
+  if (pinDigits.length === 4) autoLoginTimer = setTimeout(() => handlePrimaryLoginAction(), 140);
+}
+function renderPinSlots() {
+  for (let i = 0; i < 4; i++) {
+    const slot = document.getElementById(`pinSlot${i}`);
+    slot.classList.remove('empty', 'filled', 'error');
+    slot.classList.add(i < pinDigits.length ? 'filled' : 'empty');
+  }
+}
+function resetPinState(clearPending = true) {
+  pinDigits = [];
+  if (clearPending && loginMode !== 'confirm') pendingNewPin = '';
+  renderPinSlots();
+  updatePrimaryLoginState();
+}
+function updatePrimaryLoginState() {
+  document.getElementById('loginPrimaryBtn').disabled =
+    loginMode === 'employee' || pinDigits.length !== 4 || isLoginBusy;
+}
+
+async function handlePrimaryLoginAction() {
+  if (isLoginBusy || loginMode === 'employee' || pinDigits.length !== 4) return;
+  if (loginMode === 'existing') { await verifyExistingPin();      return; }
+  if (loginMode === 'new')      { pendingNewPin = pinDigits.join(''); renderLoginMode('confirm'); return; }
+  if (loginMode === 'confirm')  { await registerNewPinAndLogin(); }
+}
+async function verifyExistingPin() {
+  const username = document.getElementById('loginSelect').value;
+  const pin      = pinDigits.join('');
+  setLoginBusy(true, '⏳ جاري التحقق...');
+  try {
+    const data = await apiPost('verify_employee', { username, pin });
+    if (!data.ok) { await presentLoginPinError('PIN خطأ — حاول مرة أخرى'); return; }
+    await finishLogin(username, data.displayName);
+  } catch (err) {
+    await presentLoginPinError(err.message || 'PIN خطأ');
+  } finally { setLoginBusy(false); }
+}
+async function registerNewPinAndLogin() {
+  const username    = document.getElementById('loginSelect').value;
+  const confirmPin  = pinDigits.join('');
+  if (confirmPin !== pendingNewPin) {
+    await presentLoginPinError('الـ PIN غير متطابق — حاول مرة أخرى');
+    pendingNewPin = ''; renderLoginMode('new'); return;
+  }
+  setLoginBusy(true, '⏳ جاري التسجيل...');
+  try {
+    const reg = await apiPost('register_pin', { username, pin: pendingNewPin });
+    if (reg && reg.ok === false) { await presentLoginPinError(reg.error || 'تعذّر تسجيل الـ PIN'); return; }
+    const data = await apiPost('verify_employee', { username, pin: pendingNewPin });
+    if (!data.ok) { await presentLoginPinError(data.error || 'تعذّر تسجيل الدخول'); return; }
+    await finishLogin(username, data.displayName);
+  } catch (err) {
+    await presentLoginPinError(err.message || 'تعذّر تسجيل الـ PIN');
+  } finally { setLoginBusy(false); }
+}
+function setLoginBusy(active, text = '') {
+  isLoginBusy = active;
+  const primary = document.getElementById('loginPrimaryBtn');
+  document.querySelectorAll('#pinKeypad .pin-key').forEach(b => b.disabled = active);
+  document.getElementById('loginSelect').disabled = active || !isConfigured();
+  if (active) {
+    primary.dataset.prevText = primary.textContent;
+    primary.textContent      = text || primary.textContent;
+    primary.disabled         = true;
+  } else {
+    primary.textContent = primary.dataset.prevText || primary.textContent;
+    delete primary.dataset.prevText;
+    updatePrimaryLoginState();
+  }
+}
+async function presentLoginPinError(message) {
+  playBeep('error');
+  showLoginAlert(message);
+  const slots = document.getElementById('pinSlots');
+  slots.classList.add('shake');
+  for (let i = 0; i < 4; i++) document.getElementById(`pinSlot${i}`).classList.add('error');
+  await new Promise(r => setTimeout(r, 760));
+  slots.classList.remove('shake');
+  pinDigits = []; renderPinSlots(); updatePrimaryLoginState();
+}
+function showLoginAlert(msg) { const a = document.getElementById('loginAlert'); a.textContent = msg; a.classList.add('visible'); }
+function clearLoginAlert()   { const a = document.getElementById('loginAlert'); a.textContent = '';  a.classList.remove('visible'); }
+
+document.addEventListener('keydown', e => {
+  const loginVisible = !document.getElementById('loginOverlay').classList.contains('hidden');
+  const settingsOpen = document.getElementById('settingsOverlay').classList.contains('open');
+  if (!loginVisible || settingsOpen || isLoginBusy) return;
+  if (/^\d$/.test(e.key))                       { e.preventDefault(); pressPinKey(e.key);  return; }
+  if (e.key === 'Backspace')                    { e.preventDefault(); pressPinKey('back'); return; }
+  if (e.key === 'Delete' || e.key === 'Escape') { e.preventDefault(); pressPinKey('clear'); return; }
+  if (e.key === 'Enter')                        { e.preventDefault(); handlePrimaryLoginAction(); }
+});
+
+async function finishLogin(username, displayName) {
+  currentEmployee = { username, displayName };
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('activeUserBtn').textContent = `👤 ${displayName}`;
+  showToast(`أهلاً ${displayName} 👋`, 'success');
+  playBeep('success');
+  setTimeout(() => document.getElementById('wpProductId')?.focus(), 100);
+}
+
+async function doLogout() {
+  if (!currentEmployee) return; // لسه مسجّلش دخول أصلاً
+  if (!confirm('تسجيل الخروج؟')) return;
+
+  apiGet('log_logout', { username: currentEmployee.username }).catch(() => {});
+
+  currentEmployee = null;
+  loginMode       = 'employee';
+  pinDigits       = [];
+  pendingNewPin   = '';
+  isLoginBusy     = false;
+  clearTimeout(autoLoginTimer);
+
+  const sel = document.getElementById('loginSelect');
+  sel.value = '';
+  document.getElementById('pinSlots').classList.remove('shake');
+  renderPinSlots();
+  renderLoginMode('employee');
+  clearLoginAlert();
+
+  // ← تخصيص: تصفير نتيجة آخر ربط وإرجاع تاب "ربط منتج"
+  document.getElementById('syncResultWrap').style.display = 'none';
+  document.getElementById('syncResultWrap').innerHTML = '';
+  document.getElementById('wpProductId').value = '';
+  document.getElementById('skipDraft').checked = false;
+  document.getElementById('skipStar').checked  = false;
+  document.getElementById('activeUserBtn').textContent = '👤 —';
+  switchMainTab('sync');
+
+  document.getElementById('loginOverlay').classList.remove('hidden');
+}
+
+function updateLoginSettingsBtn() {
+  const btn = document.getElementById('loginSettingsBtn');
+  if (!btn) return;
+  btn.classList.toggle('ready',   isConfigured());
+  btn.classList.toggle('missing', !isConfigured());
+}
+
+// ══════════════════════════════════════════════════════════════
+// §TOOL-JS::sync — تاب "ربط منتج"
+// ══════════════════════════════════════════════════════════════
+function setSyncBusy(active) {
+  const btn = document.getElementById('syncBtn');
+  btn.disabled = active;
+  btn.innerHTML = active ? '<span class="mini-spinner"></span> جاري الربط...' : '▶ تشغيل الربط';
+}
+
+async function runSync() {
+  if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'error'); return; }
+  const raw = document.getElementById('wpProductId').value.trim();
+  if (!raw) { showToast('من فضلك أدخل WooCommerce Product ID', 'error'); return; }
+  const wpProductId = Number(raw);
+  if (!Number.isFinite(wpProductId) || wpProductId <= 0) { showToast('الـ Product ID لازم يكون رقم صحيح', 'error'); return; }
+  const skipDraft = document.getElementById('skipDraft').checked;
+  const skipStar  = document.getElementById('skipStar').checked;
+
+  setSyncBusy(true);
+  try {
+    const data = await apiPost('sync_product', {
+      wp_product_id: wpProductId,
+      skip_draft:    skipDraft,
+      skip_star:     skipStar,
+      employee:      currentEmployee.username,
+    });
+    renderSyncResult(data);
+    const st = data.results ? data.results.status : 'error';
+    showToast(st === 'success' ? 'تم الربط ✓' : st === 'warning' ? 'تم الربط جزئيًا ⚠' : 'فشل الربط ✗', st === 'error' ? 'error' : 'success');
+  } catch (e) {
+    showToast('خطأ: ' + e.message, 'error');
+  } finally {
+    setSyncBusy(false);
+  }
+}
+
+// عرض 3 حالات (نجاح / تحذير / فشل) — Step 3C إلزامي
+function renderSyncResult(data) {
+  const wrap = document.getElementById('syncResultWrap');
+  wrap.style.display = 'block';
+  const r = data.results || {};
+  const pl = r.productLevel;
+  const variants = r.variants || [];
+
+  const overallBadge = r.status === 'success'
+    ? '<span class="badge-success">✓ تم</span>'
+    : r.status === 'warning'
+      ? '<span class="badge-warn">⚠ تم جزئيًا</span>'
+      : '<span class="badge-danger">✗ فشل</span>';
+
+  let plHtml;
+  if (pl) {
+    const statusCell = pl.skippedDraft
+      ? '<span class="badge-skip">تم التخطي</span>'
+      : `<span class="badge-ok">${pl.statusApplied ? 'DRAFT ✓' : '—'}</span>`;
+    const titleCell = pl.skippedStar
+      ? '<span class="badge-skip">تم التخطي</span>'
+      : `<span class="badge-ok">${pl.titleApplied ? '⭐ اتضافت' : '—'}</span>`;
+    plHtml = `<div class="result-card">
+      <h4>🏷️ بيانات المنتج (Shopify + WooCommerce) ${overallBadge}</h4>
+      <div class="result-row"><span>Tag المضاف</span><span>${pl.tag}</span></div>
+      <div class="result-row"><span>Wordpress ID (metafield)</span><span style="font-family:var(--font-mono);direction:ltr;">${pl.wordpress_id}</span></div>
+      <div class="result-row"><span>حالة "مسودة" (Draft)</span><span>${statusCell}</span></div>
+      <div class="result-row"><span>إضافة ⭐ للعنوان</span><span>${titleCell}</span></div>
+      ${pl.newTitle ? `<div class="result-row"><span>العنوان الحالي</span><span style="font-family:var(--font-body);text-align:right;">${pl.newTitle}</span></div>` : ''}
+      ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce (_shopify_product_id): ${r.wcProductMetaError}</div>` : ''}
+      ${data.logged === false || r.logged === false ? `<div class="result-note warn">⚠️ العملية تمت لكن جزء منها ما اتسجلش في السجل (logged: false)</div>` : ''}
+    </div>`;
+  } else {
+    plHtml = `<div class="result-card">
+      <h4><span class="badge-danger">✗ فشلت مزامنة بيانات المنتج</span></h4>
+      <div class="result-note err">${r.productLevelError || 'راجع تاب "سجل العمليات" لتفاصيل الخطأ'} — مزامنة الـ Variations أدناه استمرت رغم ذلك.</div>
+    </div>`;
+  }
+
+  const syncedCount  = variants.filter(v => v.status === 'synced').length;
+  const warnCount    = variants.filter(v => v.status === 'warning').length;
+  const skippedCount = variants.filter(v => v.status === 'skipped').length;
+
+  const rows = variants.map(v => {
+    if (v.status === 'synced') {
+      return `<tr>
+        <td class="mono">${v.variationId}</td>
+        <td>${v.size}</td>
+        <td><span class="badge-ok">✓ تمت المزامنة</span></td>
+        <td class="mono">${v.sku || '—'}</td>
+        <td class="mono">${(v.stock ?? 0).toLocaleString('en-US')}</td>
+        <td class="mono">${v.shopifyVariantId}</td>
+      </tr>`;
+    }
+    if (v.status === 'warning') {
+      return `<tr>
+        <td class="mono">${v.variationId}</td>
+        <td>${v.size || '—'}</td>
+        <td><span class="badge-warn">⚠ تحذير</span></td>
+        <td class="mono">${v.sku || '—'}</td>
+        <td class="mono">${(v.stock ?? 0).toLocaleString('en-US')}</td>
+        <td class="right" style="color:var(--amber);font-size:11px;">${v.warning || '—'}</td>
+      </tr>`;
+    }
+    return `<tr>
+      <td class="mono">${v.variationId}</td>
+      <td>${v.size || '—'}</td>
+      <td><span class="badge-skip">تخطي</span></td>
+      <td colspan="3" class="right" style="color:var(--text-secondary);">${v.reason || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = plHtml + `
+    <div class="result-card">
+      <h4>📦 الـ Variations — ✓ ${syncedCount.toLocaleString('en-US')} تمت | ⚠ ${warnCount.toLocaleString('en-US')} تحذير | تخطي ${skippedCount.toLocaleString('en-US')} — من أصل ${variants.length.toLocaleString('en-US')}</h4>
+      <div style="overflow-x:auto;">
+        <table class="variant-table">
+          <tr><th>Variation ID</th><th>المقاس</th><th>الحالة</th><th>SKU</th><th>المخزون</th><th>Shopify Variant ID / التفاصيل</th></tr>
+          ${rows || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px;">لا توجد Variations</td></tr>'}
+        </table>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// §LOG-JS — تاب "سجل العمليات" — القسم الموحّد (data-table-standard.md)
+// ══════════════════════════════════════════════════════════════
+let logLoaded  = false;
+let logAllData = []; // raw entries من get_logs_export
+
+const TYPE_LABELS = { product_meta_synced: '🏷️ بيانات المنتج', synced: '✅ Variation اتزامنت', error: '✗ خطأ' };
+
+const msState = {
+  type:  { items: Object.keys(TYPE_LABELS).map(k => ({ value: k, label: TYPE_LABELS[k] })), selected: new Set(), search: '', mode: 'list' },
+  count: { items: [], selected: new Set(), search: '', mode: 'list', rangeFrom: '', rangeTo: '' },
+  emp:   { items: [], selected: new Set(), search: '' }, // يتملى من loadEmployeesList()
+};
+let searchTerm = '';
+let dateFrom = null, dateTo = null;
+let dateFilterActive = false; // الحالة المحايدة = بلا فلتر تاريخ (data-table-standard §5)
+
+// ── طي القسمين ──
+let fltOpen = true;
+function toggleFilters() {
+  fltOpen = !fltOpen;
+  document.getElementById('fltBody').classList.toggle('collapsed', !fltOpen);
+  document.getElementById('fltToggleIcon').classList.toggle('open', fltOpen);
+}
+let tblOpen = true;
+function toggleTable() {
+  tblOpen = !tblOpen;
+  document.getElementById('tblBodyWrap').classList.toggle('collapsed', !tblOpen);
+  document.getElementById('tblToggleIcon').classList.toggle('open', tblOpen);
+}
+
+// ── anyFilterActive — !!value مش !== null (data-table-standard §3، الباج القاتل) ──
+function anyFilterActive() {
+  const msActive = Object.keys(msState).some(k => msState[k].selected.size > 0 || !!msState[k].rangeFrom || !!msState[k].rangeTo);
+  return msActive || searchTerm.trim().length > 0 || dateFilterActive;
+}
+function updateFilterIconState() {
+  const active = anyFilterActive();
+  document.getElementById('fltIcon').classList.toggle('active', active);
+  document.getElementById('clearAllBtn').classList.toggle('inactive', !active);
+}
+
+// ── Multi-select عام (مطابق لـ multi-select-filter.md حرفيًا) ──
+function msRenderList(key) {
+  const st = msState[key];
+  const listEl = document.getElementById(`msList-${key}`);
+  if (!listEl) return;
+  const q = st.search.trim().toLowerCase();
+  const visible = q ? st.items.filter(it => it.label.toLowerCase().includes(q)) : st.items;
+  listEl.innerHTML = !visible.length
+    ? '<div class="ms-empty">لا توجد نتائج مطابقة للبحث</div>'
+    : visible.map(it => {
+        const checked = st.selected.has(it.value);
+        return `<div class="ms-item ${checked?'checked':''}" onclick="msToggleItem('${key}','${it.value}')">
+          <input type="checkbox" ${checked?'checked':''} onclick="event.stopPropagation(); msToggleItem('${key}','${it.value}')">
+          <span class="ms-item-label">${it.label}</span>
+        </div>`;
+      }).join('');
+  const allVisibleChecked = visible.length > 0 && visible.every(it => st.selected.has(it.value));
+  const saEl = document.getElementById(`msSelectAll-${key}`);
+  if (saEl) saEl.checked = allVisibleChecked;
+  const saLbl = document.getElementById(`msSelectAllLabel-${key}`);
+  if (saLbl) saLbl.textContent = q ? `تحديد كل نتائج البحث (${visible.length})` : 'تحديد الكل';
+  msUpdateButtonLabel(key);
+  const cnt = document.getElementById(`msFtrCount-${key}`);
+  if (cnt) cnt.textContent = `${st.selected.size} مختار`;
+}
+const msDefaultLabel = { type: 'كل العمليات', count: 'الكل', emp: 'كل الموظفين' };
+function msUpdateButtonLabel(key) {
+  const st = msState[key];
+  const btn = document.getElementById(`msBtn-${key}`);
+  const lbl = document.getElementById(`msBtnLabel-${key}`);
+  const n = st.selected.size;
+  const isRangeMode = st.mode === 'range';
+  const hasRange = isRangeMode && (st.rangeFrom || st.rangeTo);
+  btn.classList.toggle('has-selection', n > 0 || !!hasRange);
+  if (hasRange) lbl.textContent = `${st.rangeFrom || '0'} – ${st.rangeTo || '∞'}`;
+  else if (n === 0) lbl.textContent = msDefaultLabel[key] || 'الكل';
+  else if (n === 1) { const it = st.items.find(i => i.value === [...st.selected][0]); lbl.textContent = it ? it.label : [...st.selected][0]; }
+  else lbl.innerHTML = `${n} محدد <span class="ms-count">${n}</span>`;
+}
+function msToggle(key) {
+  const menu = document.getElementById(`msMenu-${key}`), btn = document.getElementById(`msBtn-${key}`);
+  const willOpen = !menu.classList.contains('open');
+  Object.keys(msState).forEach(k => {
+    document.getElementById(`msMenu-${k}`).classList.remove('open');
+    document.getElementById(`msBtn-${k}`).classList.remove('open');
+  });
+  if (willOpen) { menu.classList.add('open'); btn.classList.add('open'); }
+}
+function msToggleItem(key, value) {
+  const st = msState[key];
+  st.selected.has(value) ? st.selected.delete(value) : st.selected.add(value);
+  msRenderList(key); renderChips(); applyLogFilters();
+}
+function msToggleSelectAll(key, forceState) {
+  const st = msState[key];
+  const q = st.search.trim().toLowerCase();
+  const visible = q ? st.items.filter(it => it.label.toLowerCase().includes(q)) : st.items;
+  const allChecked = visible.length > 0 && visible.every(it => st.selected.has(it.value));
+  const shouldCheck = forceState !== undefined ? forceState : !allChecked;
+  visible.forEach(it => shouldCheck ? st.selected.add(it.value) : st.selected.delete(it.value));
+  msRenderList(key); renderChips(); applyLogFilters();
+}
+function msClear(key) { msState[key].selected.clear(); msRenderList(key); renderChips(); applyLogFilters(); }
+
+function msSwitchMode(key, mode) {
+  const st = msState[key];
+  if (st.mode === mode) return;
+  st.mode = mode;
+  if (mode === 'range') { st.selected.clear(); msRenderList(key); }
+  else {
+    st.rangeFrom = ''; st.rangeTo = '';
+    const f = document.getElementById(`msRangeFrom-${key}`), t = document.getElementById(`msRangeTo-${key}`);
+    if (f) f.value = ''; if (t) t.value = '';
+  }
+  document.getElementById(`msModeBtn-${key}-list`).classList.toggle('active', mode === 'list');
+  document.getElementById(`msModeBtn-${key}-range`).classList.toggle('active', mode === 'range');
+  document.getElementById(`msPanel-${key}-list`).classList.toggle('active', mode === 'list');
+  document.getElementById(`msPanel-${key}-range`).classList.toggle('active', mode === 'range');
+  msUpdateButtonLabel(key); renderChips(); applyLogFilters();
+}
+function msRangeChanged(key) {
+  msState[key].rangeFrom = document.getElementById(`msRangeFrom-${key}`).value;
+  msState[key].rangeTo   = document.getElementById(`msRangeTo-${key}`).value;
+  msUpdateButtonLabel(key); renderChips(); applyLogFilters();
+}
+function msRangeClear(key) {
+  document.getElementById(`msRangeFrom-${key}`).value = '';
+  document.getElementById(`msRangeTo-${key}`).value   = '';
+  msState[key].rangeFrom = ''; msState[key].rangeTo = '';
+  msUpdateButtonLabel(key); renderChips(); applyLogFilters();
+}
+document.addEventListener('click', (e) => {
+  Object.keys(msState).forEach(k => {
+    const wrap = document.getElementById(`msWrap-${k}`);
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById(`msMenu-${k}`).classList.remove('open');
+      document.getElementById(`msBtn-${k}`).classList.remove('open');
+    }
+  });
+});
+
+const filterLabels = { type: 'نوع العملية', count: 'عدد مرات الظهور', emp: 'الموظف' };
+function rangeLabel(key) {
+  const st = msState[key];
+  if (st.mode !== 'range') return null;
+  if (!st.rangeFrom && !st.rangeTo) return null;
+  return `${st.rangeFrom || '0'} – ${st.rangeTo || '∞'}`;
+}
+function renderChips() {
+  Object.keys(msState).forEach(key => {
+    const row = document.getElementById(`chipsRow-${key}`);
+    if (!row) return;
+    const label = filterLabels[key] || key;
+    const valueChips = [...msState[key].selected].map(val => {
+      const item = msState[key].items.find(it => it.value === val);
+      const v = item ? item.label : val;
+      return `<span class="ms-chip">${v}<button onclick="msToggleItem('${key}','${String(val).replace(/'/g,"\\'")}')">✕</button></span>`;
+    }).join('');
+    const rl = rangeLabel(key);
+    const rangeChip = rl ? `<span class="ms-chip">${rl}<button onclick="msRangeClear('${key}')">✕</button></span>` : '';
+    const chips = valueChips + rangeChip;
+    row.innerHTML = chips ? `<span class="chips-label">${label}:</span>${chips}` : '';
+  });
+}
+
+// ── بحث ──
+function toggleSearchActiveState(el) { el.classList.toggle('has-value', el.value.trim().length > 0); }
+let searchTimer;
+function onSearchInput(el) {
+  toggleSearchActiveState(el);
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { searchTerm = el.value; applyLogFilters(); }, 300);
+}
+
+// ── فترة التاريخ — بدون افتراضي (data-table-standard §5) ──
+function toggleRangePresetMenu(e) { e.stopPropagation(); document.getElementById('rangePresetMenu').classList.toggle('open'); }
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('rangePresetWrap');
+  if (wrap && !wrap.contains(e.target)) document.getElementById('rangePresetMenu').classList.remove('open');
+});
+function ymd(d) { const pad = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function presetRange(preset) {
+  const now = new Date(); const from = new Date(); const to = new Date();
+  if (preset === 'today') { /* اليوم فقط */ }
+  else if (preset === 'yesterday') { from.setDate(now.getDate()-1); to.setDate(now.getDate()-1); }
+  else if (preset === 'last7')  { from.setDate(now.getDate()-6); }
+  else if (preset === 'last30') { from.setDate(now.getDate()-29); }
+  else if (preset === 'thisMonth') { from.setDate(1); }
+  return { from: ymd(from), to: ymd(to) };
+}
+const presetLabels = { today:'اليوم', yesterday:'أمس', last7:'آخر 7 أيام', last30:'آخر 30 يوم', thisMonth:'الشهر الحالي' };
+function applyRangePreset(preset) {
+  const r = presetRange(preset);
+  dateFrom = r.from; dateTo = r.to; dateFilterActive = true;
+  document.getElementById('rangeDateFrom').value = r.from;
+  document.getElementById('rangeDateTo').value   = r.to;
+  document.getElementById('rangePresetLabel').textContent = `⚡ ${presetLabels[preset]}`;
+  document.getElementById('rangePresetBtn').classList.add('has-preset');
+  document.querySelectorAll('.range-preset-item').forEach(el => el.classList.toggle('active', el.dataset.preset === preset));
+  document.getElementById('rangePresetMenu').classList.remove('open');
+  applyLogFilters();
+}
+function onDateChanged() {
+  dateFrom = document.getElementById('rangeDateFrom').value || null;
+  dateTo   = document.getElementById('rangeDateTo').value || null;
+  dateFilterActive = !!(dateFrom || dateTo);
+  document.getElementById('rangePresetLabel').textContent = '⚡ اختار فترة';
+  document.getElementById('rangePresetBtn').classList.toggle('has-preset', dateFilterActive);
+  document.querySelectorAll('.range-preset-item').forEach(el => el.classList.remove('active'));
+  applyLogFilters();
+}
+function resetDateFilter() {
+  dateFrom = null; dateTo = null; dateFilterActive = false;
+  document.getElementById('rangeDateFrom').value = '';
+  document.getElementById('rangeDateTo').value   = '';
+  document.getElementById('rangePresetLabel').textContent = '⚡ اختار فترة';
+  document.getElementById('rangePresetBtn').classList.remove('has-preset');
+  document.querySelectorAll('.range-preset-item').forEach(el => el.classList.remove('active'));
+}
+function clearRangePreset() { resetDateFilter(); document.getElementById('rangePresetMenu').classList.remove('open'); applyLogFilters(); }
+
+function clearAllFilters() {
+  Object.keys(msState).forEach(k => {
+    const st = msState[k];
+    st.selected.clear();
+    if (st.rangeFrom !== undefined) {
+      st.rangeFrom = ''; st.rangeTo = ''; st.mode = 'list';
+      const f = document.getElementById(`msRangeFrom-${k}`), t = document.getElementById(`msRangeTo-${k}`);
+      if (f) f.value = ''; if (t) t.value = '';
+      const listBtn = document.getElementById(`msModeBtn-${k}-list`), rangeBtn = document.getElementById(`msModeBtn-${k}-range`);
+      const listPanel = document.getElementById(`msPanel-${k}-list`), rangePanel = document.getElementById(`msPanel-${k}-range`);
+      if (listBtn) { listBtn.classList.add('active'); rangeBtn.classList.remove('active'); }
+      if (listPanel) { listPanel.classList.add('active'); rangePanel.classList.remove('active'); }
+    }
+    msRenderList(k);
+  });
+  document.getElementById('searchInput').value = ''; searchTerm = '';
+  toggleSearchActiveState(document.getElementById('searchInput'));
+  renderChips();
+  resetDateFilter();
+  applyLogFilters();
+}
+
+// ── الترتيب — مستقل تمامًا عن الفلاتر (data-table-standard §8) ──
+const sortConfig = {
+  date: { type: 'date' }, employee: { type: 'string' }, type: { type: 'string' },
+  sku: { type: 'string' }, product: { type: 'string' }, count: { type: 'number' },
+};
+let sortState = { key: null, dir: null };
+function toggleSort(key) {
+  if (sortState.key !== key) { sortState.key = key; sortState.dir = 'asc'; }
+  else if (sortState.dir === 'asc') { sortState.dir = 'desc'; }
+  else { sortState.key = null; sortState.dir = null; }
+  updateSortHeaderUI();
+  applyLogFilters();
+}
+function updateSortHeaderUI() {
+  document.querySelectorAll('.sort-icon').forEach(el => {
+    const isActive = sortState.key === el.dataset.sortKey;
+    el.textContent = isActive ? (sortState.dir === 'asc' ? '▲' : '▼') : '';
+    el.classList.toggle('active', isActive);
+  });
+  document.querySelectorAll('.sortable-th').forEach(th => th.classList.toggle('sorted', th.dataset.sortKey === sortState.key));
+}
+function applySort(rows) {
+  if (!sortState.key) return rows;
+  const cfg = sortConfig[sortState.key];
+  const dir = sortState.dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    let av = a[sortState.key], bv = b[sortState.key];
+    if (cfg.type === 'date')   return ((av ? new Date(av).getTime() : 0) - (bv ? new Date(bv).getTime() : 0)) * dir;
+    if (cfg.type === 'string') return String(av || '').localeCompare(String(bv || '')) * dir;
+    return ((av ?? 0) - (bv ?? 0)) * dir;
+  });
+}
+
+// ── تحميل السجل ──
+function buildSkuCountMap(entries) {
+  const map = {};
+  entries.forEach(e => { if (e.sku) map[e.sku] = (map[e.sku] || 0) + 1; });
+  return map;
+}
+async function loadLog() {
+  const body = document.getElementById('logTblBody');
+  body.innerHTML = '<tr class="empty-row"><td colspan="8">جارٍ التحميل...</td></tr>';
+  document.getElementById('filteredCount').textContent = '—';
+  try {
+    const data = await apiGet('get_logs_export');
+    if (!data.ok) throw new Error(data.error || 'خطأ في جلب السجل');
+    logAllData = data.entries || [];
+    logLoaded = true;
+
+    // تعبئة فلتر "عدد مرات الظهور" من القيم الفعلية بعد التحميل (multi-select-filter.md §6)
+    const skuCountMap = buildSkuCountMap(logAllData);
+    const counts = [...new Set(Object.values(skuCountMap))].sort((a, b) => a - b);
+    msState.count.items = counts.map(c => ({ value: String(c), label: String(c) }));
+    msRenderList('count');
+
+    applyLogFilters();
+  } catch (e) {
+    body.innerHTML = `<tr class="empty-row"><td colspan="8">⚠️ ${e.message}</td></tr>`;
+  }
+}
+
+// ── الفلترة — client-side على البيانات المحمّلة (data-table-standard §7) ──
+function applyLogFilters() {
+  updateFilterIconState();
+  const skuCountMap = buildSkuCountMap(logAllData);
+  const q = searchTerm.trim().toLowerCase();
+
+  const rows = logAllData.map((e, idx) => ({
+    _idx: idx,
+    id: e.id ?? idx,
+    date: e.timestamp || null,
+    employee: e.employee || null,
+    type: e.type || null,
+    sku: e.sku || null,
+    product: e.product_title || null,
+    delta: e.delta ?? null,
+    value_before: e.value_before ?? null,
+    value_after: e.value_after ?? null,
+    notes: e.notes || null,
+    count: e.sku ? (skuCountMap[e.sku] || 0) : 0,
+  }));
+
+  const filtered = rows.filter(r => {
+    if (q) {
+      const hit = (r.sku || '').toLowerCase().includes(q) || (r.product || '').toLowerCase().includes(q) || (r.notes || '').toLowerCase().includes(q);
+      if (!hit) return false;
+    }
+    if (msState.type.selected.size && !msState.type.selected.has(r.type)) return false;
+    if (msState.emp.selected.size && !msState.emp.selected.has(r.employee)) return false;
+    if (!numericPass('count', r.count)) return false;
+    if (dateFrom || dateTo) {
+      const ts = r.date ? r.date.substring(0, 10) : '';
+      if (dateFrom && ts < dateFrom) return false;
+      if (dateTo && ts > dateTo) return false;
+    }
+    return true;
+  });
+
+  const sorted = applySort(filtered);
+  renderLogTable(sorted);
+  document.getElementById('filteredCount').textContent = filtered.length.toLocaleString('en-US');
+  document.getElementById('exportBtn').disabled = filtered.length === 0;
+}
+function numericPass(key, value) {
+  const st = msState[key];
+  if (st.mode === 'range') {
+    const hasRange = (st.rangeFrom !== '' && st.rangeFrom != null) || (st.rangeTo !== '' && st.rangeTo != null);
+    if (!hasRange) return true;
+    const from = st.rangeFrom !== '' && st.rangeFrom != null ? Number(st.rangeFrom) : -Infinity;
+    const to   = st.rangeTo   !== '' && st.rangeTo   != null ? Number(st.rangeTo)   :  Infinity;
+    return value >= from && value <= to;
+  }
+  if (st.selected.size === 0) return true;
+  return st.selected.has(String(value));
+}
+
+// ── عرض الجدول ──
+function renderLogTable(rows) {
+  const body = document.getElementById('logTblBody');
+  if (!rows.length) { body.innerHTML = '<tr class="empty-row"><td colspan="8">لا توجد نتائج تطابق الفلاتر</td></tr>'; return; }
+
+  body.innerHTML = rows.map(r => {
+    let typeHtml = '—';
+    if (r.type === 'product_meta_synced') typeHtml = `<span class="log-type-badge log-type-meta">${TYPE_LABELS.product_meta_synced}</span>`;
+    else if (r.type === 'synced')          typeHtml = `<span class="log-type-badge log-type-synced">${TYPE_LABELS.synced}</span>`;
+    else if (r.type === 'error')           typeHtml = `<span class="log-type-badge log-type-error">${TYPE_LABELS.error}</span>`;
+    else if (r.type)                       typeHtml = `<span class="log-type-badge">${r.type}</span>`;
+
+    let detailHtml = '—';
+    if (r.type === 'synced' && (r.value_before !== null || r.value_after !== null)) {
+      detailHtml = `<span class="col-num">${(r.value_before ?? 0).toLocaleString('en-US')} → ${(r.value_after ?? 0).toLocaleString('en-US')}</span>`;
+    }
+
+    return `<tr>
+      <td>${formatDateTime(r.date)}</td>
+      <td>${r.employee ? r.employee.replace(/_/g,' ') : '—'}</td>
+      <td>${typeHtml}</td>
+      <td class="col-num">${r.sku || '—'}</td>
+      <td style="text-align:right;white-space:normal;">${r.product || '—'}</td>
+      <td>${detailHtml}</td>
+      <td class="col-num">${r.sku ? r.count.toLocaleString('en-US') : '—'}</td>
+      <td style="text-align:right;white-space:normal;font-size:11.5px;color:var(--text-secondary);">${r.notes || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── تصدير XLSX — كل النتائج المفلترة حاليًا ──
+async function exportLog() {
+  const skuCountMap = buildSkuCountMap(logAllData);
+  const q = searchTerm.trim().toLowerCase();
+  const rows = logAllData.filter(e => {
+    if (q) {
+      const hit = (e.sku || '').toLowerCase().includes(q) || (e.product_title || '').toLowerCase().includes(q) || (e.notes || '').toLowerCase().includes(q);
+      if (!hit) return false;
+    }
+    if (msState.type.selected.size && !msState.type.selected.has(e.type)) return false;
+    if (msState.emp.selected.size && !msState.emp.selected.has(e.employee)) return false;
+    if (!numericPass('count', e.sku ? (skuCountMap[e.sku] || 0) : 0)) return false;
+    if (dateFrom || dateTo) {
+      const ts = e.timestamp ? e.timestamp.substring(0, 10) : '';
+      if (dateFrom && ts < dateFrom) return false;
+      if (dateTo && ts > dateTo) return false;
+    }
+    return true;
+  });
+  if (!rows.length) { showToast('لا توجد نتائج للتصدير', 'error'); return; }
+
+  try {
+    const wb = new ExcelJS.Workbook();
+    wb.views = [{ rightToLeft: true }];
+    const ws = wb.addWorksheet('سجل العمليات');
+    ws.views = [{ state: 'frozen', ySplit: 1, rightToLeft: true }];
+    ws.columns = [
+      { header: 'التاريخ', key: 'date', width: 14 }, { header: 'الوقت', key: 'time', width: 12 },
+      { header: 'الموظف', key: 'emp', width: 18 }, { header: 'SKU', key: 'sku', width: 22 },
+      { header: 'المنتج', key: 'product', width: 40 }, { header: 'نوع العملية', key: 'type', width: 20 },
+      { header: 'قبل', key: 'before', width: 10 }, { header: 'بعد', key: 'after', width: 10 },
+      { header: 'التغيير', key: 'delta', width: 10 }, { header: 'عدد مرات الظهور', key: 'count', width: 16 },
+      { header: 'الملاحظات', key: 'notes', width: 45 },
+    ];
+    rows.forEach(e => {
+      ws.addRow({
+        date: formatDatePlain(e.timestamp), time: formatTimePlain(e.timestamp),
+        emp: e.employee ? e.employee.replace(/_/g,' ') : null,
+        sku: e.sku || null, product: e.product_title || null,
+        type: TYPE_LABELS[e.type] || e.type || null,
+        before: e.value_before ?? null, after: e.value_after ?? null, delta: e.delta ?? null,
+        count: e.sku ? (skuCountMap[e.sku] || 0) : null,
+        notes: e.notes || null,
+      });
+    });
+    ws.eachRow((r, idx) => { if (idx === 1) return; r.eachCell(c => { if (typeof c.value === 'number') c.numFmt = '#,##0'; }); });
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = `stylebox-products-linking-log-${new Date().toISOString().substring(0,10)}.xlsx`;
+    a.click(); URL.revokeObjectURL(url);
+    showToast(`تم تصدير ${rows.length} عملية ✓`, 'success');
+  } catch (err) { showToast('خطأ في التصدير: ' + err.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// §INIT
+// ══════════════════════════════════════════════════════════════
+renderVersionUI();
+updateSettingsBtn();
+checkWorkerVersion();
+updateLoginSettingsBtn();
+loadEmployeesList();
+Object.keys(msState).forEach(k => msRenderList(k));
+resetDateFilter();
+</script>
+</body>
+</html>
