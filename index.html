@@ -404,13 +404,33 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
   <!-- ══ Sync Tab ════════════════════════════════════════════ -->
   <div class="tab-panel active" id="panelSync">
 
-    <div class="card">
-      <h3>🔗 ربط منتج WooCommerce ↔ Shopify</h3>
+    <!-- ─── §TOOL::findStep (v2.4.0) — خطوة 1: البحث بمعرف شوبيفاي ─── -->
+    <div class="card" id="findCard">
+      <h3>🔍 الخطوة 1: البحث عن المنتج بمعرف شوبيفاي</h3>
 
       <div class="field-row">
-        <label>WooCommerce Product ID</label>
-        <input type="number" class="field-input" id="wpProductId" inputmode="numeric" />
+        <label>Shopify Product ID</label>
+        <input type="number" class="field-input" id="shopifyProductIdInput" inputmode="numeric" />
       </div>
+
+      <div class="opt-hint" style="margin-bottom:14px;">
+        الرقم ده بتلاقيه في رابط المنتج على شوبيفاي أدمن (اللي بعد <code>/products/</code>)،
+        زي <code>10468878713154</code>. الأداة بتدوّر عليه في ووردبريس — إما في
+        خانة GTIN، أو في بداية الـ SKU (لو المنتج لسه مش مربوط).
+      </div>
+
+      <button class="btn-primary" id="findBtn" onclick="runFindProduct()">🔍 بحث</button>
+    </div>
+
+    <div id="findResultWrap" style="display:none;"></div>
+
+    <!-- ─── §TOOL::sync — خطوة 2: الربط + تحديث السعر (تظهر بعد نجاح البحث) ─── -->
+    <div class="card" id="optionsCard" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">
+        <h3 style="margin:0;">🔗 الخطوة 2: الربط وتحديث السعر</h3>
+        <button class="btn-outline btn-sm" onclick="resetFindStep()">🔄 بحث عن منتج تاني</button>
+      </div>
+      <div class="result-row" style="margin-bottom:14px;"><span>المنتج على ووردبريس</span><span id="foundProductLabel" class="mono"></span></div>
 
       <!-- ⚠️ الخيارين دول كانوا checkboxes "تخطي..." لحد v2.0.0 — اتحوّلوا لأسئلة
            صريحة باختيارات في v2.1.0. لسه مستقلّين تمامًا عن بعض. -->
@@ -443,19 +463,16 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
         <strong>بيحصل دايمًا في كل تشغيلة بدون خيار:</strong> نشر المنتج على ووردبريس
         (<code>stylebox.online</code> → <code>status = publish</code>)، الـ metafield
         <code>wordpress_id</code>، مزامنة الـ SKU/المخزون لكل Variation، وأخيرًا Tag
-        <code>stylebox</code> على شوبيفاي — بيتضاف بعد كل الخطوات التانية بـ 10 ثواني.
+        <code>stylebox</code> على شوبيفاي — فورًا كآخر خطوة.
       </div>
 
       <button class="btn-primary" id="syncBtn" onclick="runSync()">▶ تشغيل الربط</button>
-    </div>
 
-    <div id="syncResultWrap" style="display:none;"></div>
+      <div id="syncResultWrap" style="display:none;"></div>
 
-    <!-- ─── §TOOL::priceUpdate (v2.3.0) ─── أكشن منفصل عن الربط فوق —
-         بيستخدم نفس حقل WooCommerce Product ID، ومحتاج المنتج يكون اتربط
-         الأول (زرار "تشغيل الربط") قبل ما يشتغل. -->
-    <div class="card">
-      <h3>💰 تحديث السعر (WooCommerce)</h3>
+      <div class="section-divider" style="margin:20px 0;"></div>
+
+      <h4 style="margin:0 0 12px;color:var(--accent);">💰 تحديث السعر (WooCommerce)</h4>
 
       <div class="field-row">
         <label>فرق السعر (بيتضاف على سعر شوبيفاي)</label>
@@ -473,9 +490,9 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
       </div>
 
       <button class="btn-primary" id="updatePriceBtn" onclick="runUpdatePrice()">💰 تحديث السعر</button>
-    </div>
 
-    <div id="priceResultWrap" style="display:none;"></div>
+      <div id="priceResultWrap" style="display:none;"></div>
+    </div>
 
   </div>
 
@@ -716,6 +733,16 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
             <span class="cl-ver-date">26-08-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>إعادة تصميم خطوات "ربط منتج" بالكامل — <strong>الخطوة 1</strong> بقت البحث برقم منتج شوبيفاي (Product ID)؛ الأداة بتدوّر عليه في ووردبريس في خانة GTIN أو بداية الـ SKU، وبتعرض زرار "عرض المنتج على وردبريس للمراجعة". <strong>الخطوة 2</strong> (بعد نجاح البحث) فيها كل خيارات الربط الحالية + تحديث السعر مع بعض. الإدخال اليدوي القديم لـ WooCommerce Product ID اتشال بالكامل.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>اتلغى انتظار الـ 10 ثواني قبل إضافة Tag <code>stylebox</code> (<code>TAG_DELAY_MS</code>) بالكامل — الـ Tag لسه بيتضاف كآخر خطوة في <code>sync_product</code>، بس دلوقتي فورًا من غير أي انتظار.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.3.0</span>
+            <span class="cl-ver-date">26-08-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>أكشن منفصل <code>💰 تحديث السعر</code> — بيحدّث <code>regular_price</code>/<code>sale_price</code> لكل Variation ووكومرس مربوطة بالمنتج = سعر شوبيفاي + "فرق السعر" اللي بتحطه في الواجهة (نفس فكرة <code>PRICE_DIFFERENCE</code> في أداة "مزامنة أسعار Stylebox"، لكن بيتحدد لحظيًا من هنا). المنتج لازم يكون اتربط الأول.</span></li>
           </ul>
         </div>
@@ -813,22 +840,25 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
               <code>size</code>) بين الاتنين، ثم مزامنة SKU + المخزون (<code>inventoryQuantity</code>) من
               شوبيفاي لووكومرس، وتحديث <code>custom.wordpress_variation_id</code> على شوبيفاي</li>
               <li><strong>آخر خطوة على الإطلاق:</strong> Tag <code>stylebox</code> على شوبيفاي —
-              بيتنفّذ بعد كل اللي فوق، وقبله انتظار 10 ثواني (دائمًا وبدون خيار)</li>
+              بيتنفّذ فورًا بعد كل اللي فوق (دائمًا وبدون خيار، وبدون أي انتظار من v2.4.0)</li>
             </ul>
 
-            <h4>كيف تعمل — Workflow</h4>
+            <h4>كيف تعمل — Workflow (v2.4.0 — خطوتان)</h4>
             <ol>
               <li>سجّل دخولك من شاشة الدخول</li>
-              <li>حط الـ WooCommerce Product ID للمنتج المتغيّر المطلوب ربطه</li>
-              <li>جاوب: <strong>حالة المنتج على شوبيفاي بعد الربط؟</strong> — Active / Draft / تبقى كما هي</li>
-              <li>جاوب: <strong>هل تريد إضافة نجمة ⭐ للعنوان؟</strong> — نعم / لا (مستقل عن السؤال السابق)</li>
-              <li>اضغط "تشغيل الربط" — هتتنفذ مباشرة (single call، مفيش sync_all). استنى: فيه 10 ثواني
-              انتظار مقصودة في آخر العملية قبل إضافة الـ Tag</li>
+              <li><strong>الخطوة 1 — بحث:</strong> حط رقم منتج شوبيفاي (Shopify Product ID، من رابط
+              المنتج على أدمن شوبيفاي) واضغط "بحث" — الأداة بتدوّر عليه في ووردبريس (خانة GTIN أو بداية الـ SKU)</li>
+              <li>لو لقت تطابق، بتعرض اسم المنتج + زرار "عرض المنتج على وردبريس للمراجعة" (بيفتح صفحة
+              التعديل في تاب جديد)، وتفتح الخطوة 2 تلقائيًا</li>
+              <li><strong>الخطوة 2 — الربط:</strong> جاوب: <strong>حالة المنتج على شوبيفاي بعد الربط؟</strong>
+              — Active / Draft / تبقى كما هي، و<strong>هل تريد إضافة نجمة ⭐ للعنوان؟</strong> — نعم / لا
+              (مستقلّان تمامًا)، واضغط "تشغيل الربط" (single call، مفيش sync_all)</li>
               <li>راجع نتيجة بيانات المنتج + جدول الـ Variations اللي اتزامنت أو اتخطّت (مع السبب)</li>
               <li>أي تفاصيل أو أخطاء إضافية اتسجلت في تاب "سجل العمليات"</li>
-              <li><strong>تحديث السعر (اختياري، منفصل):</strong> بعد ما المنتج يتربط، حط "فرق السعر" واضغط
-              "تحديث السعر" — بيحدّث <code>regular_price</code>/<code>sale_price</code> لكل Variation على
-              ووكومرس = سعر شوبيفاي + الفرق ده (single call، مفيش انتظار الـ 10 ثواني هنا)</li>
+              <li><strong>تحديث السعر (اختياري، منفصل، في نفس الخطوة 2):</strong> بعد ما المنتج يتربط، حط
+              "فرق السعر" واضغط "تحديث السعر" — بيحدّث <code>regular_price</code>/<code>sale_price</code> لكل
+              Variation على ووكومرس = سعر شوبيفاي + الفرق ده (single call منفصل عن الربط)</li>
+              <li>"🔄 بحث عن منتج تاني" في أعلى الخطوة 2 يرجّعك للخطوة 1 لمنتج جديد</li>
             </ol>
 
             <h4>⚙️ إجراءات كل اختيار</h4>
@@ -839,7 +869,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
               <tr><td>الحالة → <strong>تبقى كما هي</strong></td><td><code>productUpdate</code> ميبعتش <code>status</code> خالص — حالة المنتج متتلمسش</td></tr>
               <tr><td>النجمة → <strong>نعم</strong> (افتراضي)</td><td>"⭐ " تتضاف لبداية العنوان (idempotent — مايتكررش لو موجود بالفعل)</td></tr>
               <tr><td>النجمة → <strong>لا</strong></td><td><code>productUpdate</code> ميبعتش <code>title</code> — العنوان يفضل زي ما هو</td></tr>
-              <tr><td>(في كل الحالات — بدون خيار)</td><td>نشر المنتج على ووردبريس (<code>status=publish</code>) + metafield <code>wordpress_id</code> + مزامنة كل الـ SKU/المخزون لكل Variation + Tag <code>stylebox</code> بعد 10 ثواني في آخر العملية</td></tr>
+              <tr><td>(في كل الحالات — بدون خيار)</td><td>نشر المنتج على ووردبريس (<code>status=publish</code>) + metafield <code>wordpress_id</code> + مزامنة كل الـ SKU/المخزون لكل Variation + Tag <code>stylebox</code> فورًا في آخر العملية</td></tr>
             </table>
 
             <h4>الـ Endpoints الرئيسية</h4>
@@ -850,6 +880,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
               <tr><td><code>verify_employee</code></td><td>POST — تسجيل الدخول</td></tr>
               <tr><td><code>log_logout</code></td><td>GET — تسجيل خروج</td></tr>
               <tr><td><code>get_employees</code></td><td>GET — قائمة الموظفين النشطين</td></tr>
+              <tr><td><code>find_product</code></td><td>GET — أكشن قراءة بس (v2.4.0، خطوة 1): بياخد <code>shopify_product_id</code> ويدوّر على منتج ووكومرس المطابق (GTIN أو بداية SKU)، ويرجّع <code>wp_product_id</code> + <code>wpEditUrl</code></td></tr>
               <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code> و<code>add_star</code>: <code>true</code>/<code>false</code> — الاتنين اختياريين، الافتراضي <code>DRAFT</code> + <code>true</code>)</td></tr>
               <tr><td><code>update_price</code></td><td>POST — أكشن منفصل (v2.3.0): بيحدّث سعر كل Variation مربوطة بمنتج <code>wp_product_id</code> = سعر شوبيفاي + <code>price_difference</code> (رقم مطلوب، بيتحدد من الواجهة). المنتج لازم يكون اتربط الأول</td></tr>
               <tr><td><code>diag</code></td><td>GET — فحص ذاتي كامل (env، صلاحيات شوبيفاي، اتصال WooCommerce، D1) بدون كتابة</td></tr>
@@ -868,8 +899,10 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
             <h4>FEATURE MAP</h4>
             <ul>
               <li><code>§AUTH</code> — Universal D1 Auth كاملة (اتضافت 25-08-2026 — الأداة كانت استثناء بدون Login)</li>
-              <li><code>§TOOL-JS::sync</code> — تاب "ربط منتج": نموذج تشغيل <code>sync_product</code> + عرض نتيجة 3 حالات (نجاح/تحذير/فشل)</li>
-              <li><code>§TOOL-JS::updatePrice</code> — بطاقة "تحديث السعر" (v2.3.0): نموذج تشغيل <code>update_price</code> + عرض نتيجة 3 حالات، مستقل تمامًا عن <code>runSync()</code></li>
+              <li><code>§TOOL-JS::find</code> — خطوة 1 (v2.4.0): نموذج تشغيل <code>find_product</code> (بحث برقم شوبيفاي) + عرض نتيجة (لقيته/مش لقيته) + زرار "عرض على وردبريس"</li>
+              <li><code>§FIND::findWcProductByShopifyId</code> (Worker) — منطق البحث (فلتر GTIN مباشر + بحث نصي fallback + تحقق فعلي من كل نتيجة)</li>
+              <li><code>§TOOL-JS::sync</code> — خطوة 2: نموذج تشغيل <code>sync_product</code> + عرض نتيجة 3 حالات (نجاح/تحذير/فشل)، بيستخدم <code>foundWpProductId</code> من خطوة 1 بدل إدخال يدوي</li>
+              <li><code>§TOOL-JS::updatePrice</code> — بطاقة "تحديث السعر" (v2.3.0)، جوه نفس خطوة 2: نموذج تشغيل <code>update_price</code> + عرض نتيجة 3 حالات، مستقل تمامًا عن <code>runSync()</code></li>
               <li><code>§PRICE::updateProductPrice</code> (Worker) — منطق حساب وتحديث السعر، بيستخدم نفس <code>findWcSize</code>/<code>findShopifyVariantBySize</code> بتوع <code>syncProduct</code></li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
               <li><code>§LOG-ENDPOINTS</code> — get_logs / get_logs_count / get_logs_export (v2، بدون تغيير في العقد)</li>
@@ -878,6 +911,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
             <h4>KEY VARIABLES</h4>
             <ul>
               <li><code>currentEmployee</code> — { username, displayName } في الذاكرة فقط، مش localStorage</li>
+              <li><code>foundWpProductId</code> (v2.4.0) — رقم منتج ووكومرس اللي رجعته خطوة 1 (<code>find_product</code>)، في الذاكرة فقط. <code>runSync()</code>/<code>runUpdatePrice()</code> بيستخدموه بدل حقل إدخال يدوي — <code>null</code> لحد ما بحث ينجح، و<code>resetFindStep()</code> بيصفّره</li>
               <li><code>LS_URL = 'stylebox_link_worker_url'</code> · <code>LS_SECRET = 'stylebox_link_worker_secret'</code> — تغيّرت بريفكس المفاتيح مع إعادة التسمية (كانت <code>wcsync_worker_*</code>)</li>
               <li><code>LS_PRICE_DIFF = 'stylebox_link_price_difference'</code> (v2.3.0) — آخر قيمة "فرق السعر" استُخدمت، للراحة بس (تعبئة تلقائية)، مش Settings حقيقي ومش مرسل تلقائيًا من غير ما المستخدم يضغط الزرار</li>
               <li><code>TOOL_NAME = 'stylebox_products_linking'</code> — قيمة <code>tool</code> في جدول <code>logs</code> (كانت <code>shopify_woo_sync</code> قبل الرينيم)</li>
@@ -888,11 +922,11 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
             <ul>
               <li>الأداة manual-only بالتصميم — مفيش <code>sync_all</code> ومفيش Cron، تشغيلة واحدة = منتج واحد (Worker Builder Step 5A + woocommerce-sync-helper Step 6)</li>
               <li>فشل الخطوة على مستوى المنتج (metafield/status/title) بيتسجل في اللوج كـ <code>error</code> لكن ما بيوقفش باقي الخطوات — نشر ووردبريس، مزامنة الـ Variations، والـ Tag كلهم معزولين في try/catch منفصلة</li>
-              <li>ترتيب التنفيذ في <code>syncProduct</code> مقصود: شوبيفاي (status/⭐/metafield) ← ووردبريس (publish + meta) ← كل الـ Variations ← انتظار <code>TAG_DELAY_MS</code> (10 ثواني) ← <code>tagsAdd("stylebox")</code>. الـ Tag آخر أثر بيظهر على المنتج — متغيّرش الترتيب ده من غير سبب</li>
-              <li>الانتظار بـ <code>await new Promise(r =&gt; setTimeout(r, 10000))</code> — مش بيستهلك CPU time في Cloudflare Workers، بس بيزوّد زمن استجابة <code>sync_product</code> بـ 10 ثواني لكل تشغيلة</li>
+              <li>ترتيب التنفيذ في <code>syncProduct</code> مقصود: شوبيفاي (status/⭐/metafield) ← ووردبريس (publish + meta) ← كل الـ Variations ← <code>tagsAdd("stylebox")</code> فورًا. الـ Tag آخر أثر بيظهر على المنتج — متغيّرش الترتيب ده من غير سبب (كان فيه انتظار <code>TAG_DELAY_MS</code> 10 ثواني قبل الـ Tag لحد v2.3.0 — اتلغى بالكامل v2.4.0)</li>
               <li>الحقل <code>global_unique_id</code> (GTIN) على مستوى المنتج في ووكومرس هو اللي بيربط المنتجين — لو فاضي، الـ Worker (26-08-2026) بيدوّر على رقم شوبيفاي في بداية الـ <code>SKU</code> (نمط "رقم-slug")، ولو لقاه بيكتبه في GTIN وبيشيله من الـ SKU تلقائيًا قبل ما يكمّل. لو مفيش رقم في الـ SKU برضه، بيرجّع خطأ فورًا زي الأول</li>
               <li>سجلات D1 القديمة تحت اسم <code>shopify_woo_sync</code> (523 صف حتى 25-08-2026) اتنقلت لـ <code>stylebox_products_linking</code> — راجع ملخّص التسليم لتوقيت الـ SQL بالظبط</li>
               <li><code>update_price</code> (v2.3.0) بيتطلّب المنتج يكون اتربط الأول (<code>global_unique_id</code> موجود) — مفيش GTIN-from-SKU fallback هنا، ده بتاع <code>syncProduct</code> بس. D1 بيستخدم نفس <code>type='synced'/'error'</code> المسجّلين للأداة دي (مش <code>type</code> جديد) مع <code>extra.operation='price_update'</code> كمُميِّز — لو محتاج فلترة منفصلة في تاب السجل مستقبلًا، سجّل <code>type</code> مخصّص في <code>ecommoda-constants</code> §7 الأول</li>
+              <li><code>find_product</code> (v2.4.0) بيجرّب فلتر <code>global_unique_id</code> المباشر على <code>/wc/v3/products</code> الأول (رسمي في ووكومرس 9.2+)، وبيرجع لبحث نصي (<code>search=</code>) كـ fallback لو مش مدعوم أو مرجعش نتيجة — كل نتيجة من الاتنين بتتفحص فعليًا (GTIN حرفيًا أو SKU يبدأ بالرقم) قبل القبول. أكشن قراءة بس، مفيش D1 log ليه (زي diag/get_config)</li>
             </ul>
           </div>
         </details>
@@ -966,7 +1000,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.3.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.4.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
@@ -1394,7 +1428,7 @@ async function finishLogin(username, displayName) {
   document.getElementById('activeUserBtn').textContent = `👤 ${displayName}`;
   showToast(`أهلاً ${displayName} 👋`, 'success');
   playBeep('success');
-  setTimeout(() => document.getElementById('wpProductId')?.focus(), 100);
+  setTimeout(() => document.getElementById('shopifyProductIdInput')?.focus(), 100);
 }
 
 async function doLogout() {
@@ -1417,12 +1451,8 @@ async function doLogout() {
   renderLoginMode('employee');
   clearLoginAlert();
 
-  // ← تخصيص: تصفير نتيجة آخر ربط/تحديث سعر وإرجاع تاب "ربط منتج"
-  document.getElementById('syncResultWrap').style.display = 'none';
-  document.getElementById('syncResultWrap').innerHTML = '';
-  document.getElementById('priceResultWrap').style.display = 'none';
-  document.getElementById('priceResultWrap').innerHTML = '';
-  document.getElementById('wpProductId').value = '';
+  // ← تخصيص: تصفير خطوة البحث والربط/تحديث السعر وإرجاع تاب "ربط منتج"
+  resetFindStep();
   resetSyncOptions();
   document.getElementById('activeUserBtn').textContent = '👤 —';
   switchMainTab('sync');
@@ -1438,16 +1468,87 @@ function updateLoginSettingsBtn() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// §TOOL-JS::sync — تاب "ربط منتج"
+// §TOOL-JS::find — تاب "ربط منتج": خطوة 1 (v2.4.0) — البحث بمعرف شوبيفاي
+// ══════════════════════════════════════════════════════════════
+let foundWpProductId = null; // بيتملى بعد نجاح runFindProduct() — ده اللي runSync()/runUpdatePrice() بيستخدموه
+
+function setFindBusy(active) {
+  const btn = document.getElementById('findBtn');
+  btn.disabled = active;
+  btn.innerHTML = active ? '<span class="mini-spinner"></span> جاري البحث...' : '🔍 بحث';
+}
+
+async function runFindProduct() {
+  if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'error'); return; }
+  const raw = document.getElementById('shopifyProductIdInput').value.trim();
+  if (!raw) { showToast('من فضلك أدخل Shopify Product ID', 'error'); return; }
+  if (!/^\d+$/.test(raw)) { showToast('الـ Product ID لازم يكون رقم فقط', 'error'); return; }
+
+  setFindBusy(true);
+  try {
+    const data = await apiGet('find_product', { shopify_product_id: raw });
+    renderFindResult(data);
+    if (data.found) {
+      foundWpProductId = data.wp_product_id;
+      document.getElementById('foundProductLabel').textContent =
+        `#${data.wp_product_id}${data.productName ? ' — ' + data.productName : ''}`;
+      document.getElementById('optionsCard').style.display = 'block';
+      showToast('لقينا المنتج ✓', 'success');
+    } else {
+      foundWpProductId = null;
+      document.getElementById('optionsCard').style.display = 'none';
+      showToast('مفيش منتج على ووردبريس بالرقم ده', 'error');
+    }
+  } catch (e) {
+    foundWpProductId = null;
+    document.getElementById('optionsCard').style.display = 'none';
+    showToast('خطأ: ' + e.message, 'error');
+  } finally {
+    setFindBusy(false);
+  }
+}
+
+function renderFindResult(data) {
+  const wrap = document.getElementById('findResultWrap');
+  wrap.style.display = 'block';
+  if (!data.found) {
+    wrap.innerHTML = `<div class="result-card">
+      <h4><span class="badge-danger">✗ مفيش تطابق</span></h4>
+      <div class="result-note err">مفيش منتج على ووردبريس بيحمل الرقم ده — لا في خانة GTIN ولا في بداية الـ SKU (اتفحص ${(data.scanned ?? 0).toLocaleString('en-US')} منتج مرشّح). تأكد من الرقم من رابط المنتج على شوبيفاي أدمن.</div>
+    </div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="result-card">
+    <h4>🔍 نتيجة البحث <span class="badge-success">✓ اتلقى</span></h4>
+    <div class="result-row"><span>رقم المنتج على ووردبريس</span><span class="mono">${data.wp_product_id}</span></div>
+    ${data.productName ? `<div class="result-row"><span>اسم المنتج</span><span>${data.productName}</span></div>` : ''}
+    ${data.sku ? `<div class="result-row"><span>SKU</span><span class="mono">${data.sku}</span></div>` : ''}
+    <div class="result-row"><span>اتلقى عن طريق</span><span>${data.matchedBy === 'gtin' ? 'خانة GTIN' : 'بداية الـ SKU'}</span></div>
+    <div style="margin-top:12px;">
+      <a class="btn-outline btn-sm" href="${data.wpEditUrl}" target="_blank" rel="noopener">🔗 عرض المنتج على وردبريس للمراجعة</a>
+    </div>
+  </div>`;
+}
+
+function resetFindStep() {
+  foundWpProductId = null;
+  document.getElementById('shopifyProductIdInput').value = '';
+  document.getElementById('findResultWrap').style.display = 'none';
+  document.getElementById('findResultWrap').innerHTML = '';
+  document.getElementById('optionsCard').style.display = 'none';
+  document.getElementById('syncResultWrap').style.display = 'none';
+  document.getElementById('syncResultWrap').innerHTML = '';
+  document.getElementById('priceResultWrap').style.display = 'none';
+  document.getElementById('priceResultWrap').innerHTML = '';
+}
+
+// ══════════════════════════════════════════════════════════════
+// §TOOL-JS::sync — تاب "ربط منتج": خطوة 2 — الربط
 // ══════════════════════════════════════════════════════════════
 function setSyncBusy(active) {
   const btn = document.getElementById('syncBtn');
   btn.disabled = active;
-  // الـ Worker بيستنى 10 ثواني قبل الـ Tag — الرسالة بتقول ده صراحةً عشان
-  // الانتظار مايتقراش كتعليق.
-  btn.innerHTML = active
-    ? '<span class="mini-spinner"></span> جاري الربط... (فيه انتظار 10 ثواني قبل إضافة الـ Tag)'
-    : '▶ تشغيل الربط';
+  btn.innerHTML = active ? '<span class="mini-spinner"></span> جاري الربط...' : '▶ تشغيل الربط';
 }
 
 // القيم الافتراضية = سلوك v2.0.0 نفسه: Draft + إضافة ⭐
@@ -1469,16 +1570,13 @@ function readSyncOptions() {
 
 async function runSync() {
   if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'error'); return; }
-  const raw = document.getElementById('wpProductId').value.trim();
-  if (!raw) { showToast('من فضلك أدخل WooCommerce Product ID', 'error'); return; }
-  const wpProductId = Number(raw);
-  if (!Number.isFinite(wpProductId) || wpProductId <= 0) { showToast('الـ Product ID لازم يكون رقم صحيح', 'error'); return; }
+  if (!foundWpProductId) { showToast('ابحث عن المنتج الأول (الخطوة 1)', 'error'); return; }
   const { shopifyStatus, addStar } = readSyncOptions();
 
   setSyncBusy(true);
   try {
     const data = await apiPost('sync_product', {
-      wp_product_id:  wpProductId,
+      wp_product_id:  foundWpProductId,
       shopify_status: shopifyStatus,
       add_star:       addStar,
       employee:       currentEmployee.username,
@@ -1509,8 +1607,7 @@ function renderSyncResult(data) {
 
   // صف الـ Tag + صف نشر ووردبريس بيتعرضوا في الحالتين (نجاح بيانات المنتج أو فشلها)
   // لأن الاتنين معزولين عن بلوك شوبيفاي — بيتنفّذوا حتى لو هو فشل.
-  const tagDelaySec = ((r.tagDelayMs ?? 10000) / 1000).toLocaleString('en-US');
-  const tagRow = `<div class="result-row"><span>Tag "stylebox" (آخر خطوة، بعد ${tagDelaySec} ثواني)</span><span>${
+  const tagRow = `<div class="result-row"><span>Tag "stylebox" (آخر خطوة)</span><span>${
     r.tagError ? '<span class="badge-danger">✗ فشل</span>' : `<span class="badge-ok">${r.tag || 'stylebox'} ✓</span>`
   }</span></div>`;
   const wcPublishRow = `<div class="result-row"><span>نشر المنتج على ووردبريس (publish)</span><span>${
@@ -1612,11 +1709,7 @@ function setPriceBusy(active) {
 
 async function runUpdatePrice() {
   if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'error'); return; }
-
-  const rawId = document.getElementById('wpProductId').value.trim();
-  if (!rawId) { showToast('من فضلك أدخل WooCommerce Product ID', 'error'); return; }
-  const wpProductId = Number(rawId);
-  if (!Number.isFinite(wpProductId) || wpProductId <= 0) { showToast('الـ Product ID لازم يكون رقم صحيح', 'error'); return; }
+  if (!foundWpProductId) { showToast('ابحث عن المنتج الأول (الخطوة 1)', 'error'); return; }
 
   const rawDiff = document.getElementById('priceDifference').value.trim();
   if (rawDiff === '') { showToast('من فضلك أدخل فرق السعر', 'error'); return; }
@@ -1626,7 +1719,7 @@ async function runUpdatePrice() {
   setPriceBusy(true);
   try {
     const data = await apiPost('update_price', {
-      wp_product_id:    wpProductId,
+      wp_product_id:    foundWpProductId,
       price_difference: priceDifference,
       employee:         currentEmployee.username,
     });

@@ -30,8 +30,8 @@
 //   WooCommerce product.status ← 'publish' — دايمًا، بدون خيار (اتضاف 26-08-2026)
 //   WooCommerce product.meta_data._shopify_product_id ← Shopify product
 //     numeric ID (legacy field, mirrors global_unique_id) — always
-//   Shopify product.tags ← "stylebox" tag — آخر خطوة على الإطلاق، بعد انتظار
-//     TAG_DELAY_MS (اتغيّر ترتيبه 26-08-2026 — كان بيتنفّذ في نص العملية)
+//   Shopify product.tags ← "stylebox" tag — آخر خطوة على الإطلاق، فورًا بدون
+//     انتظار (كان فيه TAG_DELAY_MS 10 ثواني، اتلغى بالكامل 26-08-2026 — v2.4.0)
 //
 // ⚠️ تعديلات 26-08-2026 (v2.1.0) — الخيارات الثنائية اتحوّلت لأسئلة صريحة:
 //   skip_draft (boolean) ← اتشال، بقى shopify_status: 'ACTIVE' | 'DRAFT' | 'KEEP'
@@ -58,9 +58,10 @@
 //   extractGtinFromSku()/syncProduct() في §SYNC::matching.
 //
 // ⚠️ ترتيب الـ Tag (26-08-2026): tagsAdd بقى آخر عملية في syncProduct بالكامل —
-//   بعد كل حاجة على شوبيفاي وووكومرس ومزامنة كل الـ Variations — وقبلها انتظار
-//   TAG_DELAY_MS (10 ثواني). الانتظار بيحصل بـ await على setTimeout: مش بيستهلك
-//   CPU time في Workers، بس بيمدّ زمن الاستجابة للواجهة بـ 10 ثواني لكل تشغيلة.
+//   بعد كل حاجة على شوبيفاي وووكومرس ومزامنة كل الـ Variations — فورًا بدون أي
+//   انتظار. (كان فيه انتظار TAG_DELAY_MS 10 ثواني قبله لحد v2.3.0 — اتلغى
+//   بالكامل بطلب صاحب الأداة نفس اليوم (26-08-2026)، v2.4.0. الترتيب [الـ Tag
+//   آخر خطوة] نفسه لسه زي ما هو — الملغي هو الانتظار بس، مش الترتيب.)
 //
 // Matching key between platforms (variants): the size attribute/option
 // value, matched on BOTH sides against ALLOWED_SIZE_ATTRIBUTE_NAMES below
@@ -93,15 +94,30 @@
 // §7 (مش type جديد — الجلسة دي معندهاش صلاحية تعدّل ريبو المهارات) مع
 // extra.operation='price_update' كمُميِّز؛ لو Log تاب محتاج فلترة منفصلة لاحقًا
 // سجّل type مخصّص هناك الأول.
+//
+// ⚠️ action=find_product (v2.4.0 — 26-08-2026): أكشن قراءة بس (GET، مفيش
+// كتابة، مفيش D1 log — زي diag/get_config)، وبيمثّل الخطوة 1 الجديدة في
+// الواجهة: الموظف بيدخل رقم منتج شوبيفاي الرقمي (زي اللي في رابط
+// admin.shopify.com/store/…/products/{ID})، والـ Worker بيدوّر على منتج
+// ووكومرس اللي يطابقه — إما GTIN (global_unique_id) مساوي للرقم، أو الرقم في
+// **بداية** الـ SKU (نفس ريجيكس extractGtinFromSku، لكن بالعكس: هنا بندوّر
+// بالرقم على المنتج بدل ما نستخرج الرقم من منتج معروف). راجع
+// findWcProductByShopifyId()/wcSearchProducts() في §FIND. لو لقى تطابق، بيرجّع
+// wp_product_id + رابط جاهز لصفحة تعديل المنتج على ووردبريس (wpEditUrl) —
+// الواجهة بتعرض زرار "عرض المنتج على وردبريس للمراجعة" بيه، وبعدين تفتح خطوة 2
+// (خيارات الربط + تحديث السعر) بالـ wp_product_id ده جاهز، من غير ما الموظف
+// يكتبه يدوي. ⚠️ الفلتر global_unique_id على /wc/v3/products مش مضمون في كل
+// نسخ ووكومرس (اتضاف رسميًا 9.2+) — الكود بيجرّبه، وبيرجع لبحث نصي (search=)
+// كـ fallback، وأي نتيجة من الاتنين بتتفحص فعليًا (GTIN تطابق حرفي / SKU
+// بيبدأ بالرقم) قبل ما تتقبل كـ"لقيته" — مفيش تصديق أعمى لنتيجة الـ API.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.3.0';
+const WORKER_VERSION = 'v2.4.0';
 
-// الـ Tag اللي بيتضاف لكل منتج مربوط، وفترة الانتظار قبله. الانتظار مقصود
-// (طلب صاحب الأداة 26-08-2026): الـ Tag لازم يبقى آخر أثر يظهر على المنتج،
-// بعد ما كل التعديلات التانية تكون خلصت واستقرّت على شوبيفاي.
+// الـ Tag اللي بيتضاف لكل منتج مربوط — آخر خطوة في syncProduct، فورًا بدون
+// انتظار (كان فيه TAG_DELAY_MS 10 ثواني قبل الخطوة دي، اتلغى بالكامل 26-08-2026
+// بطلب صاحب الأداة — v2.4.0. راجع §SYNC::syncProduct/§SYNC::addStyleboxTag).
 const STYLEBOX_TAG  = 'stylebox';
-const TAG_DELAY_MS  = 10000;
 
 // حالات المنتج المسموحة على شوبيفاي بعد الربط — KEEP معناها "ما تبعتش status
 // خالص في productUpdate" مش قيمة بتتبعت لشوبيفاي.
@@ -458,6 +474,21 @@ async function wcGetProduct(env, wpProductId) {
   return resp.json();
 }
 
+// ─── §WOOCOMMERCE::wcSearchProducts — v2.4.0، خطوة 1 (find_product) ───
+// wrapper عام حوالين GET /wc/v3/products بأي query params (search / sku /
+// global_unique_id / per_page...). بيرمي زي أي نداء WC تاني في الملف — مفيش
+// فحص خاص هنا، الفحص الفعلي (هل النتيجة بتطابق فعلًا) بيحصل في
+// findWcProductByShopifyId() اللي بتستخدمها.
+async function wcSearchProducts(env, params) {
+  const qs = new URLSearchParams(params).toString();
+  const resp = await fetch(
+    bust(`${wcBaseUrl(env)}/wp-json/wc/v3/products?${qs}`),
+    { headers: { Authorization: wcAuthHeader(env) } }
+  );
+  if (!resp.ok) throw new Error(`WC search products failed: ${resp.status}`);
+  return resp.json();
+}
+
 // product-level update — used to refresh the legacy "_shopify_product_id"
 // meta field (status=publish call), and also (26-08-2026) to recover a
 // missing global_unique_id (GTIN) + strip the number back out of sku —
@@ -560,6 +591,71 @@ function extractGtinFromSku(sku) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// §FIND::findWcProductByShopifyId — v2.4.0، خطوة 1 في الواجهة الجديدة
+// الموظف بيدخل رقم منتج شوبيفاي، والدالة دي بتدوّر على منتج ووكومرس اللي
+// GTIN بتاعه (global_unique_id) بيساوي الرقم، أو الرقم في بداية الـ SKU —
+// نفس ريجيكس extractGtinFromSku فوق، لكن بالعكس (هنا الرقم معروف من الأول،
+// وبندوّر بيه على المنتج بدل ما نستخرجه من SKU منتج معروف).
+//
+// محاولتان، والنتيجة من الاتنين بتتفحص فعليًا قبل القبول (مفيش تصديق أعمى):
+//   1. فلتر global_unique_id مباشر على /wc/v3/products — لو الموقع على
+//      ووكومرس 9.2+ (الحقل ده رسمي فيها) ده بيرجّع تطابق دقيق فورًا. لو
+//      النسخة أقدم، الفلتر ده بيتجاهَل من ووكومرس (بيرجّع كل المنتجات أو صفر)
+//      — عشان كده مش بيتصدَّق لوحده.
+//   2. بحث نصي (search=) — بيغطي حالة الرقم لسه في بداية الـ SKU (منتج لسه
+//      مش مربوط). كل نتيجة مرشحة بتتفحص: GTIN == الرقم حرفيًا، أو SKU يبدأ
+//      بالرقم ده تحديدًا (مش أي رقم — نفس الرقم المطلوب).
+// ══════════════════════════════════════════════════════════════
+async function findWcProductByShopifyId(env, shopifyProductId) {
+  assertEnv(env, 'woocommerce');
+  const idStr = String(shopifyProductId);
+
+  const candidates = [];
+
+  try {
+    const byGtin = await wcSearchProducts(env, { global_unique_id: idStr, per_page: 10 });
+    if (Array.isArray(byGtin)) candidates.push(...byGtin);
+  } catch (e) {
+    console.error('wcSearchProducts(global_unique_id) failed — falling back to search=:', e);
+  }
+
+  try {
+    const bySearch = await wcSearchProducts(env, { search: idStr, per_page: 25 });
+    if (Array.isArray(bySearch)) candidates.push(...bySearch);
+  } catch (e) {
+    // لو الاتنين فشلوا، مفيش مرشحين خالص وهيترجع "مش موجود" — ده مش فشل
+    // شبكة (كان هيترمي)، ده فحص فعلي معملش مرشحين
+    console.error('wcSearchProducts(search) failed:', e);
+  }
+
+  const seen = new Set();
+  const unique = candidates.filter(p => {
+    if (!p || seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
+
+  const match = unique.find(p => {
+    if (String(p.global_unique_id || '').trim() === idStr) return true;
+    const skuMatch = String(p.sku || '').match(/^(\d{6,})-/);
+    return !!(skuMatch && skuMatch[1] === idStr);
+  });
+
+  if (!match) {
+    return { found: false, scanned: unique.length };
+  }
+
+  return {
+    found: true,
+    wp_product_id: match.id,
+    productName: match.name,
+    sku: match.sku,
+    matchedBy: String(match.global_unique_id || '').trim() === idStr ? 'gtin' : 'sku',
+    wpEditUrl: `${wcBaseUrl(env)}/wp-admin/post.php?post=${match.id}&action=edit`,
+  };
+}
+
+// ══════════════════════════════════════════════════════════════
 // §SYNC::productLevelSync
 // Runs once per linked product, every sync_product call. Independent of
 // the per-variation loop below — wrapped in its own try/catch in
@@ -606,7 +702,7 @@ async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId
   }
 
   // ⚠️ tagsAdd كان هنا (الخطوة 3) لحد v2.0.0 — اتنقل بالكامل لآخر syncProduct
-  // بعد انتظار TAG_DELAY_MS (راجع §SYNC::addStyleboxTag و§CONSTANTS).
+  // (راجع §SYNC::addStyleboxTag و§CONSTANTS).
 
   // ── 3. metafieldsSet: custom.wordpress_id (product-level, Integer) — دايمًا ──
   const metafieldResp = await shopifyGQL(env, token, SET_PRODUCT_METAFIELD_MUTATION, {
@@ -637,7 +733,8 @@ async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId
 
 // ══════════════════════════════════════════════════════════════
 // §SYNC::addStyleboxTag — آخر خطوة على الإطلاق في كل تشغيلة
-// بتتنادى من syncProduct بعد ما كل حاجة تانية تخلص وبعد انتظار TAG_DELAY_MS.
+// بتتنادى من syncProduct بعد ما كل حاجة تانية تخلص، فورًا بدون أي انتظار
+// (كان فيه TAG_DELAY_MS قبلها لحد v2.3.0 — اتلغى بالكامل v2.4.0).
 // tagsAdd بتدعدَب أوتوماتيك من شوبيفاي — آمنة التكرار تمامًا.
 // ══════════════════════════════════════════════════════════════
 async function addStyleboxTag(env, token, shopifyProductGid) {
@@ -658,7 +755,8 @@ async function addStyleboxTag(env, token, shopifyProductGid) {
 //   2. Shopify product-level: status (حسب الخيار) + ⭐ (حسب الخيار) + wordpress_id
 //   3. WooCommerce product-level: status='publish' + meta _shopify_product_id
 //   4. لكل Variation: SKU/مخزون/meta على ووكومرس + wordpress_variation_id على شوبيفاي
-//   5. انتظار TAG_DELAY_MS ثم tagsAdd("stylebox") ← آخر خطوة، بعد كل اللي فوق
+//   5. tagsAdd("stylebox") فورًا ← آخر خطوة، بعد كل اللي فوق (كان فيه انتظار
+//      TAG_DELAY_MS 10 ثواني قبلها لحد v2.3.0 — اتلغى بالكامل v2.4.0)
 // ══════════════════════════════════════════════════════════════
 async function syncProduct(env, wpProductId, opts = {}) {
   const { shopifyStatus = 'DRAFT', addStar = true, employee = null } = opts;
@@ -877,22 +975,18 @@ async function syncProduct(env, wpProductId, opts = {}) {
     });
   }
 
-  // ── آخر خطوة على الإطلاق: انتظار 10 ثواني ثم Tag "stylebox" ──────
-  // مطلوب صراحةً (26-08-2026): الـ Tag مايتضافش غير بعد ما كل الأكشنز
-  // التانية تخلص. await على setTimeout مش بيستهلك CPU time في Workers —
-  // بس بيمدّ زمن استجابة sync_product بـ 10 ثواني، والواجهة مستنية عادي.
+  // ── آخر خطوة على الإطلاق: Tag "stylebox" فورًا (بدون انتظار — اتلغى v2.4.0) ──
   // معزول في try/catch زي باقي البلوكات: فشله بيخلّي النتيجة "warning" ومش
   // بيلغي أي حاجة اتعملت قبله.
   let tagAdded = null;
   let tagError = null;
-  await new Promise(resolve => setTimeout(resolve, TAG_DELAY_MS));
   try {
     tagAdded = await addStyleboxTag(env, token, shopifyProductGid);
     const okLog = await safeWriteLog(env.DB, {
       tool: TOOL_NAME, type: 'product_meta_synced', employee,
       productTitle: productLevelResult?.newTitle || shopifyTitle,
-      notes: `Tag "${STYLEBOX_TAG}" اتضاف (آخر خطوة، بعد انتظار ${TAG_DELAY_MS / 1000} ثواني)`,
-      extra: { wpProductId, shopifyProductId, tag: STYLEBOX_TAG, delayMs: TAG_DELAY_MS },
+      notes: `Tag "${STYLEBOX_TAG}" اتضاف (آخر خطوة)`,
+      extra: { wpProductId, shopifyProductId, tag: STYLEBOX_TAG },
     });
     if (!okLog) loggedOk = false;
   } catch (e) {
@@ -922,7 +1016,6 @@ async function syncProduct(env, wpProductId, opts = {}) {
     wcPublished,
     tag:        tagAdded,
     tagError,
-    tagDelayMs: TAG_DELAY_MS,
     variants: results,
     logged: loggedOk,
   };
@@ -1134,6 +1227,18 @@ export default {
           'SELECT username, display_name FROM employees WHERE is_active = 1 ORDER BY display_name'
         ).all();
         return json({ ok: true, employees: results }, 200, request);
+      }
+      // ──────────────────────────────────────────────────────────────
+
+      // ─── §FIND — read-only lookup, خطوة 1 في الواجهة (v2.4.0) ──────
+      if (action === 'find_product') {
+        const shopifyProductId = url.searchParams.get('shopify_product_id');
+        if (!shopifyProductId) return json({ error: 'shopify_product_id required' }, 400, request);
+        if (!/^\d+$/.test(shopifyProductId)) {
+          return json({ error: 'shopify_product_id لازم يكون رقم فقط' }, 400, request);
+        }
+        const result = await findWcProductByShopifyId(env, shopifyProductId);
+        return json({ ok: true, ...result }, 200, request);
       }
       // ──────────────────────────────────────────────────────────────
 
