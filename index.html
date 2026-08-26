@@ -199,8 +199,15 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 .field-row label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 .field-input { border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--font-mono); font-size: 14px; color: var(--text-primary); background: var(--surface); outline: none; width: 100%; direction: ltr; transition: border-color .15s; }
 .field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
-.checkbox-row { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.6; cursor: pointer; max-width: 520px; }
-.checkbox-row input { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+/* خيارات الربط — أسئلة صريحة باختيارات (v2.1.0، بدل الـ checkboxes القديمة) */
+.opt-block { margin-bottom: 16px; max-width: 560px; }
+.opt-q { font-size: 12px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.opt-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.opt-choice { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; color: var(--text-secondary); background: var(--surface); cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
+.opt-choice:hover { border-color: var(--accent); }
+.opt-choice input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; margin: 0; }
+.opt-choice:has(input:checked) { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+.opt-hint { font-size: 11px; color: var(--text-muted); line-height: 1.6; margin-top: 7px; }
 .btn-primary { display: flex; align-items: center; gap: 6px; padding: 10px 22px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; margin-top: 4px; }
 .btn-primary:hover { background: var(--accent-dark); }
 .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
@@ -404,22 +411,39 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
         <input type="number" class="field-input" id="wpProductId" inputmode="numeric" />
       </div>
 
-      <!-- ⚠️ الخيار الأصلي "تخطي فرض مسودة + إضافة ⭐" اتقسم لخيارين مستقلين تمامًا (25-08-2026) -->
-      <label class="checkbox-row">
-        <input type="checkbox" id="skipDraft" />
-        <span>
-          <strong>تخطي فرض حالة "مسودة" (Draft)</strong> — استخدمها للمنتجات اللي لازم تفضل
-          Active على شوبيفاي. مستقل تمامًا عن خيار العنوان تحت — تفعيله وحده مايأثرش على ⭐.
-        </span>
-      </label>
-      <label class="checkbox-row">
-        <input type="checkbox" id="skipStar" />
-        <span>
-          <strong>تخطي إضافة ⭐ لعنوان المنتج</strong> — استخدمها لو مش عايز العنوان يتغيّر. مستقل
-          تمامًا عن خيار حالة "مسودة" فوق. باقي الخطوات (Tag <code>stylebox</code>، الـ metafield
-          <code>wordpress_id</code>، مزامنة الـ SKU/المخزون لكل Variation) بتشتغل عادي في كل الحالات.
-        </span>
-      </label>
+      <!-- ⚠️ الخيارين دول كانوا checkboxes "تخطي..." لحد v2.0.0 — اتحوّلوا لأسئلة
+           صريحة باختيارات في v2.1.0. لسه مستقلّين تمامًا عن بعض. -->
+      <div class="opt-block">
+        <div class="opt-q">حالة المنتج على شوبيفاي بعد الربط؟</div>
+        <div class="opt-choices">
+          <label class="opt-choice"><input type="radio" name="shopifyStatus" value="ACTIVE" /><span>Active</span></label>
+          <label class="opt-choice"><input type="radio" name="shopifyStatus" value="DRAFT" checked /><span>Draft</span></label>
+          <label class="opt-choice"><input type="radio" name="shopifyStatus" value="KEEP" /><span>تبقى كما هي (بدون تعديل)</span></label>
+        </div>
+        <div class="opt-hint">
+          "تبقى كما هي" معناها إن <code>productUpdate</code> مايبعتش <code>status</code> خالص —
+          حالة المنتج على شوبيفاي متتلمسش. مستقل تمامًا عن سؤال النجمة تحت.
+        </div>
+      </div>
+
+      <div class="opt-block">
+        <div class="opt-q">هل تريد إضافة نجمة ⭐ للعنوان؟</div>
+        <div class="opt-choices">
+          <label class="opt-choice"><input type="radio" name="addStar" value="yes" checked /><span>نعم</span></label>
+          <label class="opt-choice"><input type="radio" name="addStar" value="no" /><span>لا</span></label>
+        </div>
+        <div class="opt-hint">
+          "نعم" بتضيف "⭐ " لبداية العنوان مرة واحدة بس (idempotent — مبتتكررش لو النجمة موجودة).
+          "لا" معناها العنوان مايتلمسش. مستقل تمامًا عن سؤال الحالة فوق.
+        </div>
+      </div>
+
+      <div class="opt-hint" style="margin-bottom:14px;">
+        <strong>بيحصل دايمًا في كل تشغيلة بدون خيار:</strong> نشر المنتج على ووردبريس
+        (<code>stylebox.online</code> → <code>status = publish</code>)، الـ metafield
+        <code>wordpress_id</code>، مزامنة الـ SKU/المخزون لكل Variation، وأخيرًا Tag
+        <code>stylebox</code> على شوبيفاي — بيتضاف بعد كل الخطوات التانية بـ 5 ثواني.
+      </div>
 
       <button class="btn-primary" id="syncBtn" onclick="runSync()">▶ تشغيل الربط</button>
     </div>
@@ -662,6 +686,20 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
         <div class="cl-version-block">
           <div class="cl-version-row">
             <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+            <span class="cl-ver-date">26-08-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>كل تشغيلة ربط بقت بتنشر المنتج على ووردبريس (<code>stylebox.online</code> → <code>status = publish</code>) — خطوة تلقائية بدون خيار، بتتفحص من رد ووكومرس نفسه مش من HTTP 200.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>خيار "تخطي فرض حالة مسودة" اتشال — بقى سؤال صريح: <strong>حالة المنتج على شوبيفاي بعد الربط؟</strong> باختيارات (Active / Draft / تبقى كما هي بدون تعديل). الافتراضي Draft = نفس سلوك v2.0.0.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>خيار "تخطي إضافة ⭐" اتشال — بقى سؤال صريح: <strong>هل تريد إضافة نجمة ⭐ للعنوان؟</strong> (نعم / لا). الافتراضي "نعم" = نفس سلوك v2.0.0.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>Tag <code>stylebox</code> اتأخّر لآخر العملية بالكامل — بيتضاف بعد كل الأكشنز التانية (شوبيفاي + ووكومرس + كل الـ Variations) وبعد انتظار 5 ثواني. النتيجة إن كل تشغيلة بقت أطول بـ 5 ثواني.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>نتيجة التشغيل بقت بتعرض صفّين جداد: نشر ووردبريس (publish) وحالة الـ Tag — والاتنين بيظهروا حتى لو مزامنة بيانات شوبيفاي فشلت، لأنهم معزولين عنها.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>الـ Worker بيقبل <code>shopify_status</code> و<code>add_star</code>؛ <code>skip_draft</code>/<code>skip_star</code> القديمين لسه مقبولين كـ fallback لو واجهة قديمة لسه في كاش المتصفح.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.0.0</span>
             <span class="cl-ver-date">25-08-2026</span>
           </div>
           <ul class="cl-items">
@@ -711,34 +749,40 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 
             <h4>إيه اللي بيتزامن في كل تشغيلة</h4>
             <ul>
-              <li><strong>على مستوى المنتج (Shopify):</strong> Tag <code>stylebox</code> (دائمًا) +
-              metafield <code>custom.wordpress_id</code> (دائمًا) + فرض الحالة <code>DRAFT</code> وإضافة
-              "⭐ " لبداية العنوان — كل واحد فيهم مستقل، حسب الخيارين تحت</li>
-              <li><strong>على مستوى المنتج (WooCommerce):</strong> تحديث <code>meta_data._shopify_product_id</code>
-              (الحقل القديم legacy، بيعكس <code>global_unique_id</code>)</li>
+              <li><strong>على مستوى المنتج (Shopify):</strong> metafield <code>custom.wordpress_id</code>
+              (دائمًا) + حالة المنتج (<code>ACTIVE</code>/<code>DRAFT</code>/بدون تعديل — حسب السؤال الأول)
+              + إضافة "⭐ " لبداية العنوان (حسب السؤال التاني) — السؤالين مستقلّين تمامًا عن بعض</li>
+              <li><strong>على مستوى المنتج (WooCommerce):</strong> نشر المنتج
+              (<code>status = publish</code>) — دائمًا وبدون خيار — + تحديث
+              <code>meta_data._shopify_product_id</code> (الحقل القديم legacy، بيعكس <code>global_unique_id</code>)</li>
               <li><strong>لكل Variation:</strong> مطابقة بالمقاس (<code>Shoe size</code> / <code>Size</code> /
               <code>size</code>) بين الاتنين، ثم مزامنة SKU + المخزون (<code>inventoryQuantity</code>) من
               شوبيفاي لووكومرس، وتحديث <code>custom.wordpress_variation_id</code> على شوبيفاي</li>
+              <li><strong>آخر خطوة على الإطلاق:</strong> Tag <code>stylebox</code> على شوبيفاي —
+              بيتنفّذ بعد كل اللي فوق، وقبله انتظار 5 ثواني (دائمًا وبدون خيار)</li>
             </ul>
 
             <h4>كيف تعمل — Workflow</h4>
             <ol>
               <li>سجّل دخولك من شاشة الدخول</li>
               <li>حط الـ WooCommerce Product ID للمنتج المتغيّر المطلوب ربطه</li>
-              <li>لو المنتج ده لازم يفضل Active على شوبيفاي (مش Draft) → فعّل "تخطي فرض مسودة"</li>
-              <li>لو مش عايز العنوان يتغيّر → فعّل "تخطي إضافة ⭐" (مستقل عن الخيار السابق)</li>
-              <li>اضغط "تشغيل الربط" — هتتنفذ مباشرة (single call، مفيش sync_all)</li>
+              <li>جاوب: <strong>حالة المنتج على شوبيفاي بعد الربط؟</strong> — Active / Draft / تبقى كما هي</li>
+              <li>جاوب: <strong>هل تريد إضافة نجمة ⭐ للعنوان؟</strong> — نعم / لا (مستقل عن السؤال السابق)</li>
+              <li>اضغط "تشغيل الربط" — هتتنفذ مباشرة (single call، مفيش sync_all). استنى: فيه 5 ثواني
+              انتظار مقصودة في آخر العملية قبل إضافة الـ Tag</li>
               <li>راجع نتيجة بيانات المنتج + جدول الـ Variations اللي اتزامنت أو اتخطّت (مع السبب)</li>
               <li>أي تفاصيل أو أخطاء إضافية اتسجلت في تاب "سجل العمليات"</li>
             </ol>
 
-            <h4>⚙️ إجراءات كل خيار</h4>
+            <h4>⚙️ إجراءات كل اختيار</h4>
             <table>
-              <tr><th>الخيار</th><th>التأثير عند التفعيل (تخطي)</th></tr>
-              <tr><td>تخطي فرض حالة "مسودة"</td><td><code>productUpdate</code> ميبعتش <code>status: DRAFT</code> — حالة المنتج على شوبيفاي تفضل زي ما هي</td></tr>
-              <tr><td>تخطي إضافة ⭐ للعنوان</td><td><code>productUpdate</code> ميبعتش <code>title</code> — عنوان المنتج على شوبيفاي يفضل زي ما هو</td></tr>
-              <tr><td>(بدون تفعيل أي خيار)</td><td>الاتنين يتنفذوا: الحالة تتفرض DRAFT + "⭐ " تتضاف لبداية العنوان (idempotent — مايتكررش لو موجود بالفعل)</td></tr>
-              <tr><td>(في كل الحالات)</td><td>Tag <code>stylebox</code> + metafield <code>wordpress_id</code> + مزامنة كل الـ SKU/المخزون لكل Variation — مالهاش علاقة بالخيارين، بتشتغل دايمًا</td></tr>
+              <tr><th>السؤال / الاختيار</th><th>التأثير</th></tr>
+              <tr><td>الحالة → <strong>Active</strong></td><td><code>productUpdate</code> يبعت <code>status: ACTIVE</code> — المنتج يبقى Active على شوبيفاي</td></tr>
+              <tr><td>الحالة → <strong>Draft</strong> (افتراضي)</td><td><code>productUpdate</code> يبعت <code>status: DRAFT</code></td></tr>
+              <tr><td>الحالة → <strong>تبقى كما هي</strong></td><td><code>productUpdate</code> ميبعتش <code>status</code> خالص — حالة المنتج متتلمسش</td></tr>
+              <tr><td>النجمة → <strong>نعم</strong> (افتراضي)</td><td>"⭐ " تتضاف لبداية العنوان (idempotent — مايتكررش لو موجود بالفعل)</td></tr>
+              <tr><td>النجمة → <strong>لا</strong></td><td><code>productUpdate</code> ميبعتش <code>title</code> — العنوان يفضل زي ما هو</td></tr>
+              <tr><td>(في كل الحالات — بدون خيار)</td><td>نشر المنتج على ووردبريس (<code>status=publish</code>) + metafield <code>wordpress_id</code> + مزامنة كل الـ SKU/المخزون لكل Variation + Tag <code>stylebox</code> بعد 5 ثواني في آخر العملية</td></tr>
             </table>
 
             <h4>الـ Endpoints الرئيسية</h4>
@@ -749,7 +793,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
               <tr><td><code>verify_employee</code></td><td>POST — تسجيل الدخول</td></tr>
               <tr><td><code>log_logout</code></td><td>GET — تسجيل خروج</td></tr>
               <tr><td><code>get_employees</code></td><td>GET — قائمة الموظفين النشطين</td></tr>
-              <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>skip_draft</code> / <code>skip_star</code> اختياريين)</td></tr>
+              <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code> و<code>add_star</code>: <code>true</code>/<code>false</code> — الاتنين اختياريين، الافتراضي <code>DRAFT</code> + <code>true</code>)</td></tr>
               <tr><td><code>diag</code></td><td>GET — فحص ذاتي كامل (env، صلاحيات شوبيفاي، اتصال WooCommerce، D1) بدون كتابة</td></tr>
               <tr><td><code>get_config</code></td><td>GET — يرجّع نسخة الـ Worker لمقارنتها بنسخة الواجهة</td></tr>
               <tr><td><code>get_logs</code></td><td>GET — سجل مُقسّم صفحات (حتى 100 لكل صفحة)</td></tr>
@@ -782,7 +826,9 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
             <h4>NOTES</h4>
             <ul>
               <li>الأداة manual-only بالتصميم — مفيش <code>sync_all</code> ومفيش Cron، تشغيلة واحدة = منتج واحد (Worker Builder Step 5A + woocommerce-sync-helper Step 6)</li>
-              <li>فشل الخطوة على مستوى المنتج (metafield/tag/draft/title) بيتسجل في اللوج كـ <code>error</code> لكن ما بيوقفش مزامنة الـ Variations</li>
+              <li>فشل الخطوة على مستوى المنتج (metafield/status/title) بيتسجل في اللوج كـ <code>error</code> لكن ما بيوقفش باقي الخطوات — نشر ووردبريس، مزامنة الـ Variations، والـ Tag كلهم معزولين في try/catch منفصلة</li>
+              <li>ترتيب التنفيذ في <code>syncProduct</code> مقصود: شوبيفاي (status/⭐/metafield) ← ووردبريس (publish + meta) ← كل الـ Variations ← انتظار <code>TAG_DELAY_MS</code> (5 ثواني) ← <code>tagsAdd("stylebox")</code>. الـ Tag آخر أثر بيظهر على المنتج — متغيّرش الترتيب ده من غير سبب</li>
+              <li>الانتظار بـ <code>await new Promise(r =&gt; setTimeout(r, 5000))</code> — مش بيستهلك CPU time في Cloudflare Workers، بس بيزوّد زمن استجابة <code>sync_product</code> بـ 5 ثواني لكل تشغيلة</li>
               <li>الحقل <code>global_unique_id</code> على مستوى المنتج في ووكومرس هو اللي بيربط المنتجين — لو فاضي، الـ Worker بيرجّع خطأ فورًا</li>
               <li>سجلات D1 القديمة تحت اسم <code>shopify_woo_sync</code> (523 صف حتى 25-08-2026) اتنقلت لـ <code>stylebox_products_linking</code> — راجع ملخّص التسليم لتوقيت الـ SQL بالظبط</li>
             </ul>
@@ -858,7 +904,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.0.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.1.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
@@ -1313,8 +1359,7 @@ async function doLogout() {
   document.getElementById('syncResultWrap').style.display = 'none';
   document.getElementById('syncResultWrap').innerHTML = '';
   document.getElementById('wpProductId').value = '';
-  document.getElementById('skipDraft').checked = false;
-  document.getElementById('skipStar').checked  = false;
+  resetSyncOptions();
   document.getElementById('activeUserBtn').textContent = '👤 —';
   switchMainTab('sync');
 
@@ -1334,7 +1379,28 @@ function updateLoginSettingsBtn() {
 function setSyncBusy(active) {
   const btn = document.getElementById('syncBtn');
   btn.disabled = active;
-  btn.innerHTML = active ? '<span class="mini-spinner"></span> جاري الربط...' : '▶ تشغيل الربط';
+  // الـ Worker بيستنى 5 ثواني قبل الـ Tag — الرسالة بتقول ده صراحةً عشان
+  // الانتظار مايتقراش كتعليق.
+  btn.innerHTML = active
+    ? '<span class="mini-spinner"></span> جاري الربط... (فيه انتظار 5 ثواني قبل إضافة الـ Tag)'
+    : '▶ تشغيل الربط';
+}
+
+// القيم الافتراضية = سلوك v2.0.0 نفسه: Draft + إضافة ⭐
+function resetSyncOptions() {
+  const st = document.querySelector('input[name="shopifyStatus"][value="DRAFT"]');
+  if (st) st.checked = true;
+  const star = document.querySelector('input[name="addStar"][value="yes"]');
+  if (star) star.checked = true;
+}
+
+function readSyncOptions() {
+  const st   = document.querySelector('input[name="shopifyStatus"]:checked');
+  const star = document.querySelector('input[name="addStar"]:checked');
+  return {
+    shopifyStatus: st ? st.value : 'DRAFT',
+    addStar:       star ? star.value === 'yes' : true,
+  };
 }
 
 async function runSync() {
@@ -1343,16 +1409,15 @@ async function runSync() {
   if (!raw) { showToast('من فضلك أدخل WooCommerce Product ID', 'error'); return; }
   const wpProductId = Number(raw);
   if (!Number.isFinite(wpProductId) || wpProductId <= 0) { showToast('الـ Product ID لازم يكون رقم صحيح', 'error'); return; }
-  const skipDraft = document.getElementById('skipDraft').checked;
-  const skipStar  = document.getElementById('skipStar').checked;
+  const { shopifyStatus, addStar } = readSyncOptions();
 
   setSyncBusy(true);
   try {
     const data = await apiPost('sync_product', {
-      wp_product_id: wpProductId,
-      skip_draft:    skipDraft,
-      skip_star:     skipStar,
-      employee:      currentEmployee.username,
+      wp_product_id:  wpProductId,
+      shopify_status: shopifyStatus,
+      add_star:       addStar,
+      employee:       currentEmployee.username,
     });
     renderSyncResult(data);
     const st = data.results ? data.results.status : 'error';
@@ -1378,28 +1443,44 @@ function renderSyncResult(data) {
       ? '<span class="badge-warn">⚠ تم جزئيًا</span>'
       : '<span class="badge-danger">✗ فشل</span>';
 
+  // صف الـ Tag + صف نشر ووردبريس بيتعرضوا في الحالتين (نجاح بيانات المنتج أو فشلها)
+  // لأن الاتنين معزولين عن بلوك شوبيفاي — بيتنفّذوا حتى لو هو فشل.
+  const tagDelaySec = ((r.tagDelayMs ?? 5000) / 1000).toLocaleString('en-US');
+  const tagRow = `<div class="result-row"><span>Tag "stylebox" (آخر خطوة، بعد ${tagDelaySec} ثواني)</span><span>${
+    r.tagError ? '<span class="badge-danger">✗ فشل</span>' : `<span class="badge-ok">${r.tag || 'stylebox'} ✓</span>`
+  }</span></div>`;
+  const wcPublishRow = `<div class="result-row"><span>نشر المنتج على ووردبريس (publish)</span><span>${
+    r.wcProductMetaError ? '<span class="badge-danger">✗ فشل</span>' : '<span class="badge-ok">publish ✓</span>'
+  }</span></div>`;
+
   let plHtml;
   if (pl) {
-    const statusCell = pl.skippedDraft
-      ? '<span class="badge-skip">تم التخطي</span>'
-      : `<span class="badge-ok">${pl.statusApplied ? 'DRAFT ✓' : '—'}</span>`;
-    const titleCell = pl.skippedStar
-      ? '<span class="badge-skip">تم التخطي</span>'
+    const statusCell = pl.keptStatus
+      ? '<span class="badge-skip">اتسابت زي ما هي</span>'
+      : `<span class="badge-ok">${pl.statusApplied ? `${pl.shopifyStatus} ✓` : '—'}</span>`;
+    const titleCell = !pl.addStar
+      ? '<span class="badge-skip">لا — العنوان زي ما هو</span>'
       : `<span class="badge-ok">${pl.titleApplied ? '⭐ اتضافت' : '—'}</span>`;
     plHtml = `<div class="result-card">
       <h4>🏷️ بيانات المنتج (Shopify + WooCommerce) ${overallBadge}</h4>
-      <div class="result-row"><span>Tag المضاف</span><span>${pl.tag}</span></div>
       <div class="result-row"><span>Wordpress ID (metafield)</span><span style="font-family:var(--font-mono);direction:ltr;">${pl.wordpress_id}</span></div>
-      <div class="result-row"><span>حالة "مسودة" (Draft)</span><span>${statusCell}</span></div>
+      <div class="result-row"><span>حالة المنتج على شوبيفاي</span><span>${statusCell}</span></div>
       <div class="result-row"><span>إضافة ⭐ للعنوان</span><span>${titleCell}</span></div>
       ${pl.newTitle ? `<div class="result-row"><span>العنوان الحالي</span><span style="font-family:var(--font-body);text-align:right;">${pl.newTitle}</span></div>` : ''}
-      ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce (_shopify_product_id): ${r.wcProductMetaError}</div>` : ''}
+      ${wcPublishRow}
+      ${tagRow}
+      ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce (status=publish / _shopify_product_id): ${r.wcProductMetaError}</div>` : ''}
+      ${r.tagError ? `<div class="result-note err">⚠️ فشل إضافة الـ Tag: ${r.tagError}</div>` : ''}
       ${data.logged === false || r.logged === false ? `<div class="result-note warn">⚠️ العملية تمت لكن جزء منها ما اتسجلش في السجل (logged: false)</div>` : ''}
     </div>`;
   } else {
     plHtml = `<div class="result-card">
-      <h4><span class="badge-danger">✗ فشلت مزامنة بيانات المنتج</span></h4>
-      <div class="result-note err">${r.productLevelError || 'راجع تاب "سجل العمليات" لتفاصيل الخطأ'} — مزامنة الـ Variations أدناه استمرت رغم ذلك.</div>
+      <h4><span class="badge-danger">✗ فشلت مزامنة بيانات المنتج على شوبيفاي</span></h4>
+      <div class="result-note err">${r.productLevelError || 'راجع تاب "سجل العمليات" لتفاصيل الخطأ'} — باقي الخطوات أدناه استمرت رغم ذلك.</div>
+      ${wcPublishRow}
+      ${tagRow}
+      ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce (status=publish / _shopify_product_id): ${r.wcProductMetaError}</div>` : ''}
+      ${r.tagError ? `<div class="result-note err">⚠️ فشل إضافة الـ Tag: ${r.tagError}</div>` : ''}
     </div>`;
   }
 
