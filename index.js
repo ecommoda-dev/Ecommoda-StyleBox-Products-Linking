@@ -24,18 +24,35 @@
 // PLUS — product-level fields synced every run:
 //   Shopify product.metafield(custom.wordpress_id) ← WooCommerce product ID
 //     (wpProductId) — always
-//   Shopify product.tags ← "stylebox" tag added (dedup'd by Shopify) — always
-//   Shopify product.status ← forced to DRAFT every sync — UNLESS skip_draft
-//   Shopify product.title  ← "⭐ " prefix added once, idempotent — UNLESS skip_star
+//   Shopify product.status ← حسب خيار shopify_status (ACTIVE / DRAFT / KEEP)
+//   Shopify product.title  ← "⭐ " prefix added once, idempotent — UNLESS add_star=false
+//   WooCommerce product.status ← 'publish' — دايمًا، بدون خيار (اتضاف 26-08-2026)
 //   WooCommerce product.meta_data._shopify_product_id ← Shopify product
 //     numeric ID (legacy field, mirrors global_unique_id) — always
+//   Shopify product.tags ← "stylebox" tag — آخر خطوة على الإطلاق، بعد انتظار
+//     TAG_DELAY_MS (اتغيّر ترتيبه 26-08-2026 — كان بيتنفّذ في نص العملية)
 //
-// ⚠️ skip_draft / skip_star — تقسيم 25-08-2026 (كان خيار واحد skip_draft_and_star):
-//   skip_draft = true  → productUpdate ميبعتش status:'DRAFT'  (الحالة تفضل زي ما هي)
-//   skip_star  = true  → productUpdate ميبعتش title           (العنوان يفضل زي ما هو)
-//   الاتنين مستقلّين تمامًا عن بعض — تفعيل واحد مايأثرش على التاني. الـ Tag
-//   "stylebox" + الـ metafield wordpress_id + مزامنة كل الـ SKU/المخزون
-//   بتشتغل عادي في كل الحالات بغض النظر عن قيمة الاثنين.
+// ⚠️ تعديلات 26-08-2026 (v2.1.0) — الخيارات الثنائية اتحوّلت لأسئلة صريحة:
+//   skip_draft (boolean) ← اتشال، بقى shopify_status: 'ACTIVE' | 'DRAFT' | 'KEEP'
+//        ACTIVE → productUpdate يبعت status:'ACTIVE'
+//        DRAFT  → productUpdate يبعت status:'DRAFT'   (الافتراضي — سلوك v2.0.0)
+//        KEEP   → productUpdate ميبعتش status خالص    (الحالة تفضل زي ما هي)
+//   skip_star (boolean) ← اتشال، بقى add_star: true | false
+//        true  → "⭐ " تتضاف لبداية العنوان (الافتراضي — سلوك v2.0.0)
+//        false → productUpdate ميبعتش title (العنوان يفضل زي ما هو)
+//   الاتنين لسه مستقلّين تمامًا عن بعض — قيمة واحد مالهاش أي أثر على التاني.
+//   الـ Tag "stylebox" + الـ metafield wordpress_id + WC status=publish +
+//   مزامنة كل الـ SKU/المخزون بتشتغل عادي في كل الحالات بغض النظر عن قيمتهم.
+//   (الـ Worker لسه بيقبل skip_draft/skip_star القديمين كـ fallback — راجع §HANDLER.)
+//
+// ⚠️ WooCommerce publish (26-08-2026): كل تشغيلة بتحوّل حالة منتج ووكومرس لـ
+//   'publish' — خطوة تلقائية بدون خيار، بطلب صاحب الأداة. النتيجة بتتفحص من رد
+//   الـ REST نفسه (status === 'publish') مش من HTTP 200 لوحده.
+//
+// ⚠️ ترتيب الـ Tag (26-08-2026): tagsAdd بقى آخر عملية في syncProduct بالكامل —
+//   بعد كل حاجة على شوبيفاي وووكومرس ومزامنة كل الـ Variations — وقبلها انتظار
+//   TAG_DELAY_MS (5 ثواني). الانتظار بيحصل بـ await على setTimeout: مش بيستهلك
+//   CPU time في Workers، بس بيمدّ زمن الاستجابة للواجهة بـ 5 ثواني لكل تشغيلة.
 //
 // Matching key between platforms (variants): the size attribute/option
 // value, matched on BOTH sides against ALLOWED_SIZE_ATTRIBUTE_NAMES below
@@ -53,7 +70,17 @@
 // تانية في الستاك: كل عملية sync_product لازم موظف مسجّل دخول، ومسجّلة باسمه.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.0.0';
+const WORKER_VERSION = 'v2.1.0';
+
+// الـ Tag اللي بيتضاف لكل منتج مربوط، وفترة الانتظار قبله. الانتظار مقصود
+// (طلب صاحب الأداة 26-08-2026): الـ Tag لازم يبقى آخر أثر يظهر على المنتج،
+// بعد ما كل التعديلات التانية تكون خلصت واستقرّت على شوبيفاي.
+const STYLEBOX_TAG  = 'stylebox';
+const TAG_DELAY_MS  = 5000;
+
+// حالات المنتج المسموحة على شوبيفاي بعد الربط — KEEP معناها "ما تبعتش status
+// خالص في productUpdate" مش قيمة بتتبعت لشوبيفاي.
+const SHOPIFY_STATUS_CHOICES = ['ACTIVE', 'DRAFT', 'KEEP'];
 
 // Size attribute/option names accepted on BOTH platforms — checked in
 // order, first match wins. Used by findWcSize() (WooCommerce side) and
@@ -476,20 +503,24 @@ function numericIdFromGid(gid) {
 // syncProduct() so a failure here never blocks the variation/stock sync.
 // ══════════════════════════════════════════════════════════════
 async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId, currentTitle, opts) {
-  const { skipDraft, skipStar } = opts;
+  const { shopifyStatus, addStar } = opts;
 
   // ── 1. Title candidate: prepend "⭐ " — idempotent, never double-prefixes ──
   const alreadyStarred = typeof currentTitle === 'string' && currentTitle.startsWith('⭐');
   const newTitle        = alreadyStarred ? currentTitle : `⭐ ${currentTitle}`;
 
-  // ── 2. productUpdate — input بيتبني حسب skip_draft/skip_star، مستقلّين ──
+  // ── 2. productUpdate — input بيتبني حسب shopify_status/add_star، مستقلّين ──
+  //   shopifyStatus === 'KEEP' → مافيش status في الـ input خالص
+  //   addStar       === false  → مافيش title في الـ input خالص
+  //   لو الاتنين متعطّلين → الميوتيشن نفسها مبتتنفّذش (مافيش حاجة تتغيّر)
+  const wantsStatus = shopifyStatus !== 'KEEP';
   const productInput = { id: shopifyProductGid };
-  if (!skipDraft) productInput.status = 'DRAFT';
-  if (!skipStar)  productInput.title  = newTitle;
+  if (wantsStatus) productInput.status = shopifyStatus;
+  if (addStar)     productInput.title  = newTitle;
 
   let statusApplied = false, titleApplied = false;
 
-  if (!skipDraft || !skipStar) {
+  if (wantsStatus || addStar) {
     const productUpdateResp   = await shopifyGQL(env, token, PRODUCT_UPDATE_MUTATION, { input: productInput }, 'productUpdate');
     const productUpdateResult = productUpdateResp?.data?.productUpdate;
     const productUpdateErrors = productUpdateResult?.userErrors || [];
@@ -501,24 +532,20 @@ async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId
       // Step 5A ②③ — userErrors فاضية مش كافية، لازم تأكيد الـ payload نفسه
       throw new Error('productUpdate: شوبيفاي ما رجّعتش المنتج المحدَّث — العملية غير مؤكَّدة');
     }
-    if (!skipDraft) {
-      statusApplied = returnedProduct.status === 'DRAFT';
-      if (!statusApplied) throw new Error(`productUpdate: الحالة الراجعة "${returnedProduct.status}" مش DRAFT — العملية غير مؤكَّدة`);
+    if (wantsStatus) {
+      statusApplied = returnedProduct.status === shopifyStatus;
+      if (!statusApplied) throw new Error(`productUpdate: الحالة الراجعة "${returnedProduct.status}" مش ${shopifyStatus} — العملية غير مؤكَّدة`);
     }
-    if (!skipStar) {
+    if (addStar) {
       titleApplied = returnedProduct.title === newTitle;
       if (!titleApplied) throw new Error('productUpdate: العنوان الراجع مختلف عن المتوقع — العملية غير مؤكَّدة');
     }
   }
 
-  // ── 3. tagsAdd: "stylebox" — دايمًا، بتدعدَب أوتوماتيك، آمن التكرار ──
-  const tagsAddResp   = await shopifyGQL(env, token, TAGS_ADD_MUTATION, { id: shopifyProductGid, tags: ['stylebox'] }, 'tagsAdd');
-  const tagsAddResult = tagsAddResp?.data?.tagsAdd;
-  const tagsAddErrors = tagsAddResult?.userErrors || [];
-  if (tagsAddErrors.length) throw new Error('tagsAdd failed: ' + tagsAddErrors.map(e => e.message).join(' | '));
-  if (!tagsAddResult?.node) throw new Error('tagsAdd: شوبيفاي ما أكدتش العملية — مفيش node راجع');
+  // ⚠️ tagsAdd كان هنا (الخطوة 3) لحد v2.0.0 — اتنقل بالكامل لآخر syncProduct
+  // بعد انتظار TAG_DELAY_MS (راجع §SYNC::addStyleboxTag و§CONSTANTS).
 
-  // ── 4. metafieldsSet: custom.wordpress_id (product-level, Integer) — دايمًا ──
+  // ── 3. metafieldsSet: custom.wordpress_id (product-level, Integer) — دايمًا ──
   const metafieldResp = await shopifyGQL(env, token, SET_PRODUCT_METAFIELD_MUTATION, {
     metafields: [{
       ownerId:   shopifyProductGid,
@@ -534,23 +561,47 @@ async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId
   if (!metafieldResult?.metafields?.length) throw new Error('metafieldsSet (wordpress_id): شوبيفاي ما رجّعتش الميتافيلد المكتوب — العملية غير مؤكَّدة');
 
   return {
-    skippedDraft: skipDraft,
-    skippedStar:  skipStar,
+    shopifyStatus,                                   // 'ACTIVE' | 'DRAFT' | 'KEEP'
+    keptStatus:   shopifyStatus === 'KEEP',
+    addStar,
     statusApplied,
     titleApplied,
-    newTitle:     !skipStar ? newTitle : currentTitle,
-    status:       !skipDraft ? 'DRAFT' : null,
-    tag:          'stylebox',
+    newTitle:     addStar ? newTitle : currentTitle,
+    status:       shopifyStatus !== 'KEEP' ? shopifyStatus : null,
     wordpress_id: wpProductId,
   };
 }
 
 // ══════════════════════════════════════════════════════════════
+// §SYNC::addStyleboxTag — آخر خطوة على الإطلاق في كل تشغيلة
+// بتتنادى من syncProduct بعد ما كل حاجة تانية تخلص وبعد انتظار TAG_DELAY_MS.
+// tagsAdd بتدعدَب أوتوماتيك من شوبيفاي — آمنة التكرار تمامًا.
+// ══════════════════════════════════════════════════════════════
+async function addStyleboxTag(env, token, shopifyProductGid) {
+  const tagsAddResp   = await shopifyGQL(env, token, TAGS_ADD_MUTATION, { id: shopifyProductGid, tags: [STYLEBOX_TAG] }, 'tagsAdd');
+  const tagsAddResult = tagsAddResp?.data?.tagsAdd;
+  const tagsAddErrors = tagsAddResult?.userErrors || [];
+  if (tagsAddErrors.length) throw new Error('tagsAdd failed: ' + tagsAddErrors.map(e => e.message).join(' | '));
+  if (!tagsAddResult?.node) throw new Error('tagsAdd: شوبيفاي ما أكدتش العملية — مفيش node راجع');
+  return STYLEBOX_TAG;
+}
+
+// ══════════════════════════════════════════════════════════════
 // §SYNC::syncProduct — the core operation, called from action=sync_product
 // ⚠️ manual-only by design — لا يوجد sync_all ولا Cron (راجع §CONSTANTS فوق)
+//
+// ترتيب التنفيذ (مهم — اتغيّر 26-08-2026):
+//   1. قراءة منتج ووكومرس + الـ Variations + منتج شوبيفاي
+//   2. Shopify product-level: status (حسب الخيار) + ⭐ (حسب الخيار) + wordpress_id
+//   3. WooCommerce product-level: status='publish' + meta _shopify_product_id
+//   4. لكل Variation: SKU/مخزون/meta على ووكومرس + wordpress_variation_id على شوبيفاي
+//   5. انتظار TAG_DELAY_MS ثم tagsAdd("stylebox") ← آخر خطوة، بعد كل اللي فوق
 // ══════════════════════════════════════════════════════════════
 async function syncProduct(env, wpProductId, opts = {}) {
-  const { skipDraft = false, skipStar = false, employee = null } = opts;
+  const { shopifyStatus = 'DRAFT', addStar = true, employee = null } = opts;
+  if (!SHOPIFY_STATUS_CHOICES.includes(shopifyStatus)) {
+    throw new Error(`shopify_status غير صالحة: "${shopifyStatus}" — المسموح: ${SHOPIFY_STATUS_CHOICES.join(' / ')}`);
+  }
   assertEnv(env, 'shopify', 'woocommerce');
 
   const wooProduct = await wcGetProduct(env, wpProductId);
@@ -579,7 +630,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
   let productLevelError  = null;
   try {
     productLevelResult = await syncProductLevelFields(
-      env, token, shopifyProductGid, wpProductId, shopifyTitle, { skipDraft, skipStar }
+      env, token, shopifyProductGid, wpProductId, shopifyTitle, { shopifyStatus, addStar }
     );
     const okLog = await safeWriteLog(env.DB, {
       tool:         TOOL_NAME,
@@ -587,9 +638,8 @@ async function syncProduct(env, wpProductId, opts = {}) {
       employee,
       productTitle: productLevelResult.newTitle,
       notes:        `wordpress_id=${wpProductId} set` +
-                    (skipDraft ? '، الحالة (Draft) اتخطّت' : '، status→DRAFT') +
-                    (skipStar  ? '، إضافة ⭐ اتخطّت' : (productLevelResult.titleApplied ? '، ⭐ اتضافت للعنوان' : '، العنوان كان متعلّم من قبل')) +
-                    '، Tag "stylebox" اتضاف',
+                    (shopifyStatus === 'KEEP' ? '، حالة شوبيفاي اتسابت زي ما هي' : `، status→${shopifyStatus}`) +
+                    (addStar ? (productLevelResult.titleApplied ? '، ⭐ اتضافت للعنوان' : '، العنوان كان متعلّم من قبل') : '، إضافة ⭐ اتخطّت'),
       extra: { wpProductId, shopifyProductId, ...productLevelResult },
     });
     if (!okLog) loggedOk = false;
@@ -598,33 +648,43 @@ async function syncProduct(env, wpProductId, opts = {}) {
     console.error(`Product-level sync failed for ${wpProductId}:`, e);
     const okLog = await safeWriteLog(env.DB, {
       tool: TOOL_NAME, type: 'error', employee,
-      notes: `Product-level sync (metafield/draft/tag/title) failed: ${e.message}`,
+      notes: `Product-level sync (metafield/status/title) failed: ${e.message}`,
       extra: { wpProductId, shopifyProductId },
     });
     if (!okLog) loggedOk = false;
   }
 
-  // ── WooCommerce-side product-level meta: _shopify_product_id ──
-  // (legacy field, mirrors global_unique_id). Isolated separately because
-  // it's a different platform/failure mode than the Shopify-side block
-  // above — one failing should never hide or block the other.
+  // ── WooCommerce-side product-level: status=publish + meta _shopify_product_id ──
+  // status='publish' اتضاف 26-08-2026 — خطوة تلقائية بدون خيار: كل منتج بيتربط
+  // بيتنشر على stylebox.online. (_shopify_product_id حقل قديم legacy بيعكس
+  // global_unique_id.) الاتنين في نداء PUT واحد — نفس الطلب، نفس الفحص.
+  // معزول عن بلوك شوبيفاي فوق: منصّة مختلفة وأنماط فشل مختلفة، وفشل واحد
+  // مالوش حق يخفي أو يوقف التاني.
   let wcProductMetaError = null;
+  let wcPublished        = false;
   try {
-    await wcUpdateProduct(env, wpProductId, {
+    const wcUpdated = await wcUpdateProduct(env, wpProductId, {
+      status:    'publish',
       meta_data: [{ key: '_shopify_product_id', value: shopifyProductId }],
     });
+    // ⚠️ HTTP 200 لوحده مش إثبات — ووكومرس بترجّع المنتج بحالته الفعلية بعد
+    // التحديث، فالتأكيد بيتقرا منها هي (نفس مبدأ فحص returnedProduct.status).
+    wcPublished = wcUpdated?.status === 'publish';
+    if (!wcPublished) {
+      throw new Error(`WC status الراجعة "${wcUpdated?.status ?? '—'}" مش publish — العملية غير مؤكَّدة`);
+    }
     const okLog = await safeWriteLog(env.DB, {
       tool: TOOL_NAME, type: 'product_meta_synced', employee,
-      notes: `WC meta _shopify_product_id refreshed = ${shopifyProductId}`,
-      extra: { wpProductId, shopifyProductId },
+      notes: `WC status→publish، meta _shopify_product_id refreshed = ${shopifyProductId}`,
+      extra: { wpProductId, shopifyProductId, wcStatus: 'publish' },
     });
     if (!okLog) loggedOk = false;
   } catch (e) {
     wcProductMetaError = e.message;
-    console.error(`WC _shopify_product_id meta update failed for ${wpProductId}:`, e);
+    console.error(`WC product-level update (publish/meta) failed for ${wpProductId}:`, e);
     const okLog = await safeWriteLog(env.DB, {
       tool: TOOL_NAME, type: 'error', employee,
-      notes: `WC _shopify_product_id meta update failed: ${e.message}`,
+      notes: `WC product-level update (status=publish + _shopify_product_id) failed: ${e.message}`,
       extra: { wpProductId, shopifyProductId },
     });
     if (!okLog) loggedOk = false;
@@ -724,18 +784,51 @@ async function syncProduct(env, wpProductId, opts = {}) {
     });
   }
 
+  // ── آخر خطوة على الإطلاق: انتظار 5 ثواني ثم Tag "stylebox" ──────
+  // مطلوب صراحةً (26-08-2026): الـ Tag مايتضافش غير بعد ما كل الأكشنز
+  // التانية تخلص. await على setTimeout مش بيستهلك CPU time في Workers —
+  // بس بيمدّ زمن استجابة sync_product بـ 5 ثواني، والواجهة مستنية عادي.
+  // معزول في try/catch زي باقي البلوكات: فشله بيخلّي النتيجة "warning" ومش
+  // بيلغي أي حاجة اتعملت قبله.
+  let tagAdded = null;
+  let tagError = null;
+  await new Promise(resolve => setTimeout(resolve, TAG_DELAY_MS));
+  try {
+    tagAdded = await addStyleboxTag(env, token, shopifyProductGid);
+    const okLog = await safeWriteLog(env.DB, {
+      tool: TOOL_NAME, type: 'product_meta_synced', employee,
+      productTitle: productLevelResult?.newTitle || shopifyTitle,
+      notes: `Tag "${STYLEBOX_TAG}" اتضاف (آخر خطوة، بعد انتظار ${TAG_DELAY_MS / 1000} ثواني)`,
+      extra: { wpProductId, shopifyProductId, tag: STYLEBOX_TAG, delayMs: TAG_DELAY_MS },
+    });
+    if (!okLog) loggedOk = false;
+  } catch (e) {
+    tagError = e.message;
+    console.error(`tagsAdd failed for ${wpProductId}:`, e);
+    const okLog = await safeWriteLog(env.DB, {
+      tool: TOOL_NAME, type: 'error', employee,
+      notes: `Tag "${STYLEBOX_TAG}" failed: ${e.message}`,
+      extra: { wpProductId, shopifyProductId },
+    });
+    if (!okLog) loggedOk = false;
+  }
+
   // نتيجة العملية = 3 حالات مش اتنين (Step 5A ④ / ecommoda-html-builder Step 3C)
   const anyVariantWarning = results.some(r => r.status === 'warning');
   const anyVariantSynced  = results.some(r => r.status === 'synced');
   const overallStatus = productLevelError
     ? (anyVariantSynced ? 'warning' : 'error')
-    : (anyVariantWarning || wcProductMetaError ? 'warning' : 'success');
+    : (anyVariantWarning || wcProductMetaError || tagError ? 'warning' : 'success');
 
   return {
     status: overallStatus,
     productLevel: productLevelResult,
     productLevelError,
     wcProductMetaError,
+    wcPublished,
+    tag:        tagAdded,
+    tagError,
+    tagDelayMs: TAG_DELAY_MS,
     variants: results,
     logged: loggedOk,
   };
@@ -816,10 +909,22 @@ export default {
         if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
         const body = await request.json().catch(() => ({}));
         if (!body.wp_product_id) return json({ error: 'wp_product_id required' }, 400, request);
+        // shopify_status / add_star هما الخيارين الحاليين (v2.1.0). skip_draft /
+        // skip_star القديمين لسه مقبولين كـ fallback عشان أي واجهة متخزّنة في
+        // كاش المتصفح قبل التحديث ماتكسرش — بيتقرا منهم بس لو الجديد مش مبعوت.
+        let shopifyStatus = String(body.shopify_status || '').toUpperCase();
+        if (!shopifyStatus) shopifyStatus = body.skip_draft ? 'KEEP' : 'DRAFT';
+        if (!SHOPIFY_STATUS_CHOICES.includes(shopifyStatus)) {
+          return json({
+            error: `shopify_status غير صالحة — المسموح: ${SHOPIFY_STATUS_CHOICES.join(' / ')}`,
+          }, 400, request);
+        }
+        const addStar = body.add_star !== undefined ? !!body.add_star : !body.skip_star;
+
         const results = await syncProduct(env, body.wp_product_id, {
-          skipDraft: !!body.skip_draft,
-          skipStar:  !!body.skip_star,
-          employee:  body.employee || null,
+          shopifyStatus,
+          addStar,
+          employee: body.employee || null,
         });
         return json({ ok: true, wp_product_id: body.wp_product_id, results }, 200, request);
       }
