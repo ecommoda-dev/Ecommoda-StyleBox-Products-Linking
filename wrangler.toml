@@ -23,6 +23,7 @@ database_id   = "90db62d3-bd7e-4d92-912b-10fc78eeb565"
 # ⚠️ الأداة دي مش أداة مخزون — مفيش LOCATION_ID عمدًا.
 [vars]
 SHOP_DOMAIN = "6c7e1a-53.myshopify.com"
+WC_BASE_URL = "https://stylebox.online"
 
 # ⚠️ الأسرار مبتتكتبش هنا أبدًا.
 #    Worker → Settings → Variables and Secrets → علّم Secret
