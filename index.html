@@ -689,6 +689,15 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
             <span class="cl-ver-date">26-08-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>لو حقل <code>GTIN</code> (<code>global_unique_id</code>) على المنتج في ووكومرس فاضي، الـ Worker بقى بيدوّر على رقم شوبيفاي في بداية الـ <code>SKU</code> (نمط "رقم-slug" زي <code>10468835819842-skechers-…</code>) — لو لقاه بياخد الرقم بس، بيكتبه في <code>GTIN</code>، وبيمسحه من الـ SKU (يفضل الباقي)، وبعدين يكمّل الربط عادي. لو مفيش رقم في الـ SKU برضه، بيفشل زي الأول.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.1.0</span>
+            <span class="cl-ver-date">26-08-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>كل تشغيلة ربط بقت بتنشر المنتج على ووردبريس (<code>stylebox.online</code> → <code>status = publish</code>) — خطوة تلقائية بدون خيار، بتتفحص من رد ووكومرس نفسه مش من HTTP 200.</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>خيار "تخطي فرض حالة مسودة" اتشال — بقى سؤال صريح: <strong>حالة المنتج على شوبيفاي بعد الربط؟</strong> باختيارات (Active / Draft / تبقى كما هي بدون تعديل). الافتراضي Draft = نفس سلوك v2.0.0.</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>خيار "تخطي إضافة ⭐" اتشال — بقى سؤال صريح: <strong>هل تريد إضافة نجمة ⭐ للعنوان؟</strong> (نعم / لا). الافتراضي "نعم" = نفس سلوك v2.0.0.</span></li>
@@ -829,7 +838,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
               <li>فشل الخطوة على مستوى المنتج (metafield/status/title) بيتسجل في اللوج كـ <code>error</code> لكن ما بيوقفش باقي الخطوات — نشر ووردبريس، مزامنة الـ Variations، والـ Tag كلهم معزولين في try/catch منفصلة</li>
               <li>ترتيب التنفيذ في <code>syncProduct</code> مقصود: شوبيفاي (status/⭐/metafield) ← ووردبريس (publish + meta) ← كل الـ Variations ← انتظار <code>TAG_DELAY_MS</code> (5 ثواني) ← <code>tagsAdd("stylebox")</code>. الـ Tag آخر أثر بيظهر على المنتج — متغيّرش الترتيب ده من غير سبب</li>
               <li>الانتظار بـ <code>await new Promise(r =&gt; setTimeout(r, 5000))</code> — مش بيستهلك CPU time في Cloudflare Workers، بس بيزوّد زمن استجابة <code>sync_product</code> بـ 5 ثواني لكل تشغيلة</li>
-              <li>الحقل <code>global_unique_id</code> على مستوى المنتج في ووكومرس هو اللي بيربط المنتجين — لو فاضي، الـ Worker بيرجّع خطأ فورًا</li>
+              <li>الحقل <code>global_unique_id</code> (GTIN) على مستوى المنتج في ووكومرس هو اللي بيربط المنتجين — لو فاضي، الـ Worker (26-08-2026) بيدوّر على رقم شوبيفاي في بداية الـ <code>SKU</code> (نمط "رقم-slug")، ولو لقاه بيكتبه في GTIN وبيشيله من الـ SKU تلقائيًا قبل ما يكمّل. لو مفيش رقم في الـ SKU برضه، بيرجّع خطأ فورًا زي الأول</li>
               <li>سجلات D1 القديمة تحت اسم <code>shopify_woo_sync</code> (523 صف حتى 25-08-2026) اتنقلت لـ <code>stylebox_products_linking</code> — راجع ملخّص التسليم لتوقيت الـ SQL بالظبط</li>
             </ul>
           </div>
@@ -904,7 +913,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.1.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.2.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش

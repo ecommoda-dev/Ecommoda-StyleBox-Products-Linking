@@ -49,6 +49,13 @@
 //   'publish' — خطوة تلقائية بدون خيار، بطلب صاحب الأداة. النتيجة بتتفحص من رد
 //   الـ REST نفسه (status === 'publish') مش من HTTP 200 لوحده.
 //
+// ⚠️ GTIN fallback من الـ SKU (26-08-2026): لو global_unique_id (خانة GTIN)
+//   فاضية على منتج ووكومرس، الـ Worker بيدوّر على رقم شوبيفاي في بداية SKU
+//   (نمط "١٤ رقم-slug"، مثال "10468835819842-skechers-…") — لو لقاه، بيكتبه
+//   في GTIN وبيشيله من الـ SKU (يفضل الباقي بس)، وبعدين يكمّل العملية عادي.
+//   لو مفيش رقم في الـ SKU برضه، الفشل زي الأول تمامًا. راجع
+//   extractGtinFromSku()/syncProduct() في §SYNC::matching.
+//
 // ⚠️ ترتيب الـ Tag (26-08-2026): tagsAdd بقى آخر عملية في syncProduct بالكامل —
 //   بعد كل حاجة على شوبيفاي وووكومرس ومزامنة كل الـ Variations — وقبلها انتظار
 //   TAG_DELAY_MS (5 ثواني). الانتظار بيحصل بـ await على setTimeout: مش بيستهلك
@@ -70,7 +77,7 @@
 // تانية في الستاك: كل عملية sync_product لازم موظف مسجّل دخول، ومسجّلة باسمه.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.1.0';
+const WORKER_VERSION = 'v2.2.0';
 
 // الـ Tag اللي بيتضاف لكل منتج مربوط، وفترة الانتظار قبله. الانتظار مقصود
 // (طلب صاحب الأداة 26-08-2026): الـ Tag لازم يبقى آخر أثر يظهر على المنتج،
@@ -429,9 +436,11 @@ async function wcGetProduct(env, wpProductId) {
   return resp.json();
 }
 
-// product-level update — currently used only to refresh the legacy
-// "_shopify_product_id" meta field. meta_data passed here upserts by key —
-// does NOT wipe other existing meta, same behavior relied on in
+// product-level update — used to refresh the legacy "_shopify_product_id"
+// meta field (status=publish call), and also (26-08-2026) to recover a
+// missing global_unique_id (GTIN) + strip the number back out of sku —
+// see extractGtinFromSku()/syncProduct(). meta_data passed here upserts by
+// key — does NOT wipe other existing meta, same behavior relied on in
 // wcUpdateVariation() below.
 async function wcUpdateProduct(env, wpProductId, payload) {
   const resp = await fetch(
@@ -494,6 +503,20 @@ function findShopifyVariantBySize(shopifyVariants, size) {
 
 function numericIdFromGid(gid) {
   return gid.split('/').pop();
+}
+
+// ══════════════════════════════════════════════════════════════
+// §SYNC::gtinFromSku — fallback لما global_unique_id (GTIN) يكون فاضي
+// بعض منتجات ووكومرس اتكتب فيها رقم شوبيفاي في بداية الـ SKU بدل ما يتحط
+// في خانة GTIN (مثال: "10468835819842-skechers-slip-ins-relaxed-fit-…").
+// الدالة دي بتاخد الرقم بس (قبل أول "-")، وبترجّع الباقي كـ SKU جديد.
+// حد أدنى 6 أرقام عشان مايتلخبطش مع SKU عادي مالوش رقم شوبيفاي فعلي فيه.
+// ══════════════════════════════════════════════════════════════
+function extractGtinFromSku(sku) {
+  if (typeof sku !== 'string') return null;
+  const match = sku.match(/^(\d{6,})-(.+)$/);
+  if (!match) return null;
+  return { gtin: match[1], sku: match[2] };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -604,10 +627,42 @@ async function syncProduct(env, wpProductId, opts = {}) {
   }
   assertEnv(env, 'shopify', 'woocommerce');
 
+  let loggedOk = true;
+
   const wooProduct = await wcGetProduct(env, wpProductId);
-  const shopifyProductId = wooProduct.global_unique_id;
+  let shopifyProductId    = wooProduct.global_unique_id;
+  let gtinRecoveredFromSku = null;
+
+  // ── Fallback (26-08-2026، بطلب صاحب الأداة): global_unique_id (GTIN) فاضي
+  // بس رقم شوبيفاي متكتب في بداية الـ SKU — بنستخرجه، بنكتبه في GTIN، وبننضّف
+  // الـ SKU من الرقم. لو مفيش رقم في الـ SKU برضه، الفشل زي ما كان بالظبط.
   if (!shopifyProductId) {
-    throw new Error(`Product ${wpProductId}: no global_unique_id (Shopify Product ID) set — skipping`);
+    const extracted = extractGtinFromSku(wooProduct.sku);
+    if (extracted) {
+      try {
+        const wcUpdated = await wcUpdateProduct(env, wpProductId, {
+          sku:              extracted.sku,
+          global_unique_id: extracted.gtin,
+        });
+        shopifyProductId       = wcUpdated?.global_unique_id || extracted.gtin;
+        gtinRecoveredFromSku    = { skuBefore: wooProduct.sku, skuAfter: extracted.sku, gtin: extracted.gtin };
+        wooProduct.sku              = extracted.sku;
+        wooProduct.global_unique_id = shopifyProductId;
+        const okLog = await safeWriteLog(env.DB, {
+          tool: TOOL_NAME, type: 'product_meta_synced', employee,
+          productTitle: wooProduct.name,
+          notes: `global_unique_id (GTIN) كان فاضي — الرقم ${extracted.gtin} اتستخرج من بداية SKU وكُتب في GTIN، والـ SKU بقى "${extracted.sku}"`,
+          extra: { wpProductId, ...gtinRecoveredFromSku },
+        });
+        if (!okLog) loggedOk = false;
+      } catch (e) {
+        throw new Error(`Product ${wpProductId}: no global_unique_id (Shopify Product ID) set، ولقينا رقم ${extracted.gtin} في الـ SKU بس كتابته على ووكومرس فشلت: ${e.message}`);
+      }
+    }
+  }
+
+  if (!shopifyProductId) {
+    throw new Error(`Product ${wpProductId}: no global_unique_id (Shopify Product ID) set, ومفيش رقم شوبيفاي في بداية الـ SKU (${wooProduct.sku || '—'}) — skipping`);
   }
   const shopifyProductGid = `gid://shopify/Product/${shopifyProductId}`;
 
@@ -620,8 +675,6 @@ async function syncProduct(env, wpProductId, opts = {}) {
   }
   const shopifyVariants = (gqlResp.data.product.variants?.edges || []).map(e => e.node);
   const shopifyTitle    = gqlResp.data.product.title || '';
-
-  let loggedOk = true;
 
   // ── Shopify-side product-level fields (metafield + Draft + tag + ⭐ title) ──
   // Isolated try/catch: a failure here is logged but never blocks the
@@ -824,6 +877,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
     status: overallStatus,
     productLevel: productLevelResult,
     productLevelError,
+    gtinRecoveredFromSku,
     wcProductMetaError,
     wcPublished,
     tag:        tagAdded,
