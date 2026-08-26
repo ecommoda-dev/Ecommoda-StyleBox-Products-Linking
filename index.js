@@ -3,6 +3,7 @@
 // Worker: stylebox-products-linking-worker — EcomModa
 // Tool:   Ecommoda StyleBox Products Linking
 // Account: ecommoda-dev.workers.dev
+// skills: worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 · html-builder v1.0.0 — 26-08-2026
 //
 // ⚠️ RENAME — 25-08-2026: هذا الملف كان shopify-woo-sync-worker (tool =
 // shopify_woo_sync). اتعمل رينيم كامل + مراجعة شاملة مقابل ecommoda-worker-builder
@@ -75,9 +76,26 @@
 // استثناء متعمّد وموثّق بدون تسجيل دخول ("أداة تشغيل يدوي" محمية بس بـ
 // WORKER_SECRET). الاستثناء اتشال بطلب صاحب الأداة — الأداة دلوقتي زي أي أداة
 // تانية في الستاك: كل عملية sync_product لازم موظف مسجّل دخول، ومسجّلة باسمه.
+//
+// ⚠️ action=update_price (v2.3.0 — 26-08-2026): أكشن جديد ومنفصل عن
+// sync_product، بيحدّث سعر كل Variation ووكومرس مربوطة بالمنتج = سعر شوبيفاي
+// + فرق سعر (price_difference) بييجي في POST body من الواجهة (حقل رقمي —
+// مش env var زي PRICE_DIFFERENCE في أداة "مزامنة أسعار Stylebox"، لأن الأداة
+// دي عايزة الهامش يتغيّر لحظيًا من الواجهة). نفس معادلة الحساب المستخدمة هناك
+// (regular = compare_at+diff / sale = price+diff لو فيه خصم فعلي، وإلا regular
+// = price+diff وsale فاضي) — راجع computeVariantPrices()/updateProductPrice()
+// تحت. المطابقة بتستخدم نفس آلية sync_product (findWcSize/findShopifyVariantBySize
+// بالمقاس) مش wordpress_variation_id/GTIN triple-check بتاع أداة الأسعار —
+// المنتج لازم يكون اتربط الأول (global_unique_id موجود) وإلا العملية بترفض.
+// الكتابة على ووكومرس مباشرة عبر wc/v3 (regular_price/sale_price) — نفس
+// الـ REST creds المستخدمة في wcUpdateVariation، مفيش سر جديد مطلوب.
+// D1: بيستخدم نفس type='synced'/'error' المسجّلين للأداة دي في ecommoda-constants
+// §7 (مش type جديد — الجلسة دي معندهاش صلاحية تعدّل ريبو المهارات) مع
+// extra.operation='price_update' كمُميِّز؛ لو Log تاب محتاج فلترة منفصلة لاحقًا
+// سجّل type مخصّص هناك الأول.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.2.1';
+const WORKER_VERSION = 'v2.3.0';
 
 // الـ Tag اللي بيتضاف لكل منتج مربوط، وفترة الانتظار قبله. الانتظار مقصود
 // (طلب صاحب الأداة 26-08-2026): الـ Tag لازم يبقى آخر أثر يظهر على المنتج،
@@ -370,6 +388,8 @@ async function shopifyGQL(env, token, query, variables = {}, opName = 'shopify')
 }
 
 // title مطلوب — الـ idempotency check الخاص بالـ "⭐ " prefix
+// price/compareAtPrice (v2.3.0) — مستخدمين بس من updateProductPrice()، مفيش
+// أي أثر على sync_product (بيتجاهلهم زي أي field تاني مش مستخدم في اللوجيك بتاعه)
 const VARIANTS_QUERY = `
   query getVariants($id: ID!) {
     product(id: $id) {
@@ -379,6 +399,8 @@ const VARIANTS_QUERY = `
           node {
             id
             sku
+            price
+            compareAtPrice
             inventoryQuantity
             selectedOptions { name value }
           }
@@ -503,6 +525,24 @@ function findShopifyVariantBySize(shopifyVariants, size) {
 
 function numericIdFromGid(gid) {
   return gid.split('/').pop();
+}
+
+// ─── §SYNC::matching::money ─── (v2.3.0 — نفس helper وأداة "مزامنة أسعار
+// Stylebox" حرفيًا: تقريب لأقرب قرشين + تنسيق ثابت "0.00")
+function money(n) {
+  return (Math.round(n * 100) / 100).toFixed(2);
+}
+
+// ─── §PRICE::computeVariantPrices ─── نفس معادلة processVariant() في
+// stylebox-price-sync-worker حرفيًا — فيه خصم فعلي على شوبيفاي (compare_at >
+// price) → regular = compare_at+diff / sale = price+diff. مفيش خصم → regular
+// = price+diff وsale فاضي (بيمسح أي sale_price قديم على ووكومرس).
+function computeVariantPrices(shopifyPrice, shopifyCompareAt, diff) {
+  const hasCompare = Number.isFinite(shopifyCompareAt) && shopifyCompareAt > shopifyPrice;
+  if (hasCompare) {
+    return { regularPrice: money(shopifyCompareAt + diff), salePrice: money(shopifyPrice + diff) };
+  }
+  return { regularPrice: money(shopifyPrice + diff), salePrice: '' };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -889,6 +929,145 @@ async function syncProduct(env, wpProductId, opts = {}) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// §PRICE::updateProductPrice — the core operation, called from action=update_price
+// ⚠️ منفصل تمامًا عن syncProduct — أكشن قائم بذاته، مش خطوة جوه الربط.
+//
+// المنتج لازم يكون اتربط قبل كده (global_unique_id موجود على ووكومرس) — لو
+// لسه مش مربوط، بترمي وتوجّه المستخدم لـ "تشغيل الربط" الأول (نفس مبدأ رسالة
+// الخطأ في syncProduct، بدون GTIN-from-SKU fallback هنا — الأكشن ده مخصّص
+// للسعر بس، والربط بيحصل من sync_product).
+//
+// المطابقة بمقاس الـ Variation (findWcSize/findShopifyVariantBySize) — نفس
+// آلية sync_product، مش wordpress_variation_id/GTIN triple-check.
+// ══════════════════════════════════════════════════════════════
+async function updateProductPrice(env, wpProductId, opts = {}) {
+  const { priceDifference, employee = null } = opts;
+  assertEnv(env, 'shopify', 'woocommerce');
+
+  let loggedOk = true;
+
+  const wooProduct = await wcGetProduct(env, wpProductId);
+  const shopifyProductId = wooProduct.global_unique_id;
+  if (!shopifyProductId) {
+    throw new Error(
+      `Product ${wpProductId}: no global_unique_id (Shopify Product ID) set — ` +
+      `المنتج لازم يتربط الأول بزرار "تشغيل الربط" قبل ما تحدّث السعر`
+    );
+  }
+  const shopifyProductGid = `gid://shopify/Product/${shopifyProductId}`;
+
+  const wooVariations = await wcGetVariations(env, wpProductId);
+
+  const token   = await getAccessToken(env);
+  const gqlResp = await shopifyGQL(env, token, VARIANTS_QUERY, { id: shopifyProductGid }, 'getVariants');
+  if (!gqlResp?.data?.product) {
+    throw new Error(`Product ${wpProductId}: المنتج ${shopifyProductGid} مش موجود على شوبيفاي أو التوكن مالوش صلاحية عليه`);
+  }
+  const shopifyVariants = (gqlResp.data.product.variants?.edges || []).map(e => e.node);
+
+  const results = [];
+
+  for (const variation of wooVariations) {
+    const wcSize = findWcSize(variation);
+    if (!wcSize) {
+      results.push({ variationId: variation.id, status: 'skipped', reason: 'no matching size attribute' });
+      continue;
+    }
+
+    const match = findShopifyVariantBySize(shopifyVariants, wcSize);
+    if (!match) {
+      results.push({ variationId: variation.id, size: wcSize, status: 'skipped', reason: 'no matching Shopify variant' });
+      const okLog = await safeWriteLog(env.DB, {
+        tool: TOOL_NAME, type: 'error', employee,
+        sku: variation.sku,
+        notes: `تحديث السعر: No Shopify variant found for size ${wcSize}`,
+        extra: { wpProductId, variationId: variation.id, operation: 'price_update' },
+      });
+      if (!okLog) loggedOk = false;
+      continue;
+    }
+
+    const shopifyPrice = parseFloat(match.price);
+    if (!Number.isFinite(shopifyPrice)) {
+      const warning = `سعر شوبيفاي غير صالح: "${match.price}"`;
+      results.push({ variationId: variation.id, size: wcSize, status: 'warning', warning });
+      const okLog = await safeWriteLog(env.DB, {
+        tool: TOOL_NAME, type: 'error', employee,
+        sku: match.sku,
+        notes: `تحديث السعر: ${warning}`,
+        extra: { wpProductId, variationId: variation.id, operation: 'price_update' },
+      });
+      if (!okLog) loggedOk = false;
+      continue;
+    }
+
+    const compareRaw     = match.compareAtPrice;
+    const shopifyCompare = (compareRaw !== null && compareRaw !== undefined && compareRaw !== '') ? parseFloat(compareRaw) : null;
+    const { regularPrice, salePrice } = computeVariantPrices(shopifyPrice, shopifyCompare, priceDifference);
+
+    const priceBefore = `regular:${variation.regular_price ?? '—'} / sale:${variation.sale_price || '-'}`;
+
+    let variantWarning = null;
+    try {
+      const wcUpdated = await wcUpdateVariation(env, wpProductId, variation.id, {
+        regular_price: regularPrice,
+        sale_price:    salePrice,
+      });
+      // ⚠️ Step 5A-style تأكيد — HTTP 200 لوحده مش إثبات، لازم نقرا الرد الفعلي
+      const regularConfirmed = String(wcUpdated?.regular_price ?? '') === regularPrice;
+      const saleConfirmed    = String(wcUpdated?.sale_price ?? '') === (salePrice || '');
+      if (!regularConfirmed || !saleConfirmed) {
+        throw new Error(
+          `ووكومرس رجّعت regular_price="${wcUpdated?.regular_price}" / sale_price="${wcUpdated?.sale_price}" — مش مطابقة للمتوقع`
+        );
+      }
+    } catch (e) {
+      variantWarning = e.message;
+      console.error(`Price update failed for variation ${variation.id}:`, e);
+    }
+
+    const okLog = await safeWriteLog(env.DB, {
+      tool: TOOL_NAME,
+      type: variantWarning ? 'error' : 'synced',
+      employee,
+      sku: match.sku,
+      productTitle: wooProduct.name,
+      valueBefore: priceBefore,
+      valueAfter: `regular:${regularPrice} / sale:${salePrice || '-'}`,
+      notes: variantWarning
+        ? `تحديث السعر — Size ${wcSize}: ${variantWarning}`
+        : `تحديث السعر — Size ${wcSize} synced`,
+      extra: {
+        wpProductId, variationId: variation.id, shopifyVariantId: numericIdFromGid(match.id),
+        operation: 'price_update', shopifyPrice, shopifyCompare, priceDifference,
+      },
+    });
+    if (!okLog) loggedOk = false;
+
+    results.push({
+      variationId: variation.id,
+      size: wcSize,
+      status: variantWarning ? 'warning' : 'synced',
+      warning: variantWarning,
+      regularPrice,
+      salePrice,
+    });
+  }
+
+  // نتيجة العملية = 3 حالات (Step 5A ④) — نفس صيغة syncProduct: أي variant
+  // بتحذير → warning على مستوى العملية كلها، وإلا success (حتى لو فيه skipped)
+  const anyVariantWarning = results.some(r => r.status === 'warning');
+  const overallStatus = anyVariantWarning ? 'warning' : 'success';
+
+  return {
+    status: overallStatus,
+    priceDifference,
+    variants: results,
+    logged: loggedOk,
+  };
+}
+
+// ══════════════════════════════════════════════════════════════
 // §HANDLER
 // ══════════════════════════════════════════════════════════════
 export default {
@@ -978,6 +1157,24 @@ export default {
         const results = await syncProduct(env, body.wp_product_id, {
           shopifyStatus,
           addStar,
+          employee: body.employee || null,
+        });
+        return json({ ok: true, wp_product_id: body.wp_product_id, results }, 200, request);
+      }
+      // ──────────────────────────────────────────────────────────────
+
+      // ─── §PRICE — manual-only, single product per call (v2.3.0) ────
+      if (action === 'update_price') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        const body = await request.json().catch(() => ({}));
+        if (!body.wp_product_id) return json({ error: 'wp_product_id required' }, 400, request);
+        const priceDifference = Number(body.price_difference);
+        if (!Number.isFinite(priceDifference)) {
+          return json({ error: 'price_difference رقم مطلوب' }, 400, request);
+        }
+
+        const results = await updateProductPrice(env, body.wp_product_id, {
+          priceDifference,
           employee: body.employee || null,
         });
         return json({ ok: true, wp_product_id: body.wp_product_id, results }, 200, request);

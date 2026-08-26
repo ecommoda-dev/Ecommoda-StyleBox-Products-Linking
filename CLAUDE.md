@@ -12,7 +12,7 @@
 `global_unique_id`)، بتزامن الـ SKU/المخزون/الـ metafields لكل Variation، بتحدّث
 حالة وعنوان وتاج المنتج على شوبيفاي، وبتنشر المنتج على ووردبريس (`status=publish`).
 **مين بيستخدمها:** فريق ربط المنتجات (WooCommerce ↔ Shopify).
-**الإصدار:** Worker `v2.2.1` · الواجهة `v2.2.1`.
+**الإصدار:** Worker `v2.3.0` · الواجهة `v2.3.0`.
 
 ## ترتيب التنفيذ في `sync_product` (مقصود — متغيّرهوش من غير سبب)
 
@@ -52,6 +52,41 @@ Worker بيدوّر على رقم شوبيفاي في **بداية** الـ `SKU
 > (`skip_draft:true` ≡ `KEEP`، `skip_star:true` ≡ `add_star:false`) عشان أي واجهة
 > قديمة في كاش المتصفح ماتكسرش. الواجهة الحالية مبتبعتهمش خالص.
 
+## أكشن `update_price` (v2.3.0 — 26-08-2026، جديد)
+
+أكشن **منفصل تمامًا** عن `sync_product` — مفيش انتظار الـ 10 ثواني هنا، وبيتشغّل
+من بطاقة "💰 تحديث السعر" الخاصة بيه في نفس تاب "ربط منتج".
+
+```
+POST ?action=update_price
+body: { wp_product_id, price_difference, employee }
+```
+
+- `price_difference` رقم **مطلوب** (يقبل سالب أيضًا) — بييجي من حقل في الواجهة
+  مباشرة، **مش** `env var` زي `PRICE_DIFFERENCE` في أداة "مزامنة أسعار
+  Stylebox". القيمة بتتحفظ في `localStorage` (`stylebox_link_price_difference`)
+  كآخر قيمة استُخدمت **للراحة بس** — مفيش قيمة افتراضية مبيّتة في الكود، ومفيش
+  إرسال تلقائي من غير ما المستخدم يضغط الزرار.
+- **المنتج لازم يكون اتربط الأول** (`global_unique_id` موجود على ووكومرس) —
+  لو لسه مش مربوط، الأكشن بيرفض برسالة توجّه لتشغيل "تشغيل الربط" الأول.
+  مفيش GTIN-from-SKU fallback هنا (ده بتاع `sync_product` بس).
+- **المطابقة بالمقاس** — نفس آلية `sync_product` (`findWcSize`/
+  `findShopifyVariantBySize`)، **مش** `wordpress_variation_id`/GTIN triple-check
+  بتاع أداة "مزامنة أسعار Stylebox" (الأداة دي مالهاش الـ custom WP endpoint
+  ولا `SYNC_SECRET` بتاعها — الكتابة هنا مباشرة عبر `wc/v3` بنفس أسرار WC
+  المستخدمة في `wcUpdateVariation`).
+- **معادلة الحساب** (نفس معادلة `stylebox-price-sync-worker` حرفيًا —
+  `computeVariantPrices()`): لو فيه خصم فعلي على شوبيفاي
+  (`compareAtPrice > price`) → `regular_price = compare_at + diff` و
+  `sale_price = price + diff`. وإلا → `regular_price = price + diff` و
+  `sale_price` بيتفضّى (بيمسح أي خصم قديم على ووكومرس).
+- **D1:** بيستخدم نفس `type = 'synced'` (نجاح) / `'error'` (فشل) المسجّلين
+  أصلًا للأداة دي في `ecommoda-constants` §7 — **مش** `type` جديد، لأن الجلسة
+  اللي بنت الميزة دي معندهاش صلاحية تعدّل ريبو المهارات. المُميِّز هو
+  `extra.operation = 'price_update'`. لو محتاج فلترة منفصلة في تاب السجل
+  مستقبلًا (بدل البحث النصي)، سجّل `type` مخصّص (مثلاً `price_synced`) في
+  `ecommoda-constants` §7 **الأول** قبل أي تعديل تاني.
+
 ## الروابط
 
 ```
@@ -65,6 +100,7 @@ Worker بيدوّر على رقم شوبيفاي في **بداية** الـ `SKU
 | `?action=` | بيعمل إيه |
 |---|---|
 | `sync_product` | العملية الأساسية — ربط/مزامنة منتج واحد (POST، `wp_product_id` مطلوب) |
+| `update_price` | تحديث السعر (v2.3.0) — أكشن منفصل (POST، `wp_product_id` + `price_difference` مطلوبان) — راجع القسم فوق |
 | `check_employee` / `register_pin` / `verify_employee` / `log_logout` / `get_employees` | Universal D1 Auth |
 | `diag` | تشخيص env/Shopify/WC/D1 |
 | `get_config` | نسخة الـ Worker |
@@ -78,6 +114,13 @@ type  : product_meta_synced · synced · error · login · logout
 ```
 
 > لو القيم دي مش في جدول D1 في `ecommoda-constants` §7 → ضيفها هناك الأول.
+
+> ⚠️ **`update_price` (v2.3.0) بيستخدم نفس `type = 'synced'`/`'error'` فوق —
+> مفيش `type` جديد.** المُميِّز `extra.operation = 'price_update'` جوه كل صف.
+> قرار مقصود (مش سهو): الجلسة اللي بنت الميزة دي معندهاش وصول لريبو
+> `ecommoda-constants` عشان تسجّل `type` جديد فيه قبل أول استخدام (Rule 7).
+> لو محتاج فلترة منفصلة لعمليات تحديث السعر في تاب السجل مستقبلًا، سجّل
+> `type` مخصّص (مثلاً `price_synced`) هناك **الأول** قبل أي تعديل تاني.
 
 ## المضبوط فعليًا في الداشبورد
 
@@ -119,6 +162,13 @@ Build watch paths : * الافتراضي
   التأكيد بيتقرا من رد ووكومرس نفسه (`status === 'publish'`) مش من HTTP 200.
 - كل عملية `sync_product` لازم تكون من موظف مسجّل دخول (Universal D1 Auth) —
   مفيش استثناء "تشغيل يدوي بدون تسجيل دخول" هنا رغم إن الأداة manual-only.
+- `update_price` (v2.3.0) **مايشتغلش لو المنتج مش مربوط بعد** — لازم
+  `sync_product` يتشغّل الأول (أو أي تشغيلة سابقة كتبت `global_unique_id`).
+  مفيش GTIN-from-SKU fallback في `update_price` — القرار ده مقصود، مش نسيان.
+- فرق السعر (`price_difference`) بيتحفظ في `localStorage` **للراحة بس** (آخر
+  قيمة استُخدمت) — مفيش قيمة افتراضية صامتة في الكود، ولازم المستخدم يدخلها
+  ويضغط الزرار في كل مرة. لو حد غيّر القيمة في الحقل ونسي، مفيش هامش "افتراضي"
+  بيتطبّق بدل منها زي `getPriceDiff()` في أداة الأسعار التانية.
 
 ## استرجاع النسخ القديمة
 
@@ -129,9 +179,33 @@ v2.0.0 → commit 3234fb1 (آخر commit قبل تعديلات 26-08-2026)
 git checkout 3234fb1 -- index.js index.html
 ```
 
+## بصمة المهارات
+
+> الصيغة والقواعد والمهارات اللي بتدخل الجدول → `ecommoda-skill-versioning`
+> Step 4. مهارة مالهاش رقم إصدار مابتدخلش الجدول.
+
+| المهارة | الإصدار وقت آخر تعديل |
+|---|---|
+| ecommoda-worker-builder | v1.0.0 |
+| ecommoda-html-builder | v1.0.0 |
+| woocommerce-sync-helper | v1.0.0 |
+
+آخر مطابقة: 26-08-2026 · `index.js` v2.3.0 · `index.html` v2.3.0
+🔴 معلّقة: — لا شيء
+
+> سطر **🔴 معلّقة** = أي بند كاسر **معروف ومتقرر تأجيله**، بسببه.
+> `— لا شيء` معناها مفيش. **بند 🔴 متأجل من غير ما يتكتب هنا = بند ضايع** —
+> مفيش ملف تاني في المشروع بيتتبّعه.
+
 ## مسائل مفتوحة
 
 - تأكيد ما إذا كانت WooCommerce REST secrets (`WC_BASE_URL` / `WC_CONSUMER_KEY` /
   `WC_CONSUMER_SECRET`) لازم تتضاف كأسرار — الكود بيستخدمها فعليًا (`wcGetProduct`
   وغيرها) رغم إن الوصف الأصلي قال "Shopify OAuth بس". لو الأداة رجّعت خطأ ناقص
-  متغيرات WC عند أول تشغيل حقيقي، ضيفهم في الداشبورد وحدّث هذا الملف.
+  متغيرات WC عند أول تشغيل حقيقي، ضيفهم في الداشبورد وحدّث هذا الملف. **`update_price`
+  (v2.3.0) بيستخدم نفس الأسرار دي** (`wcGetProduct`/`wcUpdateVariation`) — لو
+  البند ده لسه مفتوح، `update_price` هيفشل بنفس السبب اللي `sync_product` ممكن
+  يفشل بيه.
+- تسجيل `type` مخصّص لعمليات `update_price` في `ecommoda-constants` §7 (بدل
+  إعادة استخدام `synced`/`error` مع `extra.operation`) — اختياري، مش إلزامي
+  دلوقتي. يستاهل لو محتاجين فلترة/تقرير منفصل لعمليات تحديث السعر في تاب السجل.
