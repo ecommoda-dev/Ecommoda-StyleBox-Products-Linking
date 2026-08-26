@@ -58,8 +58,8 @@
 //
 // ⚠️ ترتيب الـ Tag (26-08-2026): tagsAdd بقى آخر عملية في syncProduct بالكامل —
 //   بعد كل حاجة على شوبيفاي وووكومرس ومزامنة كل الـ Variations — وقبلها انتظار
-//   TAG_DELAY_MS (5 ثواني). الانتظار بيحصل بـ await على setTimeout: مش بيستهلك
-//   CPU time في Workers، بس بيمدّ زمن الاستجابة للواجهة بـ 5 ثواني لكل تشغيلة.
+//   TAG_DELAY_MS (10 ثواني). الانتظار بيحصل بـ await على setTimeout: مش بيستهلك
+//   CPU time في Workers، بس بيمدّ زمن الاستجابة للواجهة بـ 10 ثواني لكل تشغيلة.
 //
 // Matching key between platforms (variants): the size attribute/option
 // value, matched on BOTH sides against ALLOWED_SIZE_ATTRIBUTE_NAMES below
@@ -77,13 +77,13 @@
 // تانية في الستاك: كل عملية sync_product لازم موظف مسجّل دخول، ومسجّلة باسمه.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.2.0';
+const WORKER_VERSION = 'v2.2.1';
 
 // الـ Tag اللي بيتضاف لكل منتج مربوط، وفترة الانتظار قبله. الانتظار مقصود
 // (طلب صاحب الأداة 26-08-2026): الـ Tag لازم يبقى آخر أثر يظهر على المنتج،
 // بعد ما كل التعديلات التانية تكون خلصت واستقرّت على شوبيفاي.
 const STYLEBOX_TAG  = 'stylebox';
-const TAG_DELAY_MS  = 5000;
+const TAG_DELAY_MS  = 10000;
 
 // حالات المنتج المسموحة على شوبيفاي بعد الربط — KEEP معناها "ما تبعتش status
 // خالص في productUpdate" مش قيمة بتتبعت لشوبيفاي.
@@ -837,10 +837,10 @@ async function syncProduct(env, wpProductId, opts = {}) {
     });
   }
 
-  // ── آخر خطوة على الإطلاق: انتظار 5 ثواني ثم Tag "stylebox" ──────
+  // ── آخر خطوة على الإطلاق: انتظار 10 ثواني ثم Tag "stylebox" ──────
   // مطلوب صراحةً (26-08-2026): الـ Tag مايتضافش غير بعد ما كل الأكشنز
   // التانية تخلص. await على setTimeout مش بيستهلك CPU time في Workers —
-  // بس بيمدّ زمن استجابة sync_product بـ 5 ثواني، والواجهة مستنية عادي.
+  // بس بيمدّ زمن استجابة sync_product بـ 10 ثواني، والواجهة مستنية عادي.
   // معزول في try/catch زي باقي البلوكات: فشله بيخلّي النتيجة "warning" ومش
   // بيلغي أي حاجة اتعملت قبله.
   let tagAdded = null;
