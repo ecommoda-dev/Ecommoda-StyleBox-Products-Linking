@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ecommoda StyleBox Products Linking</title>
-<!-- skills: html-builder v1.0.0 — 27-08-2026 (تعديلات UI إضافية — worker-builder/woocommerce-sync-helper ماتلمسوش) -->
+<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (حارس البراند + تصحيح الـ Slug — منطق فعلي جديد في index.js، مش UI بس) -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
@@ -840,6 +840,16 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">27-08-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>حارس براند إلزامي جديد قبل أي كتابة في <code>sync_product</code> (على مستوى الـ Worker، v2.6.0): الـ Vendor على شوبيفاي لازم يكون له براند بنفس الاسم بالظبط على تاكسونومي البراندات في ووردبريس. لو مفيش، الربط بالكامل بيتوقف من غير أي تعديل على أي منصة، وتظهر نافذة خطأ مخصصة فيها زرار <strong>"➕ إضافة البراند على StyleBox"</strong> بيفتح صفحة إضافة البراند مباشرة. لو البراند موجود، بيتربط بالمنتج تلقائيًا وبيظهر صف "Brand" في نتيجة الربط.</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>تصحيح Slug إلزامي بدون خيار (على مستوى الـ Worker، v2.6.0): عند كل ربط، لو الـ Slug بتاع منتج ووردبريس مش مطابق لعنوانه، الأداة بتصلّحه تلقائيًا ليطابق العنوان (نفس نمط ووردبريس القياسي — أحرف صغيرة وشرطات بدل المسافات). صف "Slug" جديد في نتيجة الربط بيوضّح القديم والجديد.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.7.0</span>
+            <span class="cl-ver-date">27-08-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>"نتيجة البحث" بقت خطوة مستقلة لوحدها (② بدل ما تكون جوه خطوة البحث نفسها)، وزرار "🔗 عرض المنتج على وردبريس للمراجعة" بقى زرار كبير كامل عرض الصفحة بدل زرار صغير. نفس التصميم (كامل العرض) اتطبّق على زرار الربط النهائي واتغيّر اسمه لـ"▶ ابدأ ربط المنتج بين الموقعين الآن" (كان "▶ تشغيل الربط"). الخطوات بقت أربعة: ① بحث → ② نتيجة البحث → ③ الربط وتحديث السعر → ④ النتيجة.</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>أسئلة الربط الثلاثة (الحالة/النجمة/السعر) بقت كل واحدة صندوق مستقل بإطار، وعنوان السؤال والاختيارات في نفس الصف بدل ما يكونوا فوق بعض. اتشالت شيبس "ⓘ تفاصيل" الخاصة بسؤالي الحالة والنجمة، وشيبس "ⓘ إزاي بيتحسب السعر؟" بالكامل. الجملة "إيه اللي بيحصل دايمًا بدون خيار" بقت صندوق ثابت وظاهر دايمًا (🔒) بدل ما تكون شيبس قابلة للطي زي باقي الأسئلة — عشان توضّح إنها إجراء إجباري مش سؤال للمستخدم.</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>خطوة ① بقت تقبل رابط منتج شوبيفاي بالكامل (من صفحة المنتج على أدمن شوبيفاي) مش بس الرقم الصريح — الأداة بتستخرج الرقم من الرابط تلقائيًا (<code>extractShopifyProductId()</code>). القيمة اللي بتتبعت لـ <code>find_product</code> لسه رقم صريح زي الأول، مفيش تغيير في العقد مع الـ Worker.</span></li>
@@ -974,7 +984,12 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               + إضافة "⭐ " لبداية العنوان (حسب السؤال التاني) — السؤالين مستقلّين تمامًا عن بعض</li>
               <li><strong>على مستوى المنتج (WooCommerce):</strong> نشر المنتج
               (<code>status = publish</code>) — دائمًا وبدون خيار — + تحديث
-              <code>meta_data._shopify_product_id</code> (الحقل القديم legacy، بيعكس <code>global_unique_id</code>)</li>
+              <code>meta_data._shopify_product_id</code> (الحقل القديم legacy، بيعكس <code>global_unique_id</code>)
+              + <strong>(v2.6.0)</strong> تصحيح <code>slug</code> ليطابق عنوان المنتج، دائمًا وبدون خيار
+              + <strong>(v2.6.0)</strong> ربط Brand بنفس اسم الـ Vendor على شوبيفاي — لو موجود</li>
+              <li><strong>(v2.6.0) حارس إلزامي قبل أي كتابة:</strong> لازم يكون فيه براند على ووردبريس بنفس
+              اسم الـ Vendor على شوبيفاي، وإلا الربط بالكامل يتوقف من غير أي تعديل على أي منصة — نافذة خطأ
+              مخصصة بزرار لإضافة البراند</li>
               <li><strong>لكل Variation:</strong> مطابقة بالمقاس (<code>Shoe size</code> / <code>Size</code> /
               <code>size</code>) بين الاتنين، ثم مزامنة SKU + المخزون (<code>inventoryQuantity</code>) من
               شوبيفاي لووكومرس، وتحديث <code>custom.wordpress_variation_id</code> على شوبيفاي</li>
@@ -1019,7 +1034,8 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <tr><td>النجمة → <strong>لا</strong></td><td><code>productUpdate</code> ميبعتش <code>title</code> — العنوان يفضل زي ما هو</td></tr>
               <tr><td>فرق السعر → <strong>رقم</strong></td><td>كل Variation على ووكومرس بياخد <code>regular_price</code>/<code>sale_price</code> = سعر شوبيفاي + الفرق ده (نفس معادلة أداة "مزامنة أسعار Stylebox")</td></tr>
               <tr><td>فرق السعر → <strong>فاضي</strong> (افتراضي)</td><td>تحديث السعر يتخطّى تمامًا — regular_price/sale_price متتلمسش</td></tr>
-              <tr><td>(في كل الحالات — بدون خيار)</td><td>نشر المنتج على ووردبريس (<code>status=publish</code>) + metafield <code>wordpress_id</code> + مزامنة كل الـ SKU/المخزون لكل Variation + Tag <code>stylebox</code> فورًا في آخر العملية</td></tr>
+              <tr><td>(في كل الحالات — بدون خيار)</td><td>نشر المنتج على ووردبريس (<code>status=publish</code>) + metafield <code>wordpress_id</code> + تصحيح <code>slug</code> ليطابق العنوان (v2.6.0) + مزامنة كل الـ SKU/المخزون لكل Variation + Tag <code>stylebox</code> فورًا في آخر العملية</td></tr>
+              <tr><td>(حارس إلزامي قبل أي كتابة — v2.6.0)</td><td>لازم يكون فيه براند على ووردبريس بنفس اسم الـ Vendor على شوبيفاي — لو موجود بيتربط بالمنتج تلقائيًا، لو مفيش الربط بالكامل يتوقف (نافذة خطأ + زرار "إضافة البراند")</td></tr>
             </table>
 
             <h4>الـ Endpoints الرئيسية</h4>
@@ -1031,7 +1047,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <tr><td><code>log_logout</code></td><td>GET — تسجيل خروج</td></tr>
               <tr><td><code>get_employees</code></td><td>GET — قائمة الموظفين النشطين</td></tr>
               <tr><td><code>find_product</code></td><td>GET — أكشن قراءة بس (خطوة 1): بياخد <code>shopify_product_id</code> ويدوّر على منتج ووكومرس المطابق (GTIN، أو بحث بالعنوان لتضييق النطاق + تأكيد قاطع بالـ SKU)، ويرجّع <code>wp_product_id</code> + <code>wpEditUrl</code></td></tr>
-              <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code>، <code>add_star</code>: <code>true</code>/<code>false</code>، و<code>price_difference</code>: رقم اختياري لتحديث السعر في نفس التشغيلة — الثلاثة اختياريون، الافتراضي <code>DRAFT</code> + <code>true</code> + بدون تحديث سعر)</td></tr>
+              <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code>، <code>add_star</code>: <code>true</code>/<code>false</code>، و<code>price_difference</code>: رقم اختياري لتحديث السعر في نفس التشغيلة — الثلاثة اختياريون، الافتراضي <code>DRAFT</code> + <code>true</code> + بدون تحديث سعر). <strong>(v2.6.0)</strong> ممكن يرجع HTTP 409 بـ <code>{code:'brand_missing', vendor, addBrandUrl}</code> لو مفيش براند مطابق على ووردبريس — الربط بيتوقف كامل من غير أي كتابة</td></tr>
               <tr><td><code>diag</code></td><td>GET — فحص ذاتي كامل (env، صلاحيات شوبيفاي، اتصال WooCommerce، D1) بدون كتابة</td></tr>
               <tr><td><code>get_config</code></td><td>GET — يرجّع نسخة الـ Worker لمقارنتها بنسخة الواجهة</td></tr>
               <tr><td><code>get_logs</code></td><td>GET — سجل مُقسّم صفحات (حتى 100 لكل صفحة)</td></tr>
@@ -1053,7 +1069,8 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>§FIND::findWcProductByShopifyId</code> (Worker) — منطق البحث (فلتر GTIN مباشر + بحث بعنوان شوبيفاي لتضييق النطاق + تأكيد قاطع بالـ SKU/GTIN)</li>
               <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (لقيته/مش لقيته) في خطوتها المستقلة + زرار "عرض على وردبريس" كامل العرض (<code>.btn-block</code>)</li>
               <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر اختياري مع بعض، كل واحد في صندوق <code>.opt-block</code> مستقل)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي</li>
-              <li><code>renderSyncResult()</code> — خطوة ④: بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + عرض نتيجة 3 حالات (نجاح/تحذير/فشل) + جدول Variations، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
+              <li><code>renderSyncResult()</code> — خطوة ④: بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + عرض نتيجة 3 حالات (نجاح/تحذير/فشل) + جدول Variations (+ صفوف Brand/Slug من v2.6.0)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
+              <li><code>openBrandMissingModal()</code>/<code>closeBrandMissingModal()</code> (v2.6.0) — نافذة خطأ مخصصة (<code>#brandMissingOverlay</code>) لما <code>runSync()</code> يلقى <code>e.data.code === 'brand_missing'</code>؛ <code>apiRequest()</code> بقى يحط رد الـ Worker كامل على <code>err.data</code> مش بس <code>err.message</code> عشان الكود ده يتقرا</li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
               <li><code>§LOG-ENDPOINTS</code> — get_logs / get_logs_count / get_logs_export (v2، بدون تغيير في العقد)</li>
             </ul>
@@ -1066,11 +1083,20 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>LS_PRICE_DIFF = 'stylebox_link_price_difference'</code> — آخر قيمة "فرق السعر" استُخدمت، للراحة بس (تعبئة تلقائية)، مش Settings حقيقي ومش مرسل تلقائيًا من غير ما المستخدم يضغط "تشغيل الربط"</li>
               <li><code>TOOL_NAME = 'stylebox_products_linking'</code> — قيمة <code>tool</code> في جدول <code>logs</code> (كانت <code>shopify_woo_sync</code> قبل الرينيم)</li>
               <li><code>ALLOWED_SIZE_ATTRIBUTE_NAMES = ['Shoe size','Size','size']</code> — مصدر الحقيقة لمطابقة المقاس بين المنصتين (في الـ Worker)</li>
-              <li><code>EXPECTED_WORKER_VERSION</code> (v2.7.0) — نسخة الـ Worker المتوقعة لغرض تنبيه "نسخة الـ Worker مختلفة" فقط، منفصلة تمامًا عن <code>TOOL_VERSION</code> (نسخة الواجهة). تتحدّث يدويًا هنا بس لو <code>index.js</code> نفسه اتغيّر فعلاً وترقّى على Cloudflare — تعديل UI بحت زي ده ميلزمهاش تتغيّر</li>
+              <li><code>EXPECTED_WORKER_VERSION</code> (v2.6.0) — نسخة الـ Worker المتوقعة لغرض تنبيه "نسخة الـ Worker مختلفة" فقط، منفصلة تمامًا عن <code>TOOL_VERSION</code> (نسخة الواجهة). تتحدّث يدويًا هنا بس لو <code>index.js</code> نفسه اتغيّر فعلاً وترقّى على Cloudflare — تعديل UI بحت زي ده ميلزمهاش تتغيّر</li>
             </ul>
 
             <h4>NOTES</h4>
             <ul>
+              <li>v2.8.0 (27-08-2026) — تعديلان جديدان بطلب صاحب الأداة، <strong>منطق فعلي في الـ Worker
+              (v2.6.0) مش UI بس</strong>: (1) حارس براند إلزامي قبل أي كتابة في <code>sync_product</code> — لو
+              الـ Vendor على شوبيفاي معندوش براند مطابق بنفس الاسم على تاكسونومي <code>product_brand</code>
+              في ووردبريس، الربط بالكامل بيتوقف من غير أي تعديل (لا على شوبيفاي ولا على ووكومرس)، وتظهر
+              نافذة خطأ فيها زرار يفتح صفحة إضافة البراند مباشرة. (2) تصحيح <code>slug</code> إلزامي بدون
+              خيار — لو مختلف عن عنوان المنتج، بيتصلّح تلقائيًا في نفس نداء <code>status=publish</code>.
+              ⚠️ افتراض <code>/wc/v3/products/brands</code> (تاكسونومي البراندات الأصلي في ووكومرس 9.4+)
+              <strong>لسه مش مؤكَّد فعليًا</strong> ضد <code>stylebox.online</code> وقت الكتابة — راجع "مسائل مفتوحة" في
+              CLAUDE.md.</li>
               <li>v2.7.0 (27-08-2026) — تعديلات UI إضافية بطلب صاحب الأداة: "نتيجة البحث" بقت خطوة ②
               مستقلة (كانت جوه خطوة البحث)، زرار "عرض على وردبريس" وزرار الربط النهائي (اتغيّر اسمه لـ"ابدأ
               ربط المنتج بين الموقعين الآن") بقوا <code>.btn-block</code> كامل العرض، أسئلة الربط التلاتة
@@ -1096,6 +1122,29 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
           </div>
         </details>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Brand Missing Modal (v2.6.0) — نافذة خطأ إلزامية توقف الربط ═══ -->
+  <div class="eco-overlay" id="brandMissingOverlay" onclick="if(event.target===this)closeBrandMissingModal()">
+    <div class="eco-modal" style="max-width:480px;">
+      <div class="eco-modal-hdr">
+        <span>⚠️ الربط تم إيقافه — البراند غير موجود</span>
+        <button class="modal-close-x" onclick="closeBrandMissingModal()">✕</button>
+      </div>
+      <div class="eco-modal-body">
+        <p style="margin:0 0 14px;line-height:1.9;">
+          لا يوجد براند بنفس اسم <strong style="color:var(--accent);" id="brandMissingVendor">—</strong>
+          (Vendor على شوبيفاي) على ووردبريس. الربط بين المنتجين تم إيقافه بالكامل —
+          مفيش أي تعديل حصل لا على شوبيفاي ولا على ووكومرس.
+        </p>
+        <p style="margin:0 0 18px;line-height:1.9;color:var(--text-secondary);font-size:13px;">
+          أضِف البراند على ستايل بوكس بنفس الاسم بالظبط، ثم أعد المحاولة.
+        </p>
+        <a class="btn-primary btn-block" id="brandMissingAddBtn" target="_blank" rel="noopener" href="#">
+          ➕ إضافة البراند على StyleBox
+        </a>
       </div>
     </div>
   </div>
@@ -1165,11 +1214,11 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.7.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
-// نسخة الـ Worker المتوقعة (v2.7.0) — منفصلة تمامًا عن TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
+const TOOL_VERSION = 'v2.8.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+// نسخة الـ Worker المتوقعة (v2.6.0) — منفصلة تمامًا عن TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
 // أي لمس للـ Worker — راجع checkWorkerVersion() تحت)
-const EXPECTED_WORKER_VERSION = 'v2.5.0';
+const EXPECTED_WORKER_VERSION = 'v2.6.0';
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
@@ -1318,7 +1367,13 @@ async function apiRequest(url, opts) {
   let data;
   try { data = JSON.parse(text); }
   catch { throw new Error(`رد غير متوقع من الـ Worker (HTTP ${resp.status}): ${text.slice(0, 160)}`); }
-  if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+  if (!resp.ok) {
+    // data بتتحط على الخطأ نفسه (مش بس message) — عشان أكواد مُبنيَنة زي
+    // brand_missing (v2.6.0) يقدر الكولر يفرّقها عن فشل عام. راجع runSync().
+    const err = new Error(data.error || `HTTP ${resp.status}`);
+    err.data = data;
+    throw err;
+  }
   return data;
 }
 async function apiPost(action, body = {}) {
@@ -1841,10 +1896,32 @@ async function runSync() {
     const st = data.results ? data.results.status : 'error';
     showToast(st === 'success' ? 'تم الربط ✓' : st === 'warning' ? 'تم الربط جزئيًا ⚠' : 'فشل الربط ✗', st === 'error' ? 'error' : 'success');
   } catch (e) {
-    showToast('خطأ: ' + e.message, 'error');
+    // brand_missing (v2.6.0) — نافذة خطأ مخصصة بزرار "إضافة البراند" بدل toast عادي
+    if (e.data && e.data.code === 'brand_missing') {
+      openBrandMissingModal(e.data);
+    } else {
+      showToast('خطأ: ' + e.message, 'error');
+    }
   } finally {
     setSyncBusy(false);
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// §TOOL-JS::brandMissingModal — v2.6.0
+// نافذة خطأ إلزامية لما الـ Worker يرجّع code:'brand_missing' (الحارس
+// الجديد في syncProduct — الربط بيتوقف بالكامل من غير أي كتابة لو الـ
+// Vendor على شوبيفاي معندوش براند مطابق بنفس الاسم على ووردبريس).
+// ══════════════════════════════════════════════════════════════
+function openBrandMissingModal(data) {
+  document.getElementById('brandMissingVendor').textContent = data.vendor || '—';
+  const btn = document.getElementById('brandMissingAddBtn');
+  if (data.addBrandUrl) { btn.href = data.addBrandUrl; btn.style.display = ''; }
+  else { btn.style.display = 'none'; }
+  document.getElementById('brandMissingOverlay').classList.add('open');
+}
+function closeBrandMissingModal() {
+  document.getElementById('brandMissingOverlay').classList.remove('open');
 }
 
 // عرض 3 حالات (نجاح / تحذير / فشل) — Step 3C إلزامي
@@ -1900,6 +1977,14 @@ function renderSyncResult(data) {
   const wcPublishRow = `<div class="result-row"><span>نشر المنتج على ووردبريس (publish)</span><span>${
     r.wcProductMetaError ? '<span class="badge-danger">✗ فشل</span>' : '<span class="badge-ok">publish ✓</span>'
   }</span></div>`;
+  // Brand + Slug (v2.6.0) — نفس نداء status=publish، فبيتعرضوا في الحالتين
+  // زي wcPublishRow/tagRow بالظبط (معزولين عن بلوك شوبيفاي).
+  const brandRow = r.brand
+    ? `<div class="result-row"><span>Brand (WooCommerce ← Vendor شوبيفاي)</span><span><span class="badge-ok">${r.brand.name} ✓</span></span></div>`
+    : '';
+  const slugRow = r.slugFixed
+    ? `<div class="result-row"><span>Slug (WooCommerce)</span><span><span class="badge-${r.slugFixed.confirmed ? 'ok' : 'warn'}" style="font-family:var(--font-mono);direction:ltr;">${r.slugFixed.before || '—'} → ${r.slugFixed.after}${r.slugFixed.confirmed ? ' ✓' : ' ⚠'}</span></span></div>`
+    : '';
 
   let plHtml;
   if (pl) {
@@ -1916,6 +2001,8 @@ function renderSyncResult(data) {
       <div class="result-row"><span>إضافة ⭐ للعنوان</span><span>${titleCell}</span></div>
       ${pl.newTitle ? `<div class="result-row"><span>العنوان الحالي</span><span style="font-family:var(--font-body);text-align:right;">${pl.newTitle}</span></div>` : ''}
       ${wcPublishRow}
+      ${brandRow}
+      ${slugRow}
       ${tagRow}
       ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce (status=publish / _shopify_product_id): ${r.wcProductMetaError}</div>` : ''}
       ${r.tagError ? `<div class="result-note err">⚠️ فشل إضافة الـ Tag: ${r.tagError}</div>` : ''}
@@ -1926,6 +2013,8 @@ function renderSyncResult(data) {
       <h4><span class="badge-danger">✗ فشلت مزامنة بيانات المنتج على شوبيفاي</span></h4>
       <div class="result-note err">${r.productLevelError || 'راجع تاب "سجل العمليات" لتفاصيل الخطأ'} — باقي الخطوات أدناه استمرت رغم ذلك.</div>
       ${wcPublishRow}
+      ${brandRow}
+      ${slugRow}
       ${tagRow}
       ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce (status=publish / _shopify_product_id): ${r.wcProductMetaError}</div>` : ''}
       ${r.tagError ? `<div class="result-note err">⚠️ فشل إضافة الـ Tag: ${r.tagError}</div>` : ''}

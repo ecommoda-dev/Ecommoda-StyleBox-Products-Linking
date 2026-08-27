@@ -3,7 +3,25 @@
 // Worker: stylebox-products-linking-worker — EcomModa
 // Tool:   Ecommoda StyleBox Products Linking
 // Account: ecommoda-dev.workers.dev
-// skills: worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 · html-builder v1.0.0 — 26-08-2026
+// skills: worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 · html-builder v1.0.0 — 27-08-2026
+//
+// ⚠️ v2.6.0 (27-08-2026) — تعديلان جديدان إلزاميان في syncProduct، بطلب صاحب الأداة:
+//   1) حارس البراند (قبل أي كتابة): الـ Vendor على شوبيفاي لازم يكون له براند
+//      بنفس الاسم بالظبط (case-insensitive) على تاكسونومي product_brand في
+//      ووردبريس. لو مفيش، الربط بالكامل بيتوقف من غير أي كتابة على أي منصة —
+//      رد مُبنيَن {code:'brand_missing', vendor, addBrandUrl} (HTTP 409) عشان
+//      الواجهة تعرض نافذة خطأ فيها زرار "إضافة البراند على StyleBox" يفتح
+//      /wp-admin/edit-tags.php?taxonomy=product_brand&post_type=product. لو
+//      البراند موجود بيتربط بالمنتج (brands:[{id}]) في نفس نداء status=publish.
+//      Vendor فاضي على شوبيفاي = الحارس بيتخطّى (مفيش حاجة تتطابق أصلاً).
+//      راجع BrandNotFoundError/wcFindBrandByName/wcSearchBrands.
+//   2) تصحيح الـ Slug إلزامي بدون خيار: الـ Slug بتاع منتج ووردبريس لازم يطابق
+//      عنوانه (slugify(wooProduct.name)) — لو مختلف بيتصلّح في نفس نداء
+//      status=publish. راجع slugify()/slugFixed.
+//   ⚠️ الاتنين مش متأكَّدين فعليًا ضد stylebox.online وقت الكتابة (زي فلتر
+//   global_unique_id قبل التأكيد) — راجع "مسائل مفتوحة" في CLAUDE.md، خصوصًا
+//   افتراض إن /wc/v3/products/brands شغّال (تاكسونومي البراندات الأصلي في
+//   ووكومرس 9.4+).
 //
 // ⚠️ RENAME — 25-08-2026: هذا الملف كان shopify-woo-sync-worker (tool =
 // shopify_woo_sync). اتعمل رينيم كامل + مراجعة شاملة مقابل ecommoda-worker-builder
@@ -114,7 +132,7 @@
 // بتاعه بيبدأ حرفيًا بالرقم المطلوب).
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.5.0';
+const WORKER_VERSION = 'v2.6.0';
 
 // الـ Tag اللي بيتضاف لكل منتج مربوط — آخر خطوة في syncProduct، فورًا بدون
 // انتظار (كان فيه TAG_DELAY_MS 10 ثواني قبل الخطوة دي، اتلغى بالكامل 26-08-2026
@@ -412,6 +430,7 @@ const VARIANTS_QUERY = `
   query getVariants($id: ID!) {
     product(id: $id) {
       title
+      vendor
       variants(first: 100) {
         edges {
           node {
@@ -489,6 +508,42 @@ async function wcSearchProducts(env, params) {
   );
   if (!resp.ok) throw new Error(`WC search products failed: ${resp.status}`);
   return resp.json();
+}
+
+// ─── §WOOCOMMERCE::wcSearchBrands — v2.6.0 (البراند إلزامي قبل الربط) ───
+// تاكسونومي `product_brand` الأصلي في ووكومرس (نفس اللي شاشة تحرير المنتج
+// بتاعه فيها "All Brands" checkboxes + "+ Add New Brand" — راجع
+// edit-tags.php?taxonomy=product_brand&post_type=product). الـ REST endpoint
+// بيتبع نفس شكل categories/tags تمامًا: GET بيرجّع array من {id, name, slug}،
+// والـ PUT على المنتج بياخد `brands: [{id}]`.
+// ⚠️ لسه مش متأكَّد فعليًا (زي فلتر global_unique_id في §FIND) إن الـ endpoint
+// ده شغّال على stylebox.online — راجع "مسائل مفتوحة" في CLAUDE.md.
+async function wcSearchBrands(env, params) {
+  const qs = new URLSearchParams(params).toString();
+  const resp = await fetch(
+    bust(`${wcBaseUrl(env)}/wp-json/wc/v3/products/brands?${qs}`),
+    { headers: { Authorization: wcAuthHeader(env) } }
+  );
+  if (!resp.ok) throw new Error(`WC search brands failed: ${resp.status}`);
+  return resp.json();
+}
+
+// مطابقة حرفية (case-insensitive، بعد trim) — مش بحث تقريبي. الاسم لازم يطابق
+// اسم الـ Vendor على شوبيفاي بالظبط، وإلا العملية بتُعتبر "مفيش براند" (تتوقف).
+async function wcFindBrandByName(env, vendorName) {
+  const target  = vendorName.trim().toLowerCase();
+  const results = await wcSearchBrands(env, { search: vendorName, per_page: 100 });
+  if (!Array.isArray(results)) return null;
+  return results.find(b => String(b?.name || '').trim().toLowerCase() === target) || null;
+}
+
+// ─── §HELPERS::slugify — تعديل إلزامي جديد (v2.6.0): الـ Slug لازم يطابق العنوان ───
+function slugify(text) {
+  return String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 // product-level update — used to refresh the legacy "_shopify_product_id"
@@ -673,6 +728,22 @@ async function findWcProductByShopifyId(env, shopifyProductId) {
   };
 }
 
+// ─── §SYNC::BrandNotFoundError — v2.6.0 ───
+// حارس إلزامي جديد قبل أي كتابة في syncProduct: لازم يكون فيه براند على
+// ووردبريس (تاكسونومي product_brand) بنفس اسم الـ Vendor على شوبيفاي. لو
+// مفيش، الربط بالكامل بيتوقف من غير أي كتابة (زي فشل no global_unique_id) —
+// الفرق إنه بيترجع بشكل مُبنيَن (code/vendor/addBrandUrl) عشان الواجهة تعرض
+// نافذة خطأ فيها زرار "إضافة البراند على StyleBox" بدل رسالة عادية. راجع
+// §HANDLER catch block.
+class BrandNotFoundError extends Error {
+  constructor(vendor, addBrandUrl) {
+    super(`لا يوجد براند بنفس اسم "${vendor}" على ووردبريس — الربط تم إيقافه`);
+    this.code        = 'brand_missing';
+    this.vendor      = vendor;
+    this.addBrandUrl = addBrandUrl;
+  }
+}
+
 // ══════════════════════════════════════════════════════════════
 // §SYNC::productLevelSync
 // Runs once per linked product, every sync_product call. Independent of
@@ -768,10 +839,14 @@ async function addStyleboxTag(env, token, shopifyProductGid) {
 // §SYNC::syncProduct — the core operation, called from action=sync_product
 // ⚠️ manual-only by design — لا يوجد sync_all ولا Cron (راجع §CONSTANTS فوق)
 //
-// ترتيب التنفيذ (مهم — اتغيّر 26-08-2026):
+// ترتيب التنفيذ (مهم — اتغيّر 27-08-2026، v2.6.0):
 //   1. قراءة منتج ووكومرس + الـ Variations + منتج شوبيفاي
+//   1.5. ⚠️ حارس إلزامي جديد (v2.6.0) — لازم يكون فيه براند على ووردبريس بنفس
+//        اسم الـ Vendor، وإلا الربط بالكامل يتوقف هنا من غير أي كتابة
+//        (BrandNotFoundError). لو موجود، الـ id بتاعه يتحفظ لحد الخطوة 3.
 //   2. Shopify product-level: status (حسب الخيار) + ⭐ (حسب الخيار) + wordpress_id
 //   3. WooCommerce product-level: status='publish' + meta _shopify_product_id
+//      + slug fix (v2.6.0، إلزامي بدون خيار) + ربط الـ Brand (v2.6.0، لو 1.5 لقى تطابق)
 //   4. لكل Variation: SKU/مخزون/meta على ووكومرس + wordpress_variation_id على شوبيفاي
 //   5. tagsAdd("stylebox") فورًا ← آخر خطوة، بعد كل اللي فوق (كان فيه انتظار
 //      TAG_DELAY_MS 10 ثواني قبلها لحد v2.3.0 — اتلغى بالكامل v2.4.0)
@@ -831,6 +906,33 @@ async function syncProduct(env, wpProductId, opts = {}) {
   }
   const shopifyVariants = (gqlResp.data.product.variants?.edges || []).map(e => e.node);
   const shopifyTitle    = gqlResp.data.product.title || '';
+  const shopifyVendor   = String(gqlResp.data.product.vendor || '').trim();
+
+  // ── حارس إلزامي جديد (v2.6.0) — قبل أي كتابة: لازم يكون فيه براند على
+  // ووردبريس بنفس اسم الـ Vendor على شوبيفاي. Vendor فاضي = تخطّي الحارس
+  // (مفيش حاجة تتطابق أصلاً)، مش اعتبارها "براند موجود". راجع BrandNotFoundError.
+  let wcBrandId = null;
+  if (shopifyVendor) {
+    let brandMatch;
+    try {
+      brandMatch = await wcFindBrandByName(env, shopifyVendor);
+    } catch (e) {
+      throw new Error(`تعذّر التحقق من براند "${shopifyVendor}" على ووردبريس: ${e.message}`);
+    }
+    if (!brandMatch) {
+      await safeWriteLog(env.DB, {
+        tool: TOOL_NAME, type: 'error', employee,
+        productTitle: wooProduct.name,
+        notes: `الربط أُوقف — لا يوجد براند "${shopifyVendor}" (Vendor على شوبيفاي) على ووردبريس`,
+        extra: { wpProductId, shopifyProductId, vendor: shopifyVendor },
+      });
+      throw new BrandNotFoundError(
+        shopifyVendor,
+        `${wcBaseUrl(env)}/wp-admin/edit-tags.php?taxonomy=product_brand&post_type=product`
+      );
+    }
+    wcBrandId = brandMatch.id;
+  }
 
   // ── Shopify-side product-level fields (metafield + Draft + tag + ⭐ title) ──
   // Isolated try/catch: a failure here is logged but never blocks the
@@ -863,29 +965,43 @@ async function syncProduct(env, wpProductId, opts = {}) {
     if (!okLog) loggedOk = false;
   }
 
-  // ── WooCommerce-side product-level: status=publish + meta _shopify_product_id ──
+  // ── WooCommerce-side product-level: status=publish + meta _shopify_product_id
+  //    + slug fix (v2.6.0، إلزامي بدون خيار) + ربط الـ Brand المطابق للـ Vendor
+  //    (v2.6.0، لو الحارس فوق لقى تطابق) ──
   // status='publish' اتضاف 26-08-2026 — خطوة تلقائية بدون خيار: كل منتج بيتربط
   // بيتنشر على stylebox.online. (_shopify_product_id حقل قديم legacy بيعكس
-  // global_unique_id.) الاتنين في نداء PUT واحد — نفس الطلب، نفس الفحص.
+  // global_unique_id.) كل التعديلات دي في نداء PUT واحد — نفس الطلب، نفس الفحص.
   // معزول عن بلوك شوبيفاي فوق: منصّة مختلفة وأنماط فشل مختلفة، وفشل واحد
   // مالوش حق يخفي أو يوقف التاني.
+  const expectedSlug = slugify(wooProduct.name);
+  const slugNeedsFix  = !!expectedSlug && wooProduct.slug !== expectedSlug;
+  let slugFixed          = null;
   let wcProductMetaError = null;
   let wcPublished        = false;
   try {
-    const wcUpdated = await wcUpdateProduct(env, wpProductId, {
+    const updatePayload = {
       status:    'publish',
       meta_data: [{ key: '_shopify_product_id', value: shopifyProductId }],
-    });
+    };
+    if (slugNeedsFix) updatePayload.slug = expectedSlug;
+    if (wcBrandId)    updatePayload.brands = [{ id: wcBrandId }];
+
+    const wcUpdated = await wcUpdateProduct(env, wpProductId, updatePayload);
     // ⚠️ HTTP 200 لوحده مش إثبات — ووكومرس بترجّع المنتج بحالته الفعلية بعد
     // التحديث، فالتأكيد بيتقرا منها هي (نفس مبدأ فحص returnedProduct.status).
     wcPublished = wcUpdated?.status === 'publish';
     if (!wcPublished) {
       throw new Error(`WC status الراجعة "${wcUpdated?.status ?? '—'}" مش publish — العملية غير مؤكَّدة`);
     }
+    if (slugNeedsFix) {
+      slugFixed = { before: wooProduct.slug, after: expectedSlug, confirmed: wcUpdated?.slug === expectedSlug };
+    }
     const okLog = await safeWriteLog(env.DB, {
       tool: TOOL_NAME, type: 'product_meta_synced', employee,
-      notes: `WC status→publish، meta _shopify_product_id refreshed = ${shopifyProductId}`,
-      extra: { wpProductId, shopifyProductId, wcStatus: 'publish' },
+      notes: `WC status→publish، meta _shopify_product_id refreshed = ${shopifyProductId}` +
+             (slugFixed ? `، slug اتصلّح من "${slugFixed.before}" لـ "${slugFixed.after}"` : '') +
+             (wcBrandId ? `، Brand "${shopifyVendor}" اتربط بالمنتج` : ''),
+      extra: { wpProductId, shopifyProductId, wcStatus: 'publish', slugFixed, brandLinked: wcBrandId ? { id: wcBrandId, name: shopifyVendor } : null },
     });
     if (!okLog) loggedOk = false;
   } catch (e) {
@@ -1058,11 +1174,12 @@ async function syncProduct(env, wpProductId, opts = {}) {
   }
 
   // نتيجة العملية = 3 حالات مش اتنين (Step 5A ④ / ecommoda-html-builder Step 3C)
+  const slugUnconfirmed = !!(slugFixed && !slugFixed.confirmed);
   const anyVariantWarning = results.some(r => r.status === 'warning');
   const anyVariantSynced  = results.some(r => r.status === 'synced');
   const overallStatus = productLevelError
     ? (anyVariantSynced ? 'warning' : 'error')
-    : (anyVariantWarning || wcProductMetaError || tagError ? 'warning' : 'success');
+    : (anyVariantWarning || wcProductMetaError || tagError || slugUnconfirmed ? 'warning' : 'success');
 
   return {
     status: overallStatus,
@@ -1071,6 +1188,8 @@ async function syncProduct(env, wpProductId, opts = {}) {
     gtinRecoveredFromSku,
     wcProductMetaError,
     wcPublished,
+    slugFixed,
+    brand: wcBrandId ? { id: wcBrandId, name: shopifyVendor } : null,
     tag:        tagAdded,
     tagError,
     priceApplied: priceDifference !== null,
@@ -1285,6 +1404,17 @@ export default {
       return json({ error: 'Unknown action' }, 404, request);
     } catch (err) {
       console.error(err);
+      // ─── brand_missing (v2.6.0) — رد مُبنيَن عشان الواجهة تعرض نافذة خطأ
+      // مخصصة بزرار "إضافة البراند على StyleBox" بدل رسالة عامة ───
+      if (err instanceof BrandNotFoundError || err?.code === 'brand_missing') {
+        return json({
+          ok: false,
+          error: err.message,
+          code: 'brand_missing',
+          vendor: err.vendor,
+          addBrandUrl: err.addBrandUrl,
+        }, 409, request);
+      }
       return json({ error: err.message }, 500, request);
     }
   },
