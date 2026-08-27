@@ -3,6 +3,7 @@
 // Worker: stylebox-products-linking-worker — EcomModa
 // Tool:   Ecommoda StyleBox Products Linking
 // Account: ecommoda-dev.workers.dev
+// skills: worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 · html-builder v1.0.0 — 26-08-2026
 //
 // ⚠️ RENAME — 25-08-2026: هذا الملف كان shopify-woo-sync-worker (tool =
 // shopify_woo_sync). اتعمل رينيم كامل + مراجعة شاملة مقابل ecommoda-worker-builder
@@ -29,8 +30,8 @@
 //   WooCommerce product.status ← 'publish' — دايمًا، بدون خيار (اتضاف 26-08-2026)
 //   WooCommerce product.meta_data._shopify_product_id ← Shopify product
 //     numeric ID (legacy field, mirrors global_unique_id) — always
-//   Shopify product.tags ← "stylebox" tag — آخر خطوة على الإطلاق، بعد انتظار
-//     TAG_DELAY_MS (اتغيّر ترتيبه 26-08-2026 — كان بيتنفّذ في نص العملية)
+//   Shopify product.tags ← "stylebox" tag — آخر خطوة على الإطلاق، فورًا بدون
+//     انتظار (كان فيه TAG_DELAY_MS 10 ثواني، اتلغى بالكامل 26-08-2026 — v2.4.0)
 //
 // ⚠️ تعديلات 26-08-2026 (v2.1.0) — الخيارات الثنائية اتحوّلت لأسئلة صريحة:
 //   skip_draft (boolean) ← اتشال، بقى shopify_status: 'ACTIVE' | 'DRAFT' | 'KEEP'
@@ -57,9 +58,10 @@
 //   extractGtinFromSku()/syncProduct() في §SYNC::matching.
 //
 // ⚠️ ترتيب الـ Tag (26-08-2026): tagsAdd بقى آخر عملية في syncProduct بالكامل —
-//   بعد كل حاجة على شوبيفاي وووكومرس ومزامنة كل الـ Variations — وقبلها انتظار
-//   TAG_DELAY_MS (10 ثواني). الانتظار بيحصل بـ await على setTimeout: مش بيستهلك
-//   CPU time في Workers، بس بيمدّ زمن الاستجابة للواجهة بـ 10 ثواني لكل تشغيلة.
+//   بعد كل حاجة على شوبيفاي وووكومرس ومزامنة كل الـ Variations — فورًا بدون أي
+//   انتظار. (كان فيه انتظار TAG_DELAY_MS 10 ثواني قبله لحد v2.3.0 — اتلغى
+//   بالكامل بطلب صاحب الأداة نفس اليوم (26-08-2026)، v2.4.0. الترتيب [الـ Tag
+//   آخر خطوة] نفسه لسه زي ما هو — الملغي هو الانتظار بس، مش الترتيب.)
 //
 // Matching key between platforms (variants): the size attribute/option
 // value, matched on BOTH sides against ALLOWED_SIZE_ATTRIBUTE_NAMES below
@@ -75,15 +77,47 @@
 // استثناء متعمّد وموثّق بدون تسجيل دخول ("أداة تشغيل يدوي" محمية بس بـ
 // WORKER_SECRET). الاستثناء اتشال بطلب صاحب الأداة — الأداة دلوقتي زي أي أداة
 // تانية في الستاك: كل عملية sync_product لازم موظف مسجّل دخول، ومسجّلة باسمه.
+//
+// ⚠️ action=update_price (v2.3.0 — 26-08-2026): أكشن جديد ومنفصل عن
+// sync_product، بيحدّث سعر كل Variation ووكومرس مربوطة بالمنتج = سعر شوبيفاي
+// + فرق سعر (price_difference) بييجي في POST body من الواجهة (حقل رقمي —
+// مش env var زي PRICE_DIFFERENCE في أداة "مزامنة أسعار Stylebox"، لأن الأداة
+// دي عايزة الهامش يتغيّر لحظيًا من الواجهة). نفس معادلة الحساب المستخدمة هناك
+// (regular = compare_at+diff / sale = price+diff لو فيه خصم فعلي، وإلا regular
+// = price+diff وsale فاضي) — راجع computeVariantPrices()/updateProductPrice()
+// تحت. المطابقة بتستخدم نفس آلية sync_product (findWcSize/findShopifyVariantBySize
+// بالمقاس) مش wordpress_variation_id/GTIN triple-check بتاع أداة الأسعار —
+// المنتج لازم يكون اتربط الأول (global_unique_id موجود) وإلا العملية بترفض.
+// الكتابة على ووكومرس مباشرة عبر wc/v3 (regular_price/sale_price) — نفس
+// الـ REST creds المستخدمة في wcUpdateVariation، مفيش سر جديد مطلوب.
+// D1: بيستخدم نفس type='synced'/'error' المسجّلين للأداة دي في ecommoda-constants
+// §7 (مش type جديد — الجلسة دي معندهاش صلاحية تعدّل ريبو المهارات) مع
+// extra.operation='price_update' كمُميِّز؛ لو Log تاب محتاج فلترة منفصلة لاحقًا
+// سجّل type مخصّص هناك الأول.
+//
+// ⚠️ action=find_product (v2.4.0 — 26-08-2026): أكشن قراءة بس (GET، مفيش
+// كتابة، مفيش D1 log — زي diag/get_config)، وبيمثّل الخطوة 1 الجديدة في
+// الواجهة: الموظف بيدخل رقم منتج شوبيفاي الرقمي (زي اللي في رابط
+// admin.shopify.com/store/…/products/{ID})، والـ Worker بيدوّر على منتج
+// ووكومرس اللي يطابقه — إما GTIN (global_unique_id) مساوي للرقم، أو الرقم في
+// **بداية** الـ SKU (نفس ريجيكس extractGtinFromSku، لكن بالعكس: هنا بندوّر
+// بالرقم على المنتج بدل ما نستخرج الرقم من منتج معروف). راجع
+// findWcProductByShopifyId()/wcSearchProducts() في §FIND. لو لقى تطابق، بيرجّع
+// wp_product_id + رابط جاهز لصفحة تعديل المنتج على ووردبريس (wpEditUrl) —
+// الواجهة بتعرض زرار "عرض المنتج على وردبريس للمراجعة" بيه، وبعدين تفتح خطوة 2
+// (خيارات الربط + تحديث السعر) بالـ wp_product_id ده جاهز، من غير ما الموظف
+// يكتبه يدوي. ⚠️ الفلتر global_unique_id على /wc/v3/products مش مضمون في كل
+// نسخ ووكومرس (اتضاف رسميًا 9.2+) — الكود بيجرّبه، وبيرجع لبحث نصي (search=)
+// كـ fallback، وأي نتيجة من الاتنين بتتفحص فعليًا (GTIN تطابق حرفي / SKU
+// بيبدأ بالرقم) قبل ما تتقبل كـ"لقيته" — مفيش تصديق أعمى لنتيجة الـ API.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.2.1';
+const WORKER_VERSION = 'v2.4.0';
 
-// الـ Tag اللي بيتضاف لكل منتج مربوط، وفترة الانتظار قبله. الانتظار مقصود
-// (طلب صاحب الأداة 26-08-2026): الـ Tag لازم يبقى آخر أثر يظهر على المنتج،
-// بعد ما كل التعديلات التانية تكون خلصت واستقرّت على شوبيفاي.
+// الـ Tag اللي بيتضاف لكل منتج مربوط — آخر خطوة في syncProduct، فورًا بدون
+// انتظار (كان فيه TAG_DELAY_MS 10 ثواني قبل الخطوة دي، اتلغى بالكامل 26-08-2026
+// بطلب صاحب الأداة — v2.4.0. راجع §SYNC::syncProduct/§SYNC::addStyleboxTag).
 const STYLEBOX_TAG  = 'stylebox';
-const TAG_DELAY_MS  = 10000;
 
 // حالات المنتج المسموحة على شوبيفاي بعد الربط — KEEP معناها "ما تبعتش status
 // خالص في productUpdate" مش قيمة بتتبعت لشوبيفاي.
@@ -370,6 +404,8 @@ async function shopifyGQL(env, token, query, variables = {}, opName = 'shopify')
 }
 
 // title مطلوب — الـ idempotency check الخاص بالـ "⭐ " prefix
+// price/compareAtPrice (v2.3.0) — مستخدمين بس من updateProductPrice()، مفيش
+// أي أثر على sync_product (بيتجاهلهم زي أي field تاني مش مستخدم في اللوجيك بتاعه)
 const VARIANTS_QUERY = `
   query getVariants($id: ID!) {
     product(id: $id) {
@@ -379,6 +415,8 @@ const VARIANTS_QUERY = `
           node {
             id
             sku
+            price
+            compareAtPrice
             inventoryQuantity
             selectedOptions { name value }
           }
@@ -433,6 +471,21 @@ async function wcGetProduct(env, wpProductId) {
     { headers: { Authorization: wcAuthHeader(env) } }
   );
   if (!resp.ok) throw new Error(`WC get product ${wpProductId} failed: ${resp.status}`);
+  return resp.json();
+}
+
+// ─── §WOOCOMMERCE::wcSearchProducts — v2.4.0، خطوة 1 (find_product) ───
+// wrapper عام حوالين GET /wc/v3/products بأي query params (search / sku /
+// global_unique_id / per_page...). بيرمي زي أي نداء WC تاني في الملف — مفيش
+// فحص خاص هنا، الفحص الفعلي (هل النتيجة بتطابق فعلًا) بيحصل في
+// findWcProductByShopifyId() اللي بتستخدمها.
+async function wcSearchProducts(env, params) {
+  const qs = new URLSearchParams(params).toString();
+  const resp = await fetch(
+    bust(`${wcBaseUrl(env)}/wp-json/wc/v3/products?${qs}`),
+    { headers: { Authorization: wcAuthHeader(env) } }
+  );
+  if (!resp.ok) throw new Error(`WC search products failed: ${resp.status}`);
   return resp.json();
 }
 
@@ -505,6 +558,24 @@ function numericIdFromGid(gid) {
   return gid.split('/').pop();
 }
 
+// ─── §SYNC::matching::money ─── (v2.3.0 — نفس helper وأداة "مزامنة أسعار
+// Stylebox" حرفيًا: تقريب لأقرب قرشين + تنسيق ثابت "0.00")
+function money(n) {
+  return (Math.round(n * 100) / 100).toFixed(2);
+}
+
+// ─── §PRICE::computeVariantPrices ─── نفس معادلة processVariant() في
+// stylebox-price-sync-worker حرفيًا — فيه خصم فعلي على شوبيفاي (compare_at >
+// price) → regular = compare_at+diff / sale = price+diff. مفيش خصم → regular
+// = price+diff وsale فاضي (بيمسح أي sale_price قديم على ووكومرس).
+function computeVariantPrices(shopifyPrice, shopifyCompareAt, diff) {
+  const hasCompare = Number.isFinite(shopifyCompareAt) && shopifyCompareAt > shopifyPrice;
+  if (hasCompare) {
+    return { regularPrice: money(shopifyCompareAt + diff), salePrice: money(shopifyPrice + diff) };
+  }
+  return { regularPrice: money(shopifyPrice + diff), salePrice: '' };
+}
+
 // ══════════════════════════════════════════════════════════════
 // §SYNC::gtinFromSku — fallback لما global_unique_id (GTIN) يكون فاضي
 // بعض منتجات ووكومرس اتكتب فيها رقم شوبيفاي في بداية الـ SKU بدل ما يتحط
@@ -517,6 +588,71 @@ function extractGtinFromSku(sku) {
   const match = sku.match(/^(\d{6,})-(.+)$/);
   if (!match) return null;
   return { gtin: match[1], sku: match[2] };
+}
+
+// ══════════════════════════════════════════════════════════════
+// §FIND::findWcProductByShopifyId — v2.4.0، خطوة 1 في الواجهة الجديدة
+// الموظف بيدخل رقم منتج شوبيفاي، والدالة دي بتدوّر على منتج ووكومرس اللي
+// GTIN بتاعه (global_unique_id) بيساوي الرقم، أو الرقم في بداية الـ SKU —
+// نفس ريجيكس extractGtinFromSku فوق، لكن بالعكس (هنا الرقم معروف من الأول،
+// وبندوّر بيه على المنتج بدل ما نستخرجه من SKU منتج معروف).
+//
+// محاولتان، والنتيجة من الاتنين بتتفحص فعليًا قبل القبول (مفيش تصديق أعمى):
+//   1. فلتر global_unique_id مباشر على /wc/v3/products — لو الموقع على
+//      ووكومرس 9.2+ (الحقل ده رسمي فيها) ده بيرجّع تطابق دقيق فورًا. لو
+//      النسخة أقدم، الفلتر ده بيتجاهَل من ووكومرس (بيرجّع كل المنتجات أو صفر)
+//      — عشان كده مش بيتصدَّق لوحده.
+//   2. بحث نصي (search=) — بيغطي حالة الرقم لسه في بداية الـ SKU (منتج لسه
+//      مش مربوط). كل نتيجة مرشحة بتتفحص: GTIN == الرقم حرفيًا، أو SKU يبدأ
+//      بالرقم ده تحديدًا (مش أي رقم — نفس الرقم المطلوب).
+// ══════════════════════════════════════════════════════════════
+async function findWcProductByShopifyId(env, shopifyProductId) {
+  assertEnv(env, 'woocommerce');
+  const idStr = String(shopifyProductId);
+
+  const candidates = [];
+
+  try {
+    const byGtin = await wcSearchProducts(env, { global_unique_id: idStr, per_page: 10 });
+    if (Array.isArray(byGtin)) candidates.push(...byGtin);
+  } catch (e) {
+    console.error('wcSearchProducts(global_unique_id) failed — falling back to search=:', e);
+  }
+
+  try {
+    const bySearch = await wcSearchProducts(env, { search: idStr, per_page: 25 });
+    if (Array.isArray(bySearch)) candidates.push(...bySearch);
+  } catch (e) {
+    // لو الاتنين فشلوا، مفيش مرشحين خالص وهيترجع "مش موجود" — ده مش فشل
+    // شبكة (كان هيترمي)، ده فحص فعلي معملش مرشحين
+    console.error('wcSearchProducts(search) failed:', e);
+  }
+
+  const seen = new Set();
+  const unique = candidates.filter(p => {
+    if (!p || seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
+
+  const match = unique.find(p => {
+    if (String(p.global_unique_id || '').trim() === idStr) return true;
+    const skuMatch = String(p.sku || '').match(/^(\d{6,})-/);
+    return !!(skuMatch && skuMatch[1] === idStr);
+  });
+
+  if (!match) {
+    return { found: false, scanned: unique.length };
+  }
+
+  return {
+    found: true,
+    wp_product_id: match.id,
+    productName: match.name,
+    sku: match.sku,
+    matchedBy: String(match.global_unique_id || '').trim() === idStr ? 'gtin' : 'sku',
+    wpEditUrl: `${wcBaseUrl(env)}/wp-admin/post.php?post=${match.id}&action=edit`,
+  };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -566,7 +702,7 @@ async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId
   }
 
   // ⚠️ tagsAdd كان هنا (الخطوة 3) لحد v2.0.0 — اتنقل بالكامل لآخر syncProduct
-  // بعد انتظار TAG_DELAY_MS (راجع §SYNC::addStyleboxTag و§CONSTANTS).
+  // (راجع §SYNC::addStyleboxTag و§CONSTANTS).
 
   // ── 3. metafieldsSet: custom.wordpress_id (product-level, Integer) — دايمًا ──
   const metafieldResp = await shopifyGQL(env, token, SET_PRODUCT_METAFIELD_MUTATION, {
@@ -597,7 +733,8 @@ async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId
 
 // ══════════════════════════════════════════════════════════════
 // §SYNC::addStyleboxTag — آخر خطوة على الإطلاق في كل تشغيلة
-// بتتنادى من syncProduct بعد ما كل حاجة تانية تخلص وبعد انتظار TAG_DELAY_MS.
+// بتتنادى من syncProduct بعد ما كل حاجة تانية تخلص، فورًا بدون أي انتظار
+// (كان فيه TAG_DELAY_MS قبلها لحد v2.3.0 — اتلغى بالكامل v2.4.0).
 // tagsAdd بتدعدَب أوتوماتيك من شوبيفاي — آمنة التكرار تمامًا.
 // ══════════════════════════════════════════════════════════════
 async function addStyleboxTag(env, token, shopifyProductGid) {
@@ -618,7 +755,8 @@ async function addStyleboxTag(env, token, shopifyProductGid) {
 //   2. Shopify product-level: status (حسب الخيار) + ⭐ (حسب الخيار) + wordpress_id
 //   3. WooCommerce product-level: status='publish' + meta _shopify_product_id
 //   4. لكل Variation: SKU/مخزون/meta على ووكومرس + wordpress_variation_id على شوبيفاي
-//   5. انتظار TAG_DELAY_MS ثم tagsAdd("stylebox") ← آخر خطوة، بعد كل اللي فوق
+//   5. tagsAdd("stylebox") فورًا ← آخر خطوة، بعد كل اللي فوق (كان فيه انتظار
+//      TAG_DELAY_MS 10 ثواني قبلها لحد v2.3.0 — اتلغى بالكامل v2.4.0)
 // ══════════════════════════════════════════════════════════════
 async function syncProduct(env, wpProductId, opts = {}) {
   const { shopifyStatus = 'DRAFT', addStar = true, employee = null } = opts;
@@ -837,22 +975,18 @@ async function syncProduct(env, wpProductId, opts = {}) {
     });
   }
 
-  // ── آخر خطوة على الإطلاق: انتظار 10 ثواني ثم Tag "stylebox" ──────
-  // مطلوب صراحةً (26-08-2026): الـ Tag مايتضافش غير بعد ما كل الأكشنز
-  // التانية تخلص. await على setTimeout مش بيستهلك CPU time في Workers —
-  // بس بيمدّ زمن استجابة sync_product بـ 10 ثواني، والواجهة مستنية عادي.
+  // ── آخر خطوة على الإطلاق: Tag "stylebox" فورًا (بدون انتظار — اتلغى v2.4.0) ──
   // معزول في try/catch زي باقي البلوكات: فشله بيخلّي النتيجة "warning" ومش
   // بيلغي أي حاجة اتعملت قبله.
   let tagAdded = null;
   let tagError = null;
-  await new Promise(resolve => setTimeout(resolve, TAG_DELAY_MS));
   try {
     tagAdded = await addStyleboxTag(env, token, shopifyProductGid);
     const okLog = await safeWriteLog(env.DB, {
       tool: TOOL_NAME, type: 'product_meta_synced', employee,
       productTitle: productLevelResult?.newTitle || shopifyTitle,
-      notes: `Tag "${STYLEBOX_TAG}" اتضاف (آخر خطوة، بعد انتظار ${TAG_DELAY_MS / 1000} ثواني)`,
-      extra: { wpProductId, shopifyProductId, tag: STYLEBOX_TAG, delayMs: TAG_DELAY_MS },
+      notes: `Tag "${STYLEBOX_TAG}" اتضاف (آخر خطوة)`,
+      extra: { wpProductId, shopifyProductId, tag: STYLEBOX_TAG },
     });
     if (!okLog) loggedOk = false;
   } catch (e) {
@@ -882,7 +1016,145 @@ async function syncProduct(env, wpProductId, opts = {}) {
     wcPublished,
     tag:        tagAdded,
     tagError,
-    tagDelayMs: TAG_DELAY_MS,
+    variants: results,
+    logged: loggedOk,
+  };
+}
+
+// ══════════════════════════════════════════════════════════════
+// §PRICE::updateProductPrice — the core operation, called from action=update_price
+// ⚠️ منفصل تمامًا عن syncProduct — أكشن قائم بذاته، مش خطوة جوه الربط.
+//
+// المنتج لازم يكون اتربط قبل كده (global_unique_id موجود على ووكومرس) — لو
+// لسه مش مربوط، بترمي وتوجّه المستخدم لـ "تشغيل الربط" الأول (نفس مبدأ رسالة
+// الخطأ في syncProduct، بدون GTIN-from-SKU fallback هنا — الأكشن ده مخصّص
+// للسعر بس، والربط بيحصل من sync_product).
+//
+// المطابقة بمقاس الـ Variation (findWcSize/findShopifyVariantBySize) — نفس
+// آلية sync_product، مش wordpress_variation_id/GTIN triple-check.
+// ══════════════════════════════════════════════════════════════
+async function updateProductPrice(env, wpProductId, opts = {}) {
+  const { priceDifference, employee = null } = opts;
+  assertEnv(env, 'shopify', 'woocommerce');
+
+  let loggedOk = true;
+
+  const wooProduct = await wcGetProduct(env, wpProductId);
+  const shopifyProductId = wooProduct.global_unique_id;
+  if (!shopifyProductId) {
+    throw new Error(
+      `Product ${wpProductId}: no global_unique_id (Shopify Product ID) set — ` +
+      `المنتج لازم يتربط الأول بزرار "تشغيل الربط" قبل ما تحدّث السعر`
+    );
+  }
+  const shopifyProductGid = `gid://shopify/Product/${shopifyProductId}`;
+
+  const wooVariations = await wcGetVariations(env, wpProductId);
+
+  const token   = await getAccessToken(env);
+  const gqlResp = await shopifyGQL(env, token, VARIANTS_QUERY, { id: shopifyProductGid }, 'getVariants');
+  if (!gqlResp?.data?.product) {
+    throw new Error(`Product ${wpProductId}: المنتج ${shopifyProductGid} مش موجود على شوبيفاي أو التوكن مالوش صلاحية عليه`);
+  }
+  const shopifyVariants = (gqlResp.data.product.variants?.edges || []).map(e => e.node);
+
+  const results = [];
+
+  for (const variation of wooVariations) {
+    const wcSize = findWcSize(variation);
+    if (!wcSize) {
+      results.push({ variationId: variation.id, status: 'skipped', reason: 'no matching size attribute' });
+      continue;
+    }
+
+    const match = findShopifyVariantBySize(shopifyVariants, wcSize);
+    if (!match) {
+      results.push({ variationId: variation.id, size: wcSize, status: 'skipped', reason: 'no matching Shopify variant' });
+      const okLog = await safeWriteLog(env.DB, {
+        tool: TOOL_NAME, type: 'error', employee,
+        sku: variation.sku,
+        notes: `تحديث السعر: No Shopify variant found for size ${wcSize}`,
+        extra: { wpProductId, variationId: variation.id, operation: 'price_update' },
+      });
+      if (!okLog) loggedOk = false;
+      continue;
+    }
+
+    const shopifyPrice = parseFloat(match.price);
+    if (!Number.isFinite(shopifyPrice)) {
+      const warning = `سعر شوبيفاي غير صالح: "${match.price}"`;
+      results.push({ variationId: variation.id, size: wcSize, status: 'warning', warning });
+      const okLog = await safeWriteLog(env.DB, {
+        tool: TOOL_NAME, type: 'error', employee,
+        sku: match.sku,
+        notes: `تحديث السعر: ${warning}`,
+        extra: { wpProductId, variationId: variation.id, operation: 'price_update' },
+      });
+      if (!okLog) loggedOk = false;
+      continue;
+    }
+
+    const compareRaw     = match.compareAtPrice;
+    const shopifyCompare = (compareRaw !== null && compareRaw !== undefined && compareRaw !== '') ? parseFloat(compareRaw) : null;
+    const { regularPrice, salePrice } = computeVariantPrices(shopifyPrice, shopifyCompare, priceDifference);
+
+    const priceBefore = `regular:${variation.regular_price ?? '—'} / sale:${variation.sale_price || '-'}`;
+
+    let variantWarning = null;
+    try {
+      const wcUpdated = await wcUpdateVariation(env, wpProductId, variation.id, {
+        regular_price: regularPrice,
+        sale_price:    salePrice,
+      });
+      // ⚠️ Step 5A-style تأكيد — HTTP 200 لوحده مش إثبات، لازم نقرا الرد الفعلي
+      const regularConfirmed = String(wcUpdated?.regular_price ?? '') === regularPrice;
+      const saleConfirmed    = String(wcUpdated?.sale_price ?? '') === (salePrice || '');
+      if (!regularConfirmed || !saleConfirmed) {
+        throw new Error(
+          `ووكومرس رجّعت regular_price="${wcUpdated?.regular_price}" / sale_price="${wcUpdated?.sale_price}" — مش مطابقة للمتوقع`
+        );
+      }
+    } catch (e) {
+      variantWarning = e.message;
+      console.error(`Price update failed for variation ${variation.id}:`, e);
+    }
+
+    const okLog = await safeWriteLog(env.DB, {
+      tool: TOOL_NAME,
+      type: variantWarning ? 'error' : 'synced',
+      employee,
+      sku: match.sku,
+      productTitle: wooProduct.name,
+      valueBefore: priceBefore,
+      valueAfter: `regular:${regularPrice} / sale:${salePrice || '-'}`,
+      notes: variantWarning
+        ? `تحديث السعر — Size ${wcSize}: ${variantWarning}`
+        : `تحديث السعر — Size ${wcSize} synced`,
+      extra: {
+        wpProductId, variationId: variation.id, shopifyVariantId: numericIdFromGid(match.id),
+        operation: 'price_update', shopifyPrice, shopifyCompare, priceDifference,
+      },
+    });
+    if (!okLog) loggedOk = false;
+
+    results.push({
+      variationId: variation.id,
+      size: wcSize,
+      status: variantWarning ? 'warning' : 'synced',
+      warning: variantWarning,
+      regularPrice,
+      salePrice,
+    });
+  }
+
+  // نتيجة العملية = 3 حالات (Step 5A ④) — نفس صيغة syncProduct: أي variant
+  // بتحذير → warning على مستوى العملية كلها، وإلا success (حتى لو فيه skipped)
+  const anyVariantWarning = results.some(r => r.status === 'warning');
+  const overallStatus = anyVariantWarning ? 'warning' : 'success';
+
+  return {
+    status: overallStatus,
+    priceDifference,
     variants: results,
     logged: loggedOk,
   };
@@ -958,6 +1230,18 @@ export default {
       }
       // ──────────────────────────────────────────────────────────────
 
+      // ─── §FIND — read-only lookup, خطوة 1 في الواجهة (v2.4.0) ──────
+      if (action === 'find_product') {
+        const shopifyProductId = url.searchParams.get('shopify_product_id');
+        if (!shopifyProductId) return json({ error: 'shopify_product_id required' }, 400, request);
+        if (!/^\d+$/.test(shopifyProductId)) {
+          return json({ error: 'shopify_product_id لازم يكون رقم فقط' }, 400, request);
+        }
+        const result = await findWcProductByShopifyId(env, shopifyProductId);
+        return json({ ok: true, ...result }, 200, request);
+      }
+      // ──────────────────────────────────────────────────────────────
+
       // ─── §SYNC — manual-only, single product per call ─────────────
       if (action === 'sync_product') {
         if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
@@ -978,6 +1262,24 @@ export default {
         const results = await syncProduct(env, body.wp_product_id, {
           shopifyStatus,
           addStar,
+          employee: body.employee || null,
+        });
+        return json({ ok: true, wp_product_id: body.wp_product_id, results }, 200, request);
+      }
+      // ──────────────────────────────────────────────────────────────
+
+      // ─── §PRICE — manual-only, single product per call (v2.3.0) ────
+      if (action === 'update_price') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        const body = await request.json().catch(() => ({}));
+        if (!body.wp_product_id) return json({ error: 'wp_product_id required' }, 400, request);
+        const priceDifference = Number(body.price_difference);
+        if (!Number.isFinite(priceDifference)) {
+          return json({ error: 'price_difference رقم مطلوب' }, 400, request);
+        }
+
+        const results = await updateProductPrice(env, body.wp_product_id, {
+          priceDifference,
           employee: body.employee || null,
         });
         return json({ ok: true, wp_product_id: body.wp_product_id, results }, 200, request);
