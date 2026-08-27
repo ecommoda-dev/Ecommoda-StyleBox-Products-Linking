@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ecommoda StyleBox Products Linking</title>
-<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (حارس "اتربط قبل كده" — منطق فعلي جديد في index.js v2.7.0 — + مراجعة إلزامية قبل الربط، إعادة تصميم قسم "تعديلات تلقائي"، ونقل قسمي النتيجة/بدء منتج جديد لآخر الخطوة — index.html v2.9.0) -->
+<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (زرار "إبدأ ربط منتج جديد" بقى بنفس تصميم أزرار الأداة التانية الثابتة اللون بدل أبيض/أزرق عند hover — index.html v2.10.1، صفر تغيير في index.js) -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
@@ -247,6 +247,14 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .opt-readonly-title:first-of-type { margin-top: 2px; }
 .opt-readonly-list { padding-inline-start: 20px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
 
+/* نافذة تأكيد المراجعة الإلزامية (v2.10.0) — checkbox واحد لكل بند لازم يتأكد قبل
+   فتح خطوة الربط، راجع openReviewConfirmModal()/confirmProductReviewed() */
+.confirm-check-row { display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 12px; cursor: pointer; transition: border-color .15s, background .15s; }
+.confirm-check-row:hover { border-color: var(--accent); }
+.confirm-check-row.checked { border-color: var(--accent); background: var(--accent-light); }
+.confirm-check-row input[type="checkbox"] { width: 19px; height: 19px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; margin: 0; }
+.confirm-check-row span { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+
 /* تفاصيل إضافية اختيارية — بديل الفقرات الطويلة الظاهرة دايمًا (ملحوظة المستخدم: "مليانة placeholders") */
 .info-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-light); border: 1px solid #bfdbfe; border-radius: 20px; padding: 4px 12px; margin-top: 9px; cursor: pointer; user-select: none; transition: background .15s; }
 .info-toggle:hover { background: #dbeafe; }
@@ -298,12 +306,6 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .variant-table th:first-child, .variant-table td:first-child { border-inline-start: none; }
 .variant-table td.mono { font-family: var(--font-mono); direction: ltr; }
 .variant-table td.right { text-align: right; }
-
-/* ── زرار "بدء منتج جديد" — إعادة ضبط كاملة للأداة لأول مرحلة. بقى زرار كامل عرض الصفحة
-   لوحده أسفل خطوة النتيجة خالص (v2.9.0 — كان شريط فيه نص + زرار صغير جنبه لحد v2.8.0) ── */
-.btn-new-product { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: var(--surface); color: var(--accent); border: 1.5px solid var(--accent); border-radius: 10px; font-family: inherit; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: all .15s; white-space: nowrap; }
-.btn-new-product:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
-.btn-new-product.btn-block { width: 100%; justify-content: center; padding: 18px 24px; font-size: 16.5px; margin-top: 18px; }
 
 /* ══════════════════════════════════════════════════════════════
    §DATA-TABLE-CSS — القسم الموحّد (فلاتر + جدول) — تاب سجل العمليات
@@ -533,24 +535,6 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
       <div class="step-card-body" id="stepSyncBody">
         <div class="result-row" style="margin-bottom:16px;"><span>المنتج على ووردبريس</span><span id="foundProductLabel" class="mono"></span></div>
 
-        <!-- صندوق .opt-block زي باقي الأسئلة (v2.9.0) — عرض فقط بدون أي اختيار، ده إجراء إجباري مش سؤال للمستخدم -->
-        <div class="opt-block">
-          <div class="opt-block-row">
-            <div class="opt-q">🔒 تعديلات أخرى تحدث تلقائي عند الربط:</div>
-          </div>
-          <div class="opt-readonly-title">على Stylebox.online:</div>
-          <ul class="opt-readonly-list">
-            <li>تغيير حالة المنتج على <code>stylebox.online</code> إلى: <strong>Published</strong></li>
-            <li>إضافة البراند مثل الـ Vendor على شوبيفاي</li>
-            <li>مزامنة كمية المخزون لكل مقاس / SKU</li>
-          </ul>
-          <div class="opt-readonly-title">وعلى Ecommoda.com:</div>
-          <ul class="opt-readonly-list">
-            <li>إضافة Wordpress Ids على المنتج وعلى كل مقاس داخل المنتج على شوبيفاي</li>
-            <li>إضافة تاج على شوبيفاي (<code>stylebox</code>)</li>
-          </ul>
-        </div>
-
         <!-- الخيارين دول كانوا checkboxes "تخطي..." لحد v2.0.0 — أسئلة صريحة باختيارات من v2.1.0،
              ومستقلّين تمامًا عن بعض. كل خيار بقى صندوق لوحده من v2.7.0. -->
         <div class="opt-block">
@@ -584,6 +568,26 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
           <div class="opt-block-note">سيبه فاضي لتخطّي تحديث السعر في التشغيلة دي.</div>
         </div>
 
+        <!-- صندوق .opt-block زي باقي الأسئلة (v2.9.0) — عرض فقط بدون أي اختيار، ده إجراء إجباري مش سؤال للمستخدم.
+             اتنقل لآخر الأسئلة (بعد تحديث السعر) v2.10.0 — بطلب صاحب الأداة. -->
+        <div class="opt-block">
+          <div class="opt-block-row">
+            <div class="opt-q">🔒 تعديلات أخرى تحدث تلقائي عند الربط:</div>
+          </div>
+          <div class="opt-readonly-title">على Stylebox.online:</div>
+          <ul class="opt-readonly-list">
+            <li>تغيير حالة المنتج على <code>stylebox.online</code> إلى: <strong>Published</strong></li>
+            <li>إضافة البراند مثل الـ Vendor على شوبيفاي</li>
+            <li>مزامنة كمية المخزون لكل مقاس / SKU</li>
+            <li>التأكد من ضبط رابط المنتج (URL/Slug) ليطابق عنوانه</li>
+          </ul>
+          <div class="opt-readonly-title">وعلى Ecommoda.com:</div>
+          <ul class="opt-readonly-list">
+            <li>إضافة Wordpress Ids على المنتج وعلى كل مقاس داخل المنتج على شوبيفاي</li>
+            <li>إضافة تاج على شوبيفاي (<code>stylebox</code>)</li>
+          </ul>
+        </div>
+
         <div style="margin-top:22px;">
           <button class="btn-primary success btn-block" id="syncBtn" onclick="runSync()">▶ ابدأ ربط المنتج بين الموقعين الآن</button>
         </div>
@@ -602,7 +606,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
       <div class="step-card-body" style="padding-top:22px;">
         <div id="syncResultWrap"></div>
         <div id="syncStatusBannerWrap"></div>
-        <button class="btn-new-product btn-block" onclick="startNewProduct()">🆕 بدء منتج جديد</button>
+        <button class="btn-primary btn-block" style="margin-top:18px;" onclick="startNewProduct()">إبدأ ربط منتج جديد</button>
       </div>
     </div>
 
@@ -845,6 +849,26 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">27-08-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>زرار "إبدأ ربط منتج جديد" (اتغيّر اسمه من "🆕 بدء منتج جديد") في آخر خطوة ④ بقى بنفس تصميم الأزرار الزرقاء الثابتة التانية في الأداة (لون واحد ثابت، بيغمق شوية عند hover بس) بدل التصميم القديم (أبيض بإطار أزرق، بيتلوّن أزرق كامل عند مرور الماوس بس).</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.10.0</span>
+            <span class="cl-ver-date">27-08-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>بعد الضغط على زرار "راجع صور + كاتيجوريز المنتج قبل الربط" في خطوة ②، ظهور <strong>نافذة تأكيد إلزامية جديدة</strong> فيها بندان checkbox: "تم مراجعة جميع صور المنتج" و"تم اضافة كاتيجوري فئة الشوز + كاتيجوري البراند" — زرار "تأكيد المراجعة" في النافذة معطّل لحد ما الاتنين يتأكدوا، وخطوة ③ (الربط) ما بتظهرش إلا بعد الضغط عليه.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>صندوق "🔒 تعديلات أخرى تحدث تلقائي عند الربط:" في خطوة ③ اتنقل لآخر الخطوة (بعد سؤال تحديث السعر) بدل ما يكون أول حاجة فوق كل الأسئلة، وبند جديد اتضاف تحت "على Stylebox.online": "التأكد من ضبط رابط المنتج (URL/Slug) ليطابق عنوانه".</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>خطوة ④ "النتيجة" — عنوان جدول المقاسات بقى "📦 المقاسات: ✓ تمت (N) | ⚠ تحذير (N) | تخطي (N)" بدل "الـ Variations — ... من أصل N"، وصف "فرق السعر المستخدم" اتنقل من فوق الجدول إلى جدول مستقل واضح بصريًا أسفل جدول المقاسات.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.9.0</span>
+            <span class="cl-ver-date">27-08-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>حارس جديد إلزامي على أكشن <code>find_product</code> (على مستوى الـ Worker، v2.7.0): قبل أي بحث في ووكومرس، الأداة بتتحقق أول حاجة من metafield <code>custom.wordpress_id</code> على منتج شوبيفاي — لو مش فاضية، يبقى المنتج ده اتربط قبل كده، وتظهر رسالة <strong>"هذا المنتج تم ربطه من قبل"</strong> وما تفتحش خطوة الربط خالص. لو لسه مش مربوط، البحث بيكمل زي ما هو بالظبط.</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>خطوة ② "نتيجة البحث" — اتشال صف SKU وصف "اتلقى عن طريق"، وزرار "عرض المنتج على وردبريس للمراجعة" اتغيّر اسمه لـ<strong>"راجع صور + كاتيجوريز المنتج قبل الربط"</strong> وبقى <strong>إلزامي الضغط عليه</strong> — خطوة ③ (الربط) ما بتفتحش خالص إلا بعد الضغط على الزرار ده.</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>نافذة "البراند غير موجود" — اتشالت جملة "(Vendor على شوبيفاي)" من نص الرسالة.</span></li>
@@ -1015,7 +1039,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               بيتنفّذ فورًا بعد كل اللي فوق (دائمًا وبدون خيار، وبدون أي انتظار من v2.4.0)</li>
             </ul>
 
-            <h4>كيف تعمل — Workflow (4 خطوات مرقّمة قابلة للطي — v2.9.0)</h4>
+            <h4>كيف تعمل — Workflow (4 خطوات مرقّمة قابلة للطي — v2.10.1)</h4>
             <ol>
               <li>سجّل دخولك من شاشة الدخول</li>
               <li><strong>الخطوة ① — بحث:</strong> حط رقم منتج شوبيفاي أو الصق رابط صفحة المنتج بالكامل من
@@ -1026,23 +1050,28 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><strong>الخطوة ② — نتيجة البحث</strong> (خطوة مستقلة لوحدها): لو المنتج <strong>اتربط قبل
               كده</strong>، بتعرض رسالة "هذا المنتج تم ربطه من قبل" ووقف — خطوة ③ ما بتظهرش خالص. لو لقى
               تطابق جديد، بتعرض بيانات المنتج + زرار كبير كامل عرض الصفحة <strong>"🔗 راجع صور + كاتيجوريز
-              المنتج قبل الربط"</strong> — الزرار ده <strong>إلزامي</strong> (v2.9.0): خطوة ③ ما بتظهرش إلا
-              بعد الضغط عليه. الخطوة ① بتتطوى تلقائيًا (بعلامة ✓ خضرا) وتفتح خطوة ② تلقائيًا</li>
-              <li><strong>الخطوة ③ — الربط (+ تحديث السعر اختياري):</strong> صندوق <code>.opt-block</code>
-              أعلى الخطوة بنفس تصميم باقي الأسئلة (عرض فقط) بعنوان "🔒 تعديلات أخرى تحدث تلقائي عند الربط:" —
-              مقسّم لقسمين (على Stylebox.online / وعلى Ecommoda.com)، وتحته ثلاثة صناديق مستقلة بإطار قابلة
-              للاختيار — كل واحد فيه عنوان السؤال واختياراته في نفس الصف: <strong>حالة المنتج على
+              المنتج قبل الربط"</strong> — الضغط عليه بيفتح صفحة المنتج على ووردبريس في تاب جديد <strong>+
+              نافذة تأكيد إلزامية</strong> (v2.10.0) فيها بندان لازم تأكيدهم بـ checkbox: "تم مراجعة جميع صور
+              المنتج" و"تم اضافة كاتيجوري فئة الشوز + كاتيجوري البراند" — زرار "تأكيد المراجعة" في النافذة
+              فاضل معطّل لحد ما الاتنين يتأكدوا. خطوة ③ ما بتظهرش إلا بعد الضغط على "تأكيد المراجعة". الخطوة
+              ① بتتطوى تلقائيًا (بعلامة ✓ خضرا) وتفتح خطوة ② تلقائيًا</li>
+              <li><strong>الخطوة ③ — الربط (+ تحديث السعر اختياري):</strong> ثلاثة صناديق مستقلة بإطار قابلة
+              للاختيار أولاً — كل واحد فيه عنوان السؤال واختياراته في نفس الصف: <strong>حالة المنتج على
               شوبيفاي بعد الربط؟</strong> — Active / Draft / تبقى كما هي، <strong>هل تريد إضافة نجمة ⭐
               للعنوان؟</strong> — نعم / لا، و<strong>فرق السعر</strong> (اختياري — سيبه فاضي لتخطّي تحديث
-              السعر). التلاتة مستقلّون تمامًا عن بعض، وكلهم بيتنفذوا مع بعض بضغطة زرار كبير كامل عرض الصفحة
-              "▶ ابدأ ربط المنتج بين الموقعين الآن" واحدة (single call، مفيش sync_all ومفيش أكشن منفصل لتحديث
-              السعر)</li>
+              السعر). وتحتهم في آخر الخطوة (v2.10.0) صندوق <code>.opt-block</code> عرض فقط بعنوان "🔒 تعديلات
+              أخرى تحدث تلقائي عند الربط:" مقسّم لقسمين (على Stylebox.online — من ضمنها ضبط رابط المنتج
+              URL/Slug — / وعلى Ecommoda.com). التلاتة أسئلة مستقلّون تمامًا عن بعض، وكلهم بيتنفذوا مع بعض
+              بضغطة زرار كبير كامل عرض الصفحة "▶ ابدأ ربط المنتج بين الموقعين الآن" واحدة (single call، مفيش
+              sync_all ومفيش أكشن منفصل لتحديث السعر)</li>
               <li><strong>الخطوة ④ — النتيجة:</strong> بيانات المنتج + جدول الـ Variations اللي اتزامنت أو
-              اتخطّت (مع السبب، وعمودي السعر لو فرق السعر اتحط) أولاً، وبعدهم في آخر الخطوة (v2.9.0) بانر
-              كبير ملوّن (أخضر/أصفر/أحمر) بالحالة العامة، ثم زرار "🆕 بدء منتج جديد" كامل عرض الصفحة لوحده.
-              الخطوتان ② و③ بيتطووا تلقائيًا لحد ما تفتحهم تاني</li>
+              اتخطّت (مع السبب) أولاً — عنوان الجدول بقى (v2.10.0) "📦 المقاسات: ✓ تمت (N) | ⚠ تحذير (N) |
+              تخطي (N)"، وتحت الجدول (لو فرق السعر اتحط) جدول مستقل واضح بصريًا لقيمة "فرق السعر المستخدم في
+              هذه العملية" — وبعدهم في آخر الخطوة بانر كبير ملوّن (أخضر/أصفر/أحمر) بالحالة العامة، ثم زرار
+              "إبدأ ربط منتج جديد" كامل عرض الصفحة لوحده، بنفس تصميم الأزرار الزرقاء التانية في الأداة (v2.10.1
+              — كان لون أبيض/إطار أزرق بيتلوّن أزرق بس عند الـ hover). الخطوتان ② و③ بيتطووا تلقائيًا لحد ما تفتحهم تاني</li>
               <li>أي تفاصيل أو أخطاء إضافية اتسجلت في تاب "سجل العمليات"</li>
-              <li>زرار "🆕 بدء منتج جديد" أسفل الخطوة ④ يصفّر كل حاجة (بما فيها حالة "تمت المراجعة")
+              <li>زرار "إبدأ ربط منتج جديد" أسفل الخطوة ④ يصفّر كل حاجة (بما فيها حالة "تمت المراجعة")
               ويرجّعك للخطوة ① لمنتج جديد من غير Refresh للصفحة. الضغط على عنوان أي خطوة متطوية بيفتحها
               تاني لو حبيت تراجعها من غير ما تصفّر النتيجة الحالية</li>
             </ol>
@@ -1091,10 +1120,11 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>§TOOL-JS::find</code> — خطوة ①: نموذج تشغيل <code>find_product</code> (بحث برقم أو رابط شوبيفاي — <code>extractShopifyProductId()</code> بيستخرج الرقم من الرابط لو اتحط، Enter أو زرار) + <code>resetFindStep()</code>/<code>startNewProduct()</code> لإعادة الضبط الكامل (بما فيها <code>productReviewed</code>)</li>
               <li><code>§FIND::checkShopifyAlreadyLinked</code> (Worker، v2.7.0) — أول فحص في <code>find_product</code>: بيقرا <code>custom.wordpress_id</code> على شوبيفاي قبل أي بحث في ووكومرس</li>
               <li><code>§FIND::findWcProductByShopifyId</code> (Worker) — منطق البحث لو المنتج لسه مش مربوط (فلتر GTIN مباشر + بحث بعنوان شوبيفاي لتضييق النطاق + تأكيد قاطع بالـ SKU/GTIN)</li>
-              <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (اتربط قبل كده / لقيته / مش لقيته) في خطوتها المستقلة + زرار "راجع صور + كاتيجوريز المنتج قبل الربط" كامل العرض (<code>.btn-block</code>)، إلزامي — راجع <code>markProductReviewed()</code></li>
-              <li><code>markProductReviewed()</code> (v2.9.0) — بيتنادى من زرار المراجعة الإلزامي؛ هو اللي بيفتح خطوة ③ لأول مرة (بدل ما تفتح تلقائيًا مع نجاح البحث زي قبل كده)</li>
+              <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (اتربط قبل كده / لقيته / مش لقيته) في خطوتها المستقلة + زرار "راجع صور + كاتيجوريز المنتج قبل الربط" كامل العرض (<code>.btn-block</code>)، إلزامي — بيفتح صفحة ووردبريس في تاب جديد ونادي <code>openReviewConfirmModal()</code></li>
+              <li><code>openReviewConfirmModal()</code>/<code>closeReviewConfirmModal()</code>/<code>toggleReviewCheck()</code>/<code>confirmProductReviewed()</code> (v2.10.0) — نافذة تأكيد إلزامية (<code>#reviewConfirmOverlay</code>) ببندين checkbox، زرار "تأكيد المراجعة" معطّل لحد ما الاتنين يتأكدوا؛ التأكيد بينادي <code>markProductReviewed()</code></li>
+              <li><code>markProductReviewed()</code> (v2.9.0، بيتنادى من <code>confirmProductReviewed()</code> بدل onclick مباشر من v2.10.0) — هو اللي بيفتح خطوة ③ لأول مرة (بدل ما تفتح تلقائيًا مع نجاح البحث زي قبل كده)</li>
               <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر اختياري مع بعض، كل واحد في صندوق <code>.opt-block</code> مستقل)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي، و<code>runSync()</code> برضه بيرفض لو <code>productReviewed !== true</code></li>
-              <li><code>renderSyncResult()</code> — خطوة ④: تفاصيل بيانات المنتج + جدول Variations (+ صفوف Brand/Slug من v2.6.0) أولاً، وبعدهم بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + زرار "بدء منتج جديد" كامل العرض في آخر الخطوة (v2.9.0)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
+              <li><code>renderSyncResult()</code> — خطوة ④: تفاصيل بيانات المنتج + جدول "📦 المقاسات" (+ صفوف Brand/Slug من v2.6.0، عنوان الجدول اتغيّر v2.10.0) + جدول فرق السعر تحت الجدول لو <code>priceApplied</code> (اتنقل تحت v2.10.0، كان صف فوق الجدول)، وبعدهم بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + زرار "إبدأ ربط منتج جديد" كامل العرض في آخر الخطوة (<code>.btn-primary.btn-block</code> من v2.10.1 — كان <code>.btn-new-product</code> بتصميم منفصل أبيض/أزرق عند hover)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
               <li><code>openBrandMissingModal()</code>/<code>closeBrandMissingModal()</code> (v2.6.0) — نافذة خطأ مخصصة (<code>#brandMissingOverlay</code>) لما <code>runSync()</code> يلقى <code>e.data.code === 'brand_missing'</code>؛ <code>apiRequest()</code> بقى يحط رد الـ Worker كامل على <code>err.data</code> مش بس <code>err.message</code> عشان الكود ده يتقرا</li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
               <li><code>§LOG-ENDPOINTS</code> — get_logs / get_logs_count / get_logs_export (v2، بدون تغيير في العقد)</li>
@@ -1114,6 +1144,22 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 
             <h4>NOTES</h4>
             <ul>
+              <li>v2.10.1 (27-08-2026) — تعديل واحد بطلب صاحب الأداة، <strong>صفر تغيير في الـ Worker أو أي
+              payload</strong>: زرار "بدء منتج جديد" في آخر خطوة ④ اتغيّر اسمه لـ"إبدأ ربط منتج جديد" وبقى
+              يستخدم كلاس <code>.btn-primary.btn-block</code> (نفس تصميم أزرار الأداة الزرقاء التانية، لون
+              ثابت لا يتغيّر إلا بتغميقه شوية عند hover) بدل كلاس <code>.btn-new-product</code> المخصص القديم
+              (أبيض بإطار أزرق، بيتحوّل لخلفية زرقاء كاملة بس عند مرور الماوس — بطلب المستخدم استبداله بلون
+              ثابت زي باقي أزرار الأداة). كلاس <code>.btn-new-product</code> اتشال بالكامل من الـ CSS.</li>
+              <li>v2.10.0 (27-08-2026) — ثلاث تعديلات UI بطلب صاحب الأداة، <strong>صفر تغيير في الـ Worker
+              أو أي payload</strong>: (1) نافذة تأكيد إلزامية جديدة (<code>#reviewConfirmOverlay</code>) بعد
+              الضغط على زرار "راجع صور + كاتيجوريز المنتج قبل الربط" — بندان checkbox ("تم مراجعة جميع صور
+              المنتج" و"تم اضافة كاتيجوري فئة الشوز + كاتيجوري البراند") لازم يتأكدوا الاتنين قبل ما زرار
+              "تأكيد المراجعة" يتفعّل ويفتح خطوة ③. (2) صندوق "🔒 تعديلات أخرى تحدث تلقائي عند الربط:" اتنقل
+              لآخر خطوة ③ (بعد سؤال تحديث السعر بدل ما يكون فوق كل الأسئلة)، وبند جديد اتضاف تحت "على
+              Stylebox.online": "التأكد من ضبط رابط المنتج (URL/Slug) ليطابق عنوانه" (توثيق لسلوك موجود من
+              v2.6.0). (3) عنوان جدول الـ Variations في خطوة ④ بقى "📦 المقاسات: ✓ تمت (N) | ⚠ تحذير (N) |
+              تخطي (N)" بدل "الـ Variations — ... من أصل N"، وصف "فرق السعر المستخدم" اتنقل من فوق الجدول
+              لجدول مستقل واضح بصريًا تحته.</li>
               <li>v2.9.0 (27-08-2026) — خمس تعديلات بطلب صاحب الأداة: (1) حارس جديد <strong>على مستوى الـ
               Worker (v2.7.0)</strong> في <code>find_product</code> — لو منتج شوبيفاي أصلاً عنده قيمة في
               <code>custom.wordpress_id</code>، البحث بيوقف فورًا برسالة "هذا المنتج تم ربطه من قبل" قبل أي
@@ -1186,6 +1232,32 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
     </div>
   </div>
 
+  <!-- ══ نافذة تأكيد المراجعة الإلزامية (v2.10.0) — بعد الضغط على زرار "راجع صور
+       + كاتيجوريز المنتج قبل الربط" — خطوة ③ ما بتفتحش إلا بعد تأكيد الاتنين هنا ═══ -->
+  <div class="eco-overlay" id="reviewConfirmOverlay" onclick="if(event.target===this)closeReviewConfirmModal()">
+    <div class="eco-modal" style="max-width:480px;">
+      <div class="eco-modal-hdr">
+        <span>✏️ تأكيد المراجعة قبل الربط</span>
+        <button class="modal-close-x" onclick="closeReviewConfirmModal()">✕</button>
+      </div>
+      <div class="eco-modal-body">
+        <label class="confirm-check-row" id="reviewCheckRow1">
+          <input type="checkbox" id="reviewChk1" onchange="toggleReviewCheck(this)">
+          <span>تم مراجعة جميع صور المنتج</span>
+        </label>
+        <label class="confirm-check-row" id="reviewCheckRow2">
+          <input type="checkbox" id="reviewChk2" onchange="toggleReviewCheck(this)">
+          <span>تم اضافة كاتيجوري فئة الشوز + كاتيجوري البراند</span>
+        </label>
+        <div class="result-note warn" style="margin-top:6px;">⚠️ لازم تأكيد البندين فوق قبل ما يتفعّل زرار "تأكيد المراجعة" — خطوة الربط مش هتظهر غير بعده.</div>
+        <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-primary success" id="reviewConfirmBtn" style="flex:1;margin-top:0;" disabled onclick="confirmProductReviewed()">✅ تأكيد المراجعة</button>
+          <button class="btn-outline" onclick="closeReviewConfirmModal()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ Login Overlay ═══════════════════════════════════════ -->
   <div class="login-overlay" id="loginOverlay">
     <div class="login-card">
@@ -1251,7 +1323,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.9.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.10.1'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة (v2.7.0) — منفصلة تمامًا عن TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
 // أي لمس للـ Worker — راجع checkWorkerVersion() تحت)
@@ -1857,14 +1929,14 @@ function renderFindResult(data) {
     <div class="result-row"><span>رقم المنتج على ووردبريس</span><span class="mono">${data.wp_product_id}</span></div>
     ${data.productName ? `<div class="result-row"><span>اسم المنتج</span><span>${data.productName}</span></div>` : ''}
     <div style="margin-top:18px;">
-      <a class="btn-primary btn-block" id="reviewProductBtn" href="${data.wpEditUrl}" target="_blank" rel="noopener" onclick="markProductReviewed()">🔗 راجع صور + كاتيجوريز المنتج قبل الربط</a>
+      <a class="btn-primary btn-block" id="reviewProductBtn" href="${data.wpEditUrl}" target="_blank" rel="noopener" onclick="openReviewConfirmModal()">🔗 راجع صور + كاتيجوريز المنتج قبل الربط</a>
       <div class="result-note warn" id="reviewRequiredNote" style="margin-top:10px;">⚠️ الزرار ده إلزامي — لازم تضغطه وتراجع المنتج على ووردبريس قبل ما تقدر تكمل لخطوة الربط.</div>
     </div>`;
 }
 
-// v2.9.0 — بيتنادى من زرار المراجعة الإلزامي فوق: بيفتح خطوة ③ للمرة الأولى
-// (كانت بتتفتح تلقائيًا مع نجاح البحث قبل كده). لو ضغط الزرار تاني بعد ما فتح
-// الخطوة، مفيش أي أثر إضافي.
+// v2.9.0 — بيتنادى بعد تأكيد نافذة المراجعة (confirmProductReviewed()، v2.10.0):
+// بيفتح خطوة ③ للمرة الأولى (كانت بتتفتح تلقائيًا مع نجاح البحث قبل كده).
+// لو اتنادت تاني بعد ما فتحت الخطوة، مفيش أي أثر إضافي.
 function markProductReviewed() {
   if (!foundWpProductId) return;
   productReviewed = true;
@@ -1872,6 +1944,36 @@ function markProductReviewed() {
   if (note) note.style.display = 'none';
   document.getElementById('stepSyncCard').style.display = 'block';
   setStepCollapsed('Sync', false);
+}
+
+// ══════════════════════════════════════════════════════════════
+// §TOOL-JS::reviewConfirmModal — v2.10.0
+// نافذة تأكيد إلزامية (checkbox واحد لكل بند) بعد الضغط على زرار المراجعة —
+// markProductReviewed() ما بتتنفّذش إلا لو الاتنين اتأكدوا هنا.
+// ══════════════════════════════════════════════════════════════
+function openReviewConfirmModal() {
+  document.getElementById('reviewChk1').checked = false;
+  document.getElementById('reviewChk2').checked = false;
+  document.getElementById('reviewCheckRow1').classList.remove('checked');
+  document.getElementById('reviewCheckRow2').classList.remove('checked');
+  updateReviewConfirmBtn();
+  document.getElementById('reviewConfirmOverlay').classList.add('open');
+}
+function closeReviewConfirmModal() {
+  document.getElementById('reviewConfirmOverlay').classList.remove('open');
+}
+function toggleReviewCheck(el) {
+  el.closest('.confirm-check-row').classList.toggle('checked', el.checked);
+  updateReviewConfirmBtn();
+}
+function updateReviewConfirmBtn() {
+  const ok = document.getElementById('reviewChk1').checked && document.getElementById('reviewChk2').checked;
+  document.getElementById('reviewConfirmBtn').disabled = !ok;
+}
+function confirmProductReviewed() {
+  if (document.getElementById('reviewConfirmBtn').disabled) return;
+  closeReviewConfirmModal();
+  markProductReviewed();
 }
 
 // تصفير كامل لخطوة البحث — بتترجع الأداة لأول مرحلة بصريًا (خطوة 1 مفتوحة، 2 و3 و4 مخفيين)
@@ -1898,7 +2000,7 @@ function resetFindStep() {
   setStepCollapsed('Find', false);
 }
 
-// زرار "🆕 بدء منتج جديد" (طلب المستخدم 27-08-2026) — إعادة ضبط كاملة بدون Refresh للصفحة
+// زرار "إبدأ ربط منتج جديد" (طلب المستخدم 27-08-2026، اسم ولون الزرار اتعدّلوا v2.10.1) — إعادة ضبط كاملة بدون Refresh للصفحة
 function startNewProduct() {
   resetFindStep();
   resetSyncOptions();
@@ -2135,16 +2237,25 @@ function renderSyncResult(data) {
     </tr>`;
   }).join('');
 
+  // فرق السعر (v2.5.0) — عرضه اتنقل تحت الجدول وبقى جدول مستقل واضح بصريًا (v2.10.0)
+  const priceDiffTable = priceApplied ? `
+      <div style="overflow-x:auto;margin-top:16px;">
+        <table class="variant-table" style="max-width:340px;">
+          <tr><th colspan="2">💰 فرق السعر المستخدم في هذه العملية</th></tr>
+          <tr><td>القيمة</td><td class="mono">${r.priceDifference ?? '—'}</td></tr>
+        </table>
+      </div>` : '';
+
   wrap.innerHTML = plHtml + `
     <div class="result-card">
-      <h4>📦 الـ Variations — ✓ ${syncedCount.toLocaleString('en-US')} تمت | ⚠ ${warnCount.toLocaleString('en-US')} تحذير | تخطي ${skippedCount.toLocaleString('en-US')} — من أصل ${variants.length.toLocaleString('en-US')}</h4>
-      ${priceApplied ? `<div class="result-row"><span>فرق السعر المستخدم</span><span class="mono">${r.priceDifference ?? '—'}</span></div>` : ''}
+      <h4>📦 المقاسات: ✓ تمت (${syncedCount.toLocaleString('en-US')}) | ⚠ تحذير (${warnCount.toLocaleString('en-US')}) | تخطي (${skippedCount.toLocaleString('en-US')})</h4>
       <div style="overflow-x:auto;">
         <table class="variant-table">
           <tr><th>Variation ID</th><th>المقاس</th><th>الحالة</th><th>SKU</th><th>المخزون</th><th>Shopify Variant ID / التفاصيل</th>${priceCols}</tr>
           ${rows || `<tr><td colspan="${6 + priceColCount}" style="text-align:center;color:var(--text-muted);padding:16px;">لا توجد Variations</td></tr>`}
         </table>
       </div>
+      ${priceDiffTable}
     </div>`;
 
   document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
