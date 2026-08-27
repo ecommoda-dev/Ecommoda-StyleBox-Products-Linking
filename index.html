@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ecommoda StyleBox Products Linking</title>
-<!-- skills: worker-builder v1.0.0 · html-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 26-08-2026 -->
+<!-- skills: html-builder v1.0.0 — 27-08-2026 (إعادة تصميم UI فقط — worker-builder/woocommerce-sync-helper ماتلمسوش) -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
@@ -36,34 +36,36 @@
   --purple-border:  #c4b5fd;
   --radius:         12px;
   --radius-sm:      8px;
+  --radius-lg:      16px;
   --shadow:         0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg:      0 8px 24px rgba(17,24,39,.08), 0 2px 6px rgba(17,24,39,.05);
   --font-body:      'Noto Sans Arabic', -apple-system, sans-serif;
   --font-mono:      'Noto Sans Arabic', -apple-system, sans-serif; /* موحّد — IBM Plex Mono أُلغي 19-08-2026 */
   --container-max:  1200px; /* Tier M — الأداة فيها Log Tab بجدول حقيقي (data-table-standard §9) */
 }
 
-/* ══ Base ══════════════════════════════════════════════════════ */
+/* ══ Base — إعادة تصميم UI 27-08-2026: رفع مقاسات الخط والمسافات في كل الأداة ══ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--font-body); background: var(--bg); color: var(--text-primary); min-height: 100vh; padding: 12px; direction: rtl; }
+body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; background: var(--bg); color: var(--text-primary); min-height: 100vh; padding: 18px; direction: rtl; }
 .container { max-width: var(--container-max); margin: 0 auto; }
 
 /* ══ Main Tabs ═══════════════════════════════════════════════ */
-.main-tabs-bar { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px; margin-bottom: 14px; box-shadow: var(--shadow); }
-.main-tab-btn { flex: 1; padding: 9px 10px; border: 2px solid transparent; background: transparent; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.main-tabs-bar { display: flex; gap: 5px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px; margin-bottom: 18px; box-shadow: var(--shadow); }
+.main-tab-btn { flex: 1; padding: 13px 12px; border: 2px solid transparent; background: transparent; border-radius: var(--radius-sm); font-family: inherit; font-size: 14.5px; font-weight: 700; color: var(--text-secondary); cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; }
 .main-tab-btn:hover { background: var(--surface-2); color: var(--text-primary); }
 .main-tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(37,99,235,.25); }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
 /* ══ Header ════════════════════════════════════════════════════ */
-.app-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; margin-bottom: 12px; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-.app-title { display: flex; align-items: center; gap: 10px; }
-.app-icon { font-size: 22px; }
-.app-title-text h1 { font-size: 15px; font-weight: 700; line-height: 1.2; }
-.app-title-text span { font-size: 11px; color: var(--text-muted); }
-.app-header-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.app-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 22px; margin-bottom: 18px; box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+.app-title { display: flex; align-items: center; gap: 14px; }
+.app-icon { font-size: 32px; }
+.app-title-text h1 { font-size: 19px; font-weight: 800; line-height: 1.25; }
+.app-title-text span { font-size: 13px; color: var(--text-muted); }
+.app-header-btns { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-.hbtn { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border: 1.5px solid var(--border-strong); background: var(--surface); border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all .15s; white-space: nowrap; }
+.hbtn { display: flex; align-items: center; gap: 6px; padding: 9px 15px; border: 1.5px solid var(--border-strong); background: var(--surface); border-radius: var(--radius-sm); font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all .15s; white-space: nowrap; }
 .hbtn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 .hbtn:disabled { opacity: .5; cursor: not-allowed; }
 .hbtn.settings-configured { border-color: var(--green); color: var(--green); background: var(--green-light); }
@@ -77,29 +79,29 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 .settings-overlay.open { display: flex; }
 .settings-modal { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,.18); animation: modalIn .2s ease; overflow: hidden; }
 @keyframes modalIn { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.settings-modal-hdr { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 15px; font-weight: 700; }
-.modal-close-x { background: var(--red-light); border: 1.5px solid var(--red-border); color: var(--red); font-size: 14px; font-weight: 700; line-height: 1; padding: 4px 11px; border-radius: var(--radius-sm); font-family: inherit; cursor: pointer; transition: all .15s; }
+.settings-modal-hdr { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 16.5px; font-weight: 800; }
+.modal-close-x { background: var(--red-light); border: 1.5px solid var(--red-border); color: var(--red); font-size: 14px; font-weight: 700; line-height: 1; padding: 5px 12px; border-radius: var(--radius-sm); font-family: inherit; cursor: pointer; transition: all .15s; }
 .modal-close-x:hover { background: var(--red); color: #fff; border-color: var(--red); }
-.settings-modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-.settings-field { display: flex; flex-direction: column; gap: 5px; }
-.settings-label { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px; }
-.settings-input { border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 11px; font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); outline: none; width: 100%; direction: ltr; background: var(--surface); transition: border-color .15s; }
+.settings-modal-body { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+.settings-field { display: flex; flex-direction: column; gap: 6px; }
+.settings-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px; }
+.settings-input { border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 11px 13px; font-family: var(--font-mono); font-size: 13.5px; color: var(--text-primary); outline: none; width: 100%; direction: ltr; background: var(--surface); transition: border-color .15s; }
 .settings-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
-.settings-modal-ftr { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
-.btn-modal-cancel { padding: 8px 14px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; cursor: pointer; }
+.settings-modal-ftr { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+.btn-modal-cancel { padding: 10px 16px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; cursor: pointer; }
 .btn-modal-cancel:hover { color: var(--text-primary); }
-.btn-modal-save { padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s; }
+.btn-modal-save { padding: 10px 20px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; }
 .btn-modal-save:hover { background: var(--accent-dark); }
-.btn-outline { padding: 7px 14px; background: var(--surface); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.btn-outline { padding: 9px 16px; background: var(--surface); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-.btn-sm { padding: 6px 12px; font-size: 11.5px; }
+.btn-sm { padding: 8px 14px; font-size: 12.5px; }
 
 /* ══ Modal Shell — About / Changelog ══════════════════════════ */
 .eco-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 600; display: none; align-items: center; justify-content: center; padding: 20px; }
 .eco-overlay.open { display: flex; }
 .eco-modal { background: var(--surface); border-radius: var(--radius); width: 90%; max-width: calc(var(--container-max) * .9); max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.18); overflow: hidden; }
-.eco-modal-hdr { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 700; background: var(--surface); flex-shrink: 0; }
-.eco-modal-body { overflow-y: auto; padding: 16px 20px; flex: 1; }
+.eco-modal-hdr { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 15.5px; font-weight: 800; background: var(--surface); flex-shrink: 0; }
+.eco-modal-body { overflow-y: auto; padding: 20px 24px; flex: 1; font-size: 14px; }
 
 /* ── Changelog ── */
 .cl-version-block { margin-bottom: 4px; }
@@ -146,10 +148,10 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 .login-settings-btn:hover { transform: translateY(-1px); }
 .login-version { position: absolute; top: 58px; left: 17px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: .2px; user-select: none; }
 .login-top { padding-top: 12px; display: flex; flex-direction: column; align-items: center; text-align: center; }
-.login-icon { font-size: 34px; line-height: 1; margin-bottom: 14px; }
-.login-title { font-size: 19px; font-weight: 900; letter-spacing: -.1px; }
-.login-desc { font-size: 13px; color: var(--text-secondary); font-weight: 600; margin-top: 5px; }
-.login-sub { min-height: 22px; margin-top: 4px; color: var(--text-muted); font-size: 12px; font-weight: 600; text-align: center; line-height: 1.7; }
+.login-icon { font-size: 40px; line-height: 1; margin-bottom: 14px; }
+.login-title { font-size: 21px; font-weight: 900; letter-spacing: -.1px; }
+.login-desc { font-size: 14px; color: var(--text-secondary); font-weight: 600; margin-top: 6px; }
+.login-sub { min-height: 22px; margin-top: 5px; color: var(--text-muted); font-size: 13px; font-weight: 600; text-align: center; line-height: 1.7; }
 .login-body { margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
 .login-field { display: flex; flex-direction: column; gap: 7px; }
 .login-field label { display: block; font-size: 11px; font-weight: 800; color: var(--text-secondary); letter-spacing: .3px; }
@@ -192,52 +194,101 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 .login-secondary:hover { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 
 /* ══════════════════════════════════════════════════════════════
-   §SYNC-CSS — تاب "ربط منتج"
+   §SYNC-CSS — تاب "ربط منتج" (إعادة تصميم UI 27-08-2026 — خطوات مرقّمة + طي تلقائي)
    ══════════════════════════════════════════════════════════════ */
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px; }
-.card h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
-.field-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; max-width: 340px; }
-.field-row label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
-.field-input { border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--font-mono); font-size: 14px; color: var(--text-primary); background: var(--surface); outline: none; width: 100%; direction: ltr; transition: border-color .15s; }
-.field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
-/* خيارات الربط — أسئلة صريحة باختيارات (v2.1.0، بدل الـ checkboxes القديمة) */
-.opt-block { margin-bottom: 16px; max-width: 560px; }
-.opt-q { font-size: 12px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
-.opt-choices { display: flex; flex-wrap: wrap; gap: 8px; }
-.opt-choice { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; color: var(--text-secondary); background: var(--surface); cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 26px; margin-bottom: 18px; }
+.card h3 { font-size: 17px; font-weight: 800; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+.field-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; max-width: 380px; }
+.field-row label { font-size: 13.5px; font-weight: 700; color: var(--text-secondary); }
+.field-input { border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 13px 15px; font-family: var(--font-mono); font-size: 16px; color: var(--text-primary); background: var(--surface); outline: none; width: 100%; direction: ltr; transition: border-color .15s, box-shadow .15s; }
+.field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+
+/* ── خطوات مرقّمة (Step Card) — بديل تصميمي 27-08-2026 لعرض الخطوة 1/2/3 ── */
+.step-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); margin-bottom: 20px; overflow: hidden; transition: box-shadow .15s; }
+.step-card.done { border-color: var(--green-border); }
+.step-card-hdr { display: flex; align-items: center; gap: 14px; padding: 20px 24px; cursor: pointer; user-select: none; }
+.step-card-hdr:hover { background: var(--surface-2); }
+.step-card-hdr.no-toggle { cursor: default; }
+.step-card-hdr.no-toggle:hover { background: none; }
+.step-badge { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 3px 8px rgba(37,99,235,.3); transition: background .2s; }
+.step-card.done .step-badge, .step-badge.ok { background: var(--green); box-shadow: 0 3px 8px rgba(22,163,74,.3); }
+.step-badge.warn { background: var(--amber); box-shadow: 0 3px 8px rgba(217,119,6,.3); }
+.step-badge.err { background: var(--red); box-shadow: 0 3px 8px rgba(220,38,38,.3); }
+.step-hdr-text { flex: 1; min-width: 0; }
+.step-title { font-size: 17px; font-weight: 800; color: var(--text-primary); }
+.step-subtitle { font-size: 13.5px; color: var(--text-secondary); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step-card.done .step-subtitle, .step-subtitle.ok { color: var(--green); font-weight: 600; }
+.step-subtitle.warn { color: #92400e; font-weight: 600; }
+.step-subtitle.err { color: var(--red); font-weight: 600; }
+.step-chevron { flex-shrink: 0; font-size: 14px; color: var(--text-muted); transition: transform .2s; }
+.step-chevron.open { transform: rotate(180deg); }
+.step-card-body { padding: 0 24px 24px; border-top: 1px solid var(--border); padding-top: 22px; }
+.step-card-body.collapsed { display: none; }
+
+/* خيارات الربط — أسئلة صريحة باختيارات (v2.1.0)، تكبير + بطاقات أوضح 27-08-2026 */
+.opt-block { margin-bottom: 22px; max-width: 620px; }
+.opt-q { font-size: 15px; font-weight: 800; color: var(--text-primary); margin-bottom: 10px; }
+.opt-choices { display: flex; flex-wrap: wrap; gap: 10px; }
+.opt-choice { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border: 1.5px solid var(--border-strong); border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--text-secondary); background: var(--surface); cursor: pointer; transition: border-color .15s, background .15s, color .15s; min-height: 46px; }
 .opt-choice:hover { border-color: var(--accent); }
-.opt-choice input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; margin: 0; }
-.opt-choice:has(input:checked) { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
-.opt-hint { font-size: 11px; color: var(--text-muted); line-height: 1.6; margin-top: 7px; }
-.btn-primary { display: flex; align-items: center; gap: 6px; padding: 10px 22px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; margin-top: 4px; }
-.btn-primary:hover { background: var(--accent-dark); }
-.btn-primary:disabled { opacity: .6; cursor: not-allowed; }
-.mini-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+.opt-choice input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; margin: 0; }
+.opt-choice:has(input:checked) { border-color: var(--accent); background: var(--accent-light); color: var(--accent-dark); }
+
+/* تفاصيل إضافية اختيارية — بديل الفقرات الطويلة الظاهرة دايمًا (ملحوظة المستخدم: "مليانة placeholders") */
+.info-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-light); border: 1px solid #bfdbfe; border-radius: 20px; padding: 4px 12px; margin-top: 9px; cursor: pointer; user-select: none; transition: background .15s; }
+.info-toggle:hover { background: #dbeafe; }
+.info-toggle .info-arrow { font-size: 9px; transition: transform .2s; }
+.info-toggle.open .info-arrow { transform: rotate(180deg); }
+.opt-hint { font-size: 12.5px; color: var(--text-muted); line-height: 1.75; margin-top: 9px; display: none; background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 13px; }
+.opt-hint.open { display: block; }
+
+.btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 30px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 15.5px; font-weight: 800; cursor: pointer; transition: background .15s, transform .1s, box-shadow .15s; margin-top: 6px; box-shadow: 0 4px 12px rgba(37,99,235,.28); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,.34); }
+.btn-primary:active:not(:disabled) { transform: translateY(0); }
+.btn-primary:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+.btn-primary.success { background: var(--green); box-shadow: 0 4px 12px rgba(22,163,74,.28); }
+.btn-primary.success:hover:not(:disabled) { background: #15803d; box-shadow: 0 6px 16px rgba(22,163,74,.34); }
+.mini-spinner { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
-.result-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.result-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+/* ── بانر الحالة الكبير — بديل شاشة الملخّص القديمة (ملهم من نمط "الحالة المستهدفة") ── */
+.status-banner { display: flex; align-items: center; gap: 18px; border-radius: var(--radius-lg); padding: 22px 26px; margin-bottom: 20px; border: 1.5px solid; }
+.status-banner-icon { font-size: 40px; line-height: 1; flex-shrink: 0; }
+.status-banner-title { font-size: 20px; font-weight: 800; }
+.status-banner-sub { font-size: 14px; margin-top: 5px; opacity: .85; }
+.status-banner.ok { background: var(--green-light); border-color: var(--green-border); color: #14532d; }
+.status-banner.warn { background: var(--amber-light); border-color: #fde68a; color: #78350f; }
+.status-banner.err { background: var(--red-light); border-color: var(--red-border); color: #7f1d1d; }
+
+.result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 22px; margin-bottom: 18px; }
+.result-card h4 { font-size: 15.5px; font-weight: 800; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.result-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13.5px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .result-row:last-child { border-bottom: none; }
 .result-row span:first-child { color: var(--text-secondary); flex-shrink: 0; }
-.result-row span:last-child { font-weight: 600; text-align: left; }
-.result-note { font-size: 11.5px; color: var(--text-secondary); line-height: 1.7; background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px 10px; margin-top: 6px; }
+.result-row span:last-child { font-weight: 700; text-align: left; }
+.result-note { font-size: 13px; color: var(--text-secondary); line-height: 1.8; background: var(--surface-2); border-radius: var(--radius-sm); padding: 11px 14px; margin-top: 8px; }
 .result-note.warn { background: var(--amber-light); color: #92400e; }
 .result-note.err { background: var(--red-light); color: var(--red); }
 
-.badge-success { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-.badge-warn { background: var(--amber-light); color: var(--amber); border: 1px solid #fde68a; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-.badge-danger { background: var(--red-light); color: var(--red); border: 1px solid var(--red-border); padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-.badge-ok { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-.badge-skip { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.badge-success { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); padding: 4px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.badge-warn { background: var(--amber-light); color: var(--amber); border: 1px solid #fde68a; padding: 4px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.badge-danger { background: var(--red-light); color: var(--red); border: 1px solid var(--red-border); padding: 4px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.badge-ok { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); padding: 3px 10px; border-radius: 5px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.badge-skip { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); padding: 3px 10px; border-radius: 5px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 
-.variant-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.variant-table th { text-align: center; padding: 8px; background: var(--surface-2); border-bottom: 2px solid var(--border-strong); font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
-.variant-table td { padding: 8px; border-bottom: 1px solid var(--border); text-align: center; }
+.variant-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.variant-table th { text-align: center; padding: 10px; background: var(--surface-2); border-bottom: 2px solid var(--border-strong); font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+.variant-table td { padding: 10px; border-bottom: 1px solid var(--border); text-align: center; }
 .variant-table th, .variant-table td { border-inline-start: 1px solid var(--border); }
 .variant-table th:first-child, .variant-table td:first-child { border-inline-start: none; }
 .variant-table td.mono { font-family: var(--font-mono); direction: ltr; }
 .variant-table td.right { text-align: right; }
+
+/* ── زرار "بدء منتج جديد" — إعادة ضبط كاملة للأداة لأول مرحلة (طلب المستخدم 27-08-2026) ── */
+.new-product-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: var(--surface); border: 1.5px dashed var(--border-strong); border-radius: var(--radius-lg); padding: 18px 24px; margin-bottom: 20px; }
+.new-product-bar .np-text { font-size: 14px; font-weight: 700; color: var(--text-secondary); }
+.btn-new-product { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: var(--surface); color: var(--accent); border: 1.5px solid var(--accent); border-radius: 10px; font-family: inherit; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: all .15s; white-space: nowrap; }
+.btn-new-product:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
 
 /* ══════════════════════════════════════════════════════════════
    §DATA-TABLE-CSS — القسم الموحّد (فلاتر + جدول) — تاب سجل العمليات
@@ -253,11 +304,11 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 .flt-icon.active { color: var(--accent); }
 .flt-toggle { font-size: 13px; color: var(--text-muted); transition: transform .25s; }
 .flt-toggle.open { transform: rotate(180deg); }
-.flt-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.flt-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 13px; }
 .flt-body.collapsed { display: none; }
-.flt-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-.flt-g { display: flex; flex-direction: column; gap: 3px; }
-.flt-label { font-size: 10px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+.flt-row { display: flex; gap: 11px; flex-wrap: wrap; align-items: flex-end; }
+.flt-g { display: flex; flex-direction: column; gap: 4px; }
+.flt-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
 
 .clear-btn { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s; white-space: nowrap; height: 34px; border: 1px solid var(--red-border); color: var(--red); background: var(--red-light); }
 .clear-btn:hover { background: var(--red); color: #fff; border-color: var(--red); }
@@ -355,8 +406,8 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 .tbl-body-wrap.collapsed { max-height: 0; }
 .tbl-scroll { overflow-x: auto; border-radius: 0 0 var(--radius) var(--radius); }
 
-.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.data-table thead th { text-align: center; background: var(--surface-2); color: var(--text-secondary); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; padding: 10px 8px; border-bottom: 2px solid var(--border-strong); white-space: nowrap; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.data-table thead th { text-align: center; background: var(--surface-2); color: var(--text-secondary); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .3px; padding: 12px 10px; border-bottom: 2px solid var(--border-strong); white-space: nowrap; }
 .sortable-th { cursor: pointer; user-select: none; transition: background .12s, color .12s; }
 .sortable-th:hover { background: var(--accent-light); color: var(--accent-dark); }
 .sortable-th.sorted { background: var(--accent-light); color: var(--accent-dark); }
@@ -401,92 +452,133 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
     <button class="main-tab-btn" id="mainTabLog" onclick="switchMainTab('log')">📜 سجل العمليات</button>
   </div>
 
-  <!-- ══ Sync Tab ════════════════════════════════════════════ -->
+  <!-- ══ Sync Tab — إعادة تصميم UI 27-08-2026: خطوات مرقّمة قابلة للطي + ملخّص نتيجة ══ -->
   <div class="tab-panel active" id="panelSync">
 
-    <!-- ─── §TOOL::findStep (v2.4.0) — خطوة 1: البحث بمعرف شوبيفاي ─── -->
-    <div class="card" id="findCard">
-      <h3>🔍 الخطوة 1: البحث عن المنتج بمعرف شوبيفاي</h3>
-
-      <div class="field-row">
-        <label>Shopify Product ID</label>
-        <input type="number" class="field-input" id="shopifyProductIdInput" inputmode="numeric"
-               onkeydown="if(event.key==='Enter'){event.preventDefault();runFindProduct();}" />
+    <!-- ─── §TOOL::findStep (v2.4.0، بطاقة خطوة مرقّمة 27-08-2026) — خطوة 1: البحث بمعرف شوبيفاي ─── -->
+    <div class="step-card" id="stepFindCard">
+      <div class="step-card-hdr" onclick="toggleStep('Find')">
+        <div class="step-badge" id="stepFindBadge">1</div>
+        <div class="step-hdr-text">
+          <div class="step-title">🔍 البحث عن المنتج بمعرف شوبيفاي</div>
+          <div class="step-subtitle" id="stepFindSubtitle">حط رقم منتج شوبيفاي (Product ID) وابدأ البحث</div>
+        </div>
+        <span class="step-chevron open" id="stepFindChevron">▲</span>
       </div>
 
-      <div class="opt-hint" style="margin-bottom:14px;">
-        الرقم ده بتلاقيه في رابط المنتج على شوبيفاي أدمن (اللي بعد <code>/products/</code>)،
-        زي <code>10468878713154</code>. الأداة بتدوّر عليه في ووردبريس — إما في
-        خانة GTIN، أو في بداية الـ SKU (لو المنتج لسه مش مربوط).
-      </div>
+      <div class="step-card-body" id="stepFindBody">
+        <div class="field-row">
+          <label>Shopify Product ID</label>
+          <input type="number" class="field-input" id="shopifyProductIdInput" inputmode="numeric"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();runFindProduct();}" />
+        </div>
 
-      <button class="btn-primary" id="findBtn" onclick="runFindProduct()">🔍 بحث</button>
+        <div class="info-toggle" onclick="toggleHint('findHint', this)"><span>ⓘ منين أجيب الرقم ده؟</span><span class="info-arrow">▾</span></div>
+        <div class="opt-hint" id="findHint">
+          الرقم ده بتلاقيه في رابط المنتج على شوبيفاي أدمن (اللي بعد <code>/products/</code>)،
+          زي <code>10468878713154</code>. الأداة بتدوّر عليه في ووردبريس — إما في
+          خانة GTIN، أو في بداية الـ SKU (لو المنتج لسه مش مربوط).
+        </div>
+
+        <div style="margin-top:18px;">
+          <button class="btn-primary" id="findBtn" onclick="runFindProduct()">🔍 بحث</button>
+        </div>
+
+        <div id="findResultWrap" style="display:none;margin-top:18px;"></div>
+      </div>
     </div>
 
-    <div id="findResultWrap" style="display:none;"></div>
-
     <!-- ─── §TOOL::sync — خطوة 2: الربط + تحديث السعر (تظهر بعد نجاح البحث) ─── -->
-    <div class="card" id="optionsCard" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">
-        <h3 style="margin:0;">🔗 الخطوة 2: الربط وتحديث السعر</h3>
-        <button class="btn-outline btn-sm" onclick="resetFindStep()">🔄 بحث عن منتج تاني</button>
-      </div>
-      <div class="result-row" style="margin-bottom:14px;"><span>المنتج على ووردبريس</span><span id="foundProductLabel" class="mono"></span></div>
-
-      <!-- ⚠️ الخيارين دول كانوا checkboxes "تخطي..." لحد v2.0.0 — اتحوّلوا لأسئلة
-           صريحة باختيارات في v2.1.0. لسه مستقلّين تمامًا عن بعض. -->
-      <div class="opt-block">
-        <div class="opt-q">حالة المنتج على شوبيفاي بعد الربط؟</div>
-        <div class="opt-choices">
-          <label class="opt-choice"><input type="radio" name="shopifyStatus" value="ACTIVE" /><span>Active</span></label>
-          <label class="opt-choice"><input type="radio" name="shopifyStatus" value="DRAFT" checked /><span>Draft</span></label>
-          <label class="opt-choice"><input type="radio" name="shopifyStatus" value="KEEP" /><span>تبقى كما هي (بدون تعديل)</span></label>
+    <div class="step-card" id="stepSyncCard" style="display:none;">
+      <div class="step-card-hdr" onclick="toggleStep('Sync')">
+        <div class="step-badge" id="stepSyncBadge">2</div>
+        <div class="step-hdr-text">
+          <div class="step-title">🔗 الربط وتحديث السعر</div>
+          <div class="step-subtitle" id="stepSyncSubtitle">المنتج: —</div>
         </div>
-        <div class="opt-hint">
-          "تبقى كما هي" معناها إن <code>productUpdate</code> مايبعتش <code>status</code> خالص —
-          حالة المنتج على شوبيفاي متتلمسش. مستقل تمامًا عن سؤال النجمة تحت.
-        </div>
+        <span class="step-chevron open" id="stepSyncChevron">▲</span>
       </div>
 
-      <div class="opt-block">
-        <div class="opt-q">هل تريد إضافة نجمة ⭐ للعنوان؟</div>
-        <div class="opt-choices">
-          <label class="opt-choice"><input type="radio" name="addStar" value="yes" checked /><span>نعم</span></label>
-          <label class="opt-choice"><input type="radio" name="addStar" value="no" /><span>لا</span></label>
+      <div class="step-card-body" id="stepSyncBody">
+        <div class="result-row" style="margin-bottom:16px;"><span>المنتج على ووردبريس</span><span id="foundProductLabel" class="mono"></span></div>
+
+        <!-- ⚠️ الخيارين دول كانوا checkboxes "تخطي..." لحد v2.0.0 — اتحوّلوا لأسئلة
+             صريحة باختيارات في v2.1.0. لسه مستقلّين تمامًا عن بعض. -->
+        <div class="opt-block">
+          <div class="opt-q">حالة المنتج على شوبيفاي بعد الربط؟</div>
+          <div class="opt-choices">
+            <label class="opt-choice"><input type="radio" name="shopifyStatus" value="ACTIVE" /><span>Active</span></label>
+            <label class="opt-choice"><input type="radio" name="shopifyStatus" value="DRAFT" checked /><span>Draft</span></label>
+            <label class="opt-choice"><input type="radio" name="shopifyStatus" value="KEEP" /><span>تبقى كما هي (بدون تعديل)</span></label>
+          </div>
+          <div class="info-toggle" onclick="toggleHint('statusHint', this)"><span>ⓘ تفاصيل</span><span class="info-arrow">▾</span></div>
+          <div class="opt-hint" id="statusHint">
+            "تبقى كما هي" معناها إن <code>productUpdate</code> مايبعتش <code>status</code> خالص —
+            حالة المنتج على شوبيفاي متتلمسش. مستقل تمامًا عن سؤال النجمة تحت.
+          </div>
         </div>
-        <div class="opt-hint">
-          "نعم" بتضيف "⭐ " لبداية العنوان مرة واحدة بس (idempotent — مبتتكررش لو النجمة موجودة).
-          "لا" معناها العنوان مايتلمسش. مستقل تمامًا عن سؤال الحالة فوق.
+
+        <div class="opt-block">
+          <div class="opt-q">هل تريد إضافة نجمة ⭐ للعنوان؟</div>
+          <div class="opt-choices">
+            <label class="opt-choice"><input type="radio" name="addStar" value="yes" checked /><span>نعم</span></label>
+            <label class="opt-choice"><input type="radio" name="addStar" value="no" /><span>لا</span></label>
+          </div>
+          <div class="info-toggle" onclick="toggleHint('starHint', this)"><span>ⓘ تفاصيل</span><span class="info-arrow">▾</span></div>
+          <div class="opt-hint" id="starHint">
+            "نعم" بتضيف "⭐ " لبداية العنوان مرة واحدة بس (idempotent — مبتتكررش لو النجمة موجودة).
+            "لا" معناها العنوان مايتلمسش. مستقل تمامًا عن سؤال الحالة فوق.
+          </div>
+        </div>
+
+        <div class="opt-block">
+          <div class="opt-q">💰 هل تريد تحديث السعر على ووكومرس في نفس التشغيلة؟</div>
+          <div class="field-row" style="margin-top:8px;">
+            <label>فرق السعر (سيبه فاضي لتخطّي تحديث السعر)</label>
+            <input type="number" class="field-input" id="priceDifference" step="0.01" />
+          </div>
+          <div class="info-toggle" onclick="toggleHint('priceHint', this)"><span>ⓘ إزاي بيتحسب السعر؟</span><span class="info-arrow">▾</span></div>
+          <div class="opt-hint" id="priceHint">
+            بيحسب سعر كل Variation على ووكومرس = سعر شوبيفاي + الفرق ده — نفس فكرة
+            هامش <code>PRICE_DIFFERENCE</code> في أداة "مزامنة أسعار Stylebox"، لكن
+            هنا بتتحدد لحظيًا من هنا مش من إعدادات الـ Worker. لو فيه خصم فعلي على
+            شوبيفاي (compare at price)، الأساسي (Regular) بياخد compare_at+الفرق
+            والخصم (Sale) بياخد price+الفرق — وإلا الأساسي بس بياخد price+الفرق
+            ويتشال أي خصم قديم. الحقل فاضي = مفيش تحديث سعر في التشغيلة دي خالص،
+            مستقل تمامًا عن سؤالي الحالة والنجمة فوق.
+          </div>
+        </div>
+
+        <div class="info-toggle" onclick="toggleHint('alwaysHint', this)"><span>ⓘ إيه اللي بيحصل دايمًا بدون خيار؟</span><span class="info-arrow">▾</span></div>
+        <div class="opt-hint" id="alwaysHint">
+          نشر المنتج على ووردبريس (<code>stylebox.online</code> → <code>status = publish</code>)، الـ metafield
+          <code>wordpress_id</code>، مزامنة الـ SKU/المخزون لكل Variation، وأخيرًا Tag
+          <code>stylebox</code> على شوبيفاي — فورًا كآخر خطوة.
+        </div>
+
+        <div style="margin-top:20px;">
+          <button class="btn-primary" id="syncBtn" onclick="runSync()">▶ تشغيل الربط</button>
         </div>
       </div>
+    </div>
 
-      <div class="opt-block">
-        <div class="opt-q">💰 هل تريد تحديث السعر على ووكومرس في نفس التشغيلة؟</div>
-        <div class="field-row" style="margin-top:6px;">
-          <label>فرق السعر (سيبه فاضي لتخطّي تحديث السعر)</label>
-          <input type="number" class="field-input" id="priceDifference" step="0.01" />
-        </div>
-        <div class="opt-hint">
-          بيحسب سعر كل Variation على ووكومرس = سعر شوبيفاي + الفرق ده — نفس فكرة
-          هامش <code>PRICE_DIFFERENCE</code> في أداة "مزامنة أسعار Stylebox"، لكن
-          هنا بتتحدد لحظيًا من هنا مش من إعدادات الـ Worker. لو فيه خصم فعلي على
-          شوبيفاي (compare at price)، الأساسي (Regular) بياخد compare_at+الفرق
-          والخصم (Sale) بياخد price+الفرق — وإلا الأساسي بس بياخد price+الفرق
-          ويتشال أي خصم قديم. الحقل فاضي = مفيش تحديث سعر في التشغيلة دي خالص،
-          مستقل تمامًا عن سؤالي الحالة والنجمة فوق.
+    <!-- ─── §TOOL::result — خطوة 3: النتيجة (تظهر بعد تشغيل الربط) + زرار "بدء منتج جديد" ─── -->
+    <div class="step-card" id="resultSection" style="display:none;">
+      <div class="step-card-hdr no-toggle">
+        <div class="step-badge" id="resultBadge">3</div>
+        <div class="step-hdr-text">
+          <div class="step-title">📋 النتيجة</div>
+          <div class="step-subtitle" id="resultSubtitle">—</div>
         </div>
       </div>
-
-      <div class="opt-hint" style="margin-bottom:14px;">
-        <strong>بيحصل دايمًا في كل تشغيلة بدون خيار:</strong> نشر المنتج على ووردبريس
-        (<code>stylebox.online</code> → <code>status = publish</code>)، الـ metafield
-        <code>wordpress_id</code>، مزامنة الـ SKU/المخزون لكل Variation، وأخيرًا Tag
-        <code>stylebox</code> على شوبيفاي — فورًا كآخر خطوة.
+      <div class="step-card-body" style="padding-top:22px;">
+        <div class="new-product-bar">
+          <span class="np-text">خلصت من المنتج ده؟ ابدأ منتج جديد وارجع للخطوة 1 من غير ما تعمل Refresh للصفحة.</span>
+          <button class="btn-new-product" onclick="startNewProduct()">🆕 بدء منتج جديد</button>
+        </div>
+        <div id="syncStatusBannerWrap"></div>
+        <div id="syncResultWrap"></div>
       </div>
-
-      <button class="btn-primary" id="syncBtn" onclick="runSync()">▶ تشغيل الربط</button>
-
-      <div id="syncResultWrap" style="display:none;"></div>
     </div>
 
   </div>
@@ -725,6 +817,15 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
         <div class="cl-version-block">
           <div class="cl-version-row">
             <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+            <span class="cl-ver-date">27-08-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>إعادة تصميم كاملة للواجهة (UI فقط، بدون أي تغيير في منطق الـ Worker أو الـ endpoints أو ترتيب التنفيذ): خطوات "ربط منتج" بقت بطاقات مرقّمة (① ② ③) بتتطوى تلقائيًا وهي بتتنقل من خطوة للتانية، خطوط ومسافات أكبر في كل الأداة، الشروحات الطويلة (اللي كانت ظاهرة دايمًا) بقت خلف زرار "ⓘ تفاصيل" اختياري، شاشة النتيجة اتعاد تصميمها ببانر حالة كبير ملوّن (أخضر/أصفر/أحمر)، وإضافة زرار "🆕 بدء منتج جديد" يرجّع الأداة لأول خطوة من غير Refresh.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.5.0</span>
             <span class="cl-ver-date">26-08-2026</span>
           </div>
           <ul class="cl-items">
@@ -849,23 +950,27 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
               بيتنفّذ فورًا بعد كل اللي فوق (دائمًا وبدون خيار، وبدون أي انتظار من v2.4.0)</li>
             </ul>
 
-            <h4>كيف تعمل — Workflow (v2.5.0 — خطوتان)</h4>
+            <h4>كيف تعمل — Workflow (خطوات مرقّمة قابلة للطي — v2.6.0)</h4>
             <ol>
               <li>سجّل دخولك من شاشة الدخول</li>
-              <li><strong>الخطوة 1 — بحث:</strong> حط رقم منتج شوبيفاي (Shopify Product ID، من رابط
+              <li><strong>الخطوة ① — بحث:</strong> حط رقم منتج شوبيفاي (Shopify Product ID، من رابط
               المنتج على أدمن شوبيفاي) واضغط "بحث" (أو Enter) — الأداة بتدوّر عليه في ووردبريس (خانة GTIN، أو
               بحث بعنوان المنتج لتضييق النطاق ثم تأكيد قاطع بالـ SKU/GTIN)</li>
               <li>لو لقت تطابق، بتعرض اسم المنتج + زرار "عرض المنتج على وردبريس للمراجعة" (بيفتح صفحة
-              التعديل في تاب جديد)، وتفتح الخطوة 2 تلقائيًا</li>
-              <li><strong>الخطوة 2 — الربط (+ تحديث السعر اختياري):</strong> جاوب: <strong>حالة المنتج على
+              التعديل في تاب جديد)، الخطوة ① بتتطوى تلقائيًا (بعلامة ✓ خضرا)، وتفتح الخطوة ② تلقائيًا</li>
+              <li><strong>الخطوة ② — الربط (+ تحديث السعر اختياري):</strong> جاوب: <strong>حالة المنتج على
               شوبيفاي بعد الربط؟</strong> — Active / Draft / تبقى كما هي، و<strong>هل تريد إضافة نجمة ⭐
               للعنوان؟</strong> — نعم / لا، و<strong>فرق السعر</strong> (اختياري — سيبه فاضي لتخطّي تحديث
               السعر). التلاتة مستقلّون تمامًا عن بعض، وكلهم بيتنفذوا مع بعض بضغطة "تشغيل الربط" واحدة
-              (single call، مفيش sync_all ومفيش أكشن منفصل لتحديث السعر)</li>
-              <li>راجع نتيجة بيانات المنتج + جدول الـ Variations اللي اتزامنت أو اتخطّت (مع السبب، وعمودي
-              السعر لو فرق السعر اتحط)</li>
+              (single call، مفيش sync_all ومفيش أكشن منفصل لتحديث السعر). تفاصيل كل سؤال متاحة اختياريًا خلف
+              زرار "ⓘ تفاصيل" — مش ظاهرة دايمًا عشان الشاشة تفضل مرتّبة</li>
+              <li><strong>الخطوة ③ — النتيجة:</strong> بانر كبير ملوّن (أخضر/أصفر/أحمر) بالحالة العامة، بعده
+              بيانات المنتج + جدول الـ Variations اللي اتزامنت أو اتخطّت (مع السبب، وعمودي السعر لو فرق
+              السعر اتحط). الخطوة ② بتتطوى تلقائيًا لحد ما تفتحها تاني</li>
               <li>أي تفاصيل أو أخطاء إضافية اتسجلت في تاب "سجل العمليات"</li>
-              <li>"🔄 بحث عن منتج تاني" في أعلى الخطوة 2 يرجّعك للخطوة 1 لمنتج جديد</li>
+              <li>زرار "🆕 بدء منتج جديد" أعلى الخطوة ③ يصفّر كل حاجة ويرجّعك للخطوة ① لمنتج جديد من غير
+              Refresh للصفحة. الضغط على عنوان الخطوة ① (وهي متطوية) بيفتحها تاني لو حبيت تبحث من غير ما
+              تصفّر النتيجة الحالية</li>
             </ol>
 
             <h4>⚙️ إجراءات كل اختيار</h4>
@@ -907,9 +1012,11 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
             <h4>FEATURE MAP</h4>
             <ul>
               <li><code>§AUTH</code> — Universal D1 Auth كاملة (اتضافت 25-08-2026 — الأداة كانت استثناء بدون Login)</li>
-              <li><code>§TOOL-JS::find</code> — خطوة 1: نموذج تشغيل <code>find_product</code> (بحث برقم شوبيفاي، Enter أو زرار) + عرض نتيجة (لقيته/مش لقيته) + زرار "عرض على وردبريس"</li>
+              <li><code>§TOOL-JS::steps</code> (v2.6.0، UI فقط) — <code>toggleStep()</code>/<code>setStepCollapsed()</code> لطي وفتح البطاقات المرقّمة، و<code>toggleHint()</code> لإظهار/إخفاء تفاصيل الأسئلة الاختيارية</li>
+              <li><code>§TOOL-JS::find</code> — خطوة ①: نموذج تشغيل <code>find_product</code> (بحث برقم شوبيفاي، Enter أو زرار) + عرض نتيجة (لقيته/مش لقيته) + زرار "عرض على وردبريس" + <code>resetFindStep()</code>/<code>startNewProduct()</code> لإعادة الضبط الكامل</li>
               <li><code>§FIND::findWcProductByShopifyId</code> (Worker) — منطق البحث (فلتر GTIN مباشر + بحث بعنوان شوبيفاي لتضييق النطاق + تأكيد قاطع بالـ SKU/GTIN)</li>
-              <li><code>§TOOL-JS::sync</code> — خطوة 2: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر اختياري مع بعض) + عرض نتيجة 3 حالات (نجاح/تحذير/فشل)، بيستخدم <code>foundWpProductId</code> من خطوة 1 بدل إدخال يدوي</li>
+              <li><code>§TOOL-JS::sync</code> — خطوة ②: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر اختياري مع بعض)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي</li>
+              <li><code>renderSyncResult()</code> — خطوة ③: بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + عرض نتيجة 3 حالات (نجاح/تحذير/فشل) + جدول Variations، وبيتحكم في طي خطوة ② وتلوين شارات الخطوتين ② و③</li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
               <li><code>§LOG-ENDPOINTS</code> — get_logs / get_logs_count / get_logs_export (v2، بدون تغيير في العقد)</li>
             </ul>
@@ -926,6 +1033,12 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 
             <h4>NOTES</h4>
             <ul>
+              <li>v2.6.0 (27-08-2026) — إعادة تصميم UI كاملة بطلب صريح من صاحب الأداة: خطوات مرقّمة قابلة
+              للطي، خطوط ومسافات أكبر، تفاصيل الأسئلة خلف "ⓘ تفاصيل" اختياري بدل ظهورها دايمًا، بانر حالة
+              كبير للنتيجة، وزرار "🆕 بدء منتج جديد". <strong>مفيش أي تغيير في منطق الـ Worker ولا الـ
+              endpoints ولا ترتيب التنفيذ في <code>sync_product</code></strong> — التعديل كله في
+              <code>index.html</code> فقط (CSS + هيكل HTML + JS عرض/تفاعل، بدون أي تعديل على payload
+              النداءات لـ <code>find_product</code>/<code>sync_product</code>)</li>
               <li>الأداة manual-only بالتصميم — مفيش <code>sync_all</code> ومفيش Cron، تشغيلة واحدة = منتج واحد (Worker Builder Step 5A + woocommerce-sync-helper Step 6)</li>
               <li>فشل الخطوة على مستوى المنتج (metafield/status/title) بيتسجل في اللوج كـ <code>error</code> لكن ما بيوقفش باقي الخطوات — نشر ووردبريس، مزامنة الـ Variations، والـ Tag كلهم معزولين في try/catch منفصلة</li>
               <li>ترتيب التنفيذ في <code>syncProduct</code> مقصود: شوبيفاي (status/⭐/metafield) ← ووردبريس (publish + meta) ← كل الـ Variations (SKU/مخزون + سعر اختياري مع بعض في نفس نداء <code>wcUpdateVariation</code>) ← <code>tagsAdd("stylebox")</code> فورًا. الـ Tag آخر أثر بيظهر على المنتج — متغيّرش الترتيب ده من غير سبب (كان فيه انتظار <code>TAG_DELAY_MS</code> 10 ثواني قبل الـ Tag لحد v2.3.0 — اتلغى بالكامل v2.4.0)</li>
@@ -1006,7 +1119,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.5.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.6.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
@@ -1474,6 +1587,21 @@ function updateLoginSettingsBtn() {
 }
 
 // ══════════════════════════════════════════════════════════════
+// §TOOL-JS::steps — إعادة تصميم UI 27-08-2026: طي/فتح الخطوات المرقّمة + تفاصيل اختيارية
+// ══════════════════════════════════════════════════════════════
+function setStepCollapsed(name, collapsed) {
+  document.getElementById(`step${name}Body`).classList.toggle('collapsed', collapsed);
+  document.getElementById(`step${name}Chevron`).classList.toggle('open', !collapsed);
+}
+function toggleStep(name) {
+  setStepCollapsed(name, !document.getElementById(`step${name}Body`).classList.contains('collapsed'));
+}
+function toggleHint(id, toggleEl) {
+  document.getElementById(id).classList.toggle('open');
+  toggleEl.classList.toggle('open');
+}
+
+// ══════════════════════════════════════════════════════════════
 // §TOOL-JS::find — تاب "ربط منتج": خطوة 1 (v2.4.0) — البحث بمعرف شوبيفاي
 // ══════════════════════════════════════════════════════════════
 let foundWpProductId = null; // بيتملى بعد نجاح runFindProduct() — ده اللي runSync() بيستخدمه
@@ -1490,24 +1618,36 @@ async function runFindProduct() {
   if (!raw) { showToast('من فضلك أدخل Shopify Product ID', 'error'); return; }
   if (!/^\d+$/.test(raw)) { showToast('الـ Product ID لازم يكون رقم فقط', 'error'); return; }
 
+  // بحث جديد = نطوي أي نتيجة ربط سابقة كانت ظاهرة (رجوع لمنتج تاني من غير Refresh)
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('syncResultWrap').innerHTML = '';
+  document.getElementById('syncStatusBannerWrap').innerHTML = '';
+
   setFindBusy(true);
   try {
     const data = await apiGet('find_product', { shopify_product_id: raw });
     renderFindResult(data);
     if (data.found) {
       foundWpProductId = data.wp_product_id;
-      document.getElementById('foundProductLabel').textContent =
-        `#${data.wp_product_id}${data.productName ? ' — ' + data.productName : ''}`;
-      document.getElementById('optionsCard').style.display = 'block';
+      const label = `#${data.wp_product_id}${data.productName ? ' — ' + data.productName : ''}`;
+      document.getElementById('foundProductLabel').textContent = label;
+      document.getElementById('stepSyncSubtitle').textContent = `المنتج: ${label}`;
+      document.getElementById('stepSyncCard').style.display = 'block';
+      document.getElementById('stepFindCard').classList.add('done');
+      document.getElementById('stepFindBadge').textContent = '✓';
+      document.getElementById('stepFindSubtitle').textContent = `✓ تم العثور على المنتج — ${label}`;
+      setStepCollapsed('Find', true);
+      setStepCollapsed('Sync', false);
+      document.getElementById('stepSyncCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
       showToast('لقينا المنتج ✓', 'success');
     } else {
       foundWpProductId = null;
-      document.getElementById('optionsCard').style.display = 'none';
+      document.getElementById('stepSyncCard').style.display = 'none';
       showToast('مفيش منتج على ووردبريس بالرقم ده', 'error');
     }
   } catch (e) {
     foundWpProductId = null;
-    document.getElementById('optionsCard').style.display = 'none';
+    document.getElementById('stepSyncCard').style.display = 'none';
     showToast('خطأ: ' + e.message, 'error');
   } finally {
     setFindBusy(false);
@@ -1530,20 +1670,38 @@ function renderFindResult(data) {
     ${data.productName ? `<div class="result-row"><span>اسم المنتج</span><span>${data.productName}</span></div>` : ''}
     ${data.sku ? `<div class="result-row"><span>SKU</span><span class="mono">${data.sku}</span></div>` : ''}
     <div class="result-row"><span>اتلقى عن طريق</span><span>${data.matchedBy === 'gtin' ? 'خانة GTIN' : 'بداية الـ SKU'}</span></div>
-    <div style="margin-top:12px;">
+    <div style="margin-top:14px;">
       <a class="btn-outline btn-sm" href="${data.wpEditUrl}" target="_blank" rel="noopener">🔗 عرض المنتج على وردبريس للمراجعة</a>
     </div>
   </div>`;
 }
 
+// تصفير كامل لخطوة البحث — بتترجع الأداة لأول مرحلة بصريًا (خطوة 1 مفتوحة، 2 و3 مخفيين)
 function resetFindStep() {
   foundWpProductId = null;
   document.getElementById('shopifyProductIdInput').value = '';
   document.getElementById('findResultWrap').style.display = 'none';
   document.getElementById('findResultWrap').innerHTML = '';
-  document.getElementById('optionsCard').style.display = 'none';
-  document.getElementById('syncResultWrap').style.display = 'none';
+  document.getElementById('stepSyncCard').style.display = 'none';
+  document.getElementById('resultSection').style.display = 'none';
   document.getElementById('syncResultWrap').innerHTML = '';
+  document.getElementById('syncStatusBannerWrap').innerHTML = '';
+
+  document.getElementById('stepFindCard').classList.remove('done');
+  document.getElementById('stepFindBadge').textContent = '1';
+  document.getElementById('stepFindSubtitle').textContent = 'حط رقم منتج شوبيفاي (Product ID) وابدأ البحث';
+  document.getElementById('stepSyncSubtitle').textContent = 'المنتج: —';
+  document.getElementById('stepSyncBadge').className = 'step-badge';
+  document.getElementById('stepSyncBadge').textContent = '2';
+  setStepCollapsed('Find', false);
+}
+
+// زرار "🆕 بدء منتج جديد" (طلب المستخدم 27-08-2026) — إعادة ضبط كاملة بدون Refresh للصفحة
+function startNewProduct() {
+  resetFindStep();
+  resetSyncOptions();
+  document.getElementById('shopifyProductIdInput')?.focus();
+  showToast('جاهز لمنتج جديد 🆕', 'success');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1613,13 +1771,43 @@ async function runSync() {
 }
 
 // عرض 3 حالات (نجاح / تحذير / فشل) — Step 3C إلزامي
+// إعادة تصميم UI 27-08-2026: بانر حالة كبير + كشف خطوة 3 + طي خطوة 2 تلقائيًا
 function renderSyncResult(data) {
   const wrap = document.getElementById('syncResultWrap');
-  wrap.style.display = 'block';
   const r = data.results || {};
   const pl = r.productLevel;
   const variants = r.variants || [];
+  const status = r.status || 'error';
 
+  // ── إظهار خطوة 3 (النتيجة) + طي خطوة 2 + تلوين الشارات حسب الحالة الفعلية ──
+  document.getElementById('resultSection').style.display = 'block';
+  setStepCollapsed('Sync', true);
+  document.getElementById('stepSyncBadge').className = `step-badge ${status === 'success' ? 'ok' : status}`;
+  document.getElementById('stepSyncBadge').textContent = status === 'success' ? '✓' : status === 'warning' ? '⚠' : '✗';
+  const resultBadge = document.getElementById('resultBadge');
+  resultBadge.className = `step-badge ${status === 'success' ? 'ok' : status}`;
+  resultBadge.textContent = status === 'success' ? '✓' : status === 'warning' ? '⚠' : '✗';
+
+  const syncedCountEarly  = variants.filter(v => v.status === 'synced').length;
+  const warnCountEarly    = variants.filter(v => v.status === 'warning').length;
+  const skippedCountEarly = variants.filter(v => v.status === 'skipped').length;
+  const bannerCfg = {
+    success: { cls: 'ok',   icon: '✅', title: 'تم الربط بنجاح' },
+    warning: { cls: 'warn', icon: '⚠️', title: 'تم الربط جزئيًا — راجع التحذيرات تحت' },
+    error:   { cls: 'err',  icon: '❌', title: 'فشل الربط — راجع التفاصيل تحت' },
+  }[status] || { cls: 'err', icon: '❌', title: 'فشل الربط' };
+  const bannerSub = `${variants.length.toLocaleString('en-US')} Variation — ✓ ${syncedCountEarly.toLocaleString('en-US')} تمت · ⚠ ${warnCountEarly.toLocaleString('en-US')} تحذير · تخطي ${skippedCountEarly.toLocaleString('en-US')}`;
+  document.getElementById('syncStatusBannerWrap').innerHTML = `
+    <div class="status-banner ${bannerCfg.cls}">
+      <div class="status-banner-icon">${bannerCfg.icon}</div>
+      <div>
+        <div class="status-banner-title">${bannerCfg.title}</div>
+        <div class="status-banner-sub">${bannerSub}</div>
+      </div>
+    </div>`;
+  document.getElementById('resultSubtitle').textContent = bannerCfg.title;
+
+  wrap.style.display = 'block';
   const overallBadge = r.status === 'success'
     ? '<span class="badge-success">✓ تم</span>'
     : r.status === 'warning'
@@ -1720,6 +1908,8 @@ function renderSyncResult(data) {
         </table>
       </div>
     </div>`;
+
+  document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ══════════════════════════════════════════════════════════════
