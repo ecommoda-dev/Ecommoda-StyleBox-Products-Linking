@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ecommoda StyleBox Products Linking</title>
-<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (نافذة تأكيد إلزامية بندين قبل فتح خطوة الربط، نقل صندوق "تعديلات تلقائي" لآخر خطوة ③ + بند URL/Slug جديد، وإعادة صياغة عنوان جدول المقاسات + نقل جدول فرق السعر تحته — index.html v2.10.0، صفر تغيير في index.js) -->
+<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (زرار "إبدأ ربط منتج جديد" بقى بنفس تصميم أزرار الأداة التانية الثابتة اللون بدل أبيض/أزرق عند hover — index.html v2.10.1، صفر تغيير في index.js) -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
@@ -307,12 +307,6 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .variant-table td.mono { font-family: var(--font-mono); direction: ltr; }
 .variant-table td.right { text-align: right; }
 
-/* ── زرار "بدء منتج جديد" — إعادة ضبط كاملة للأداة لأول مرحلة. بقى زرار كامل عرض الصفحة
-   لوحده أسفل خطوة النتيجة خالص (v2.9.0 — كان شريط فيه نص + زرار صغير جنبه لحد v2.8.0) ── */
-.btn-new-product { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: var(--surface); color: var(--accent); border: 1.5px solid var(--accent); border-radius: 10px; font-family: inherit; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: all .15s; white-space: nowrap; }
-.btn-new-product:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
-.btn-new-product.btn-block { width: 100%; justify-content: center; padding: 18px 24px; font-size: 16.5px; margin-top: 18px; }
-
 /* ══════════════════════════════════════════════════════════════
    §DATA-TABLE-CSS — القسم الموحّد (فلاتر + جدول) — تاب سجل العمليات
    data-table-standard.md + multi-select-filter.md — نسخة حرفية
@@ -612,7 +606,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
       <div class="step-card-body" style="padding-top:22px;">
         <div id="syncResultWrap"></div>
         <div id="syncStatusBannerWrap"></div>
-        <button class="btn-new-product btn-block" onclick="startNewProduct()">🆕 بدء منتج جديد</button>
+        <button class="btn-primary btn-block" style="margin-top:18px;" onclick="startNewProduct()">إبدأ ربط منتج جديد</button>
       </div>
     </div>
 
@@ -855,6 +849,15 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">27-08-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>زرار "إبدأ ربط منتج جديد" (اتغيّر اسمه من "🆕 بدء منتج جديد") في آخر خطوة ④ بقى بنفس تصميم الأزرار الزرقاء الثابتة التانية في الأداة (لون واحد ثابت، بيغمق شوية عند hover بس) بدل التصميم القديم (أبيض بإطار أزرق، بيتلوّن أزرق كامل عند مرور الماوس بس).</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.10.0</span>
+            <span class="cl-ver-date">27-08-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>بعد الضغط على زرار "راجع صور + كاتيجوريز المنتج قبل الربط" في خطوة ②، ظهور <strong>نافذة تأكيد إلزامية جديدة</strong> فيها بندان checkbox: "تم مراجعة جميع صور المنتج" و"تم اضافة كاتيجوري فئة الشوز + كاتيجوري البراند" — زرار "تأكيد المراجعة" في النافذة معطّل لحد ما الاتنين يتأكدوا، وخطوة ③ (الربط) ما بتظهرش إلا بعد الضغط عليه.</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>صندوق "🔒 تعديلات أخرى تحدث تلقائي عند الربط:" في خطوة ③ اتنقل لآخر الخطوة (بعد سؤال تحديث السعر) بدل ما يكون أول حاجة فوق كل الأسئلة، وبند جديد اتضاف تحت "على Stylebox.online": "التأكد من ضبط رابط المنتج (URL/Slug) ليطابق عنوانه".</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>خطوة ④ "النتيجة" — عنوان جدول المقاسات بقى "📦 المقاسات: ✓ تمت (N) | ⚠ تحذير (N) | تخطي (N)" بدل "الـ Variations — ... من أصل N"، وصف "فرق السعر المستخدم" اتنقل من فوق الجدول إلى جدول مستقل واضح بصريًا أسفل جدول المقاسات.</span></li>
@@ -1036,7 +1039,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               بيتنفّذ فورًا بعد كل اللي فوق (دائمًا وبدون خيار، وبدون أي انتظار من v2.4.0)</li>
             </ul>
 
-            <h4>كيف تعمل — Workflow (4 خطوات مرقّمة قابلة للطي — v2.10.0)</h4>
+            <h4>كيف تعمل — Workflow (4 خطوات مرقّمة قابلة للطي — v2.10.1)</h4>
             <ol>
               <li>سجّل دخولك من شاشة الدخول</li>
               <li><strong>الخطوة ① — بحث:</strong> حط رقم منتج شوبيفاي أو الصق رابط صفحة المنتج بالكامل من
@@ -1065,9 +1068,10 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               اتخطّت (مع السبب) أولاً — عنوان الجدول بقى (v2.10.0) "📦 المقاسات: ✓ تمت (N) | ⚠ تحذير (N) |
               تخطي (N)"، وتحت الجدول (لو فرق السعر اتحط) جدول مستقل واضح بصريًا لقيمة "فرق السعر المستخدم في
               هذه العملية" — وبعدهم في آخر الخطوة بانر كبير ملوّن (أخضر/أصفر/أحمر) بالحالة العامة، ثم زرار
-              "🆕 بدء منتج جديد" كامل عرض الصفحة لوحده. الخطوتان ② و③ بيتطووا تلقائيًا لحد ما تفتحهم تاني</li>
+              "إبدأ ربط منتج جديد" كامل عرض الصفحة لوحده، بنفس تصميم الأزرار الزرقاء التانية في الأداة (v2.10.1
+              — كان لون أبيض/إطار أزرق بيتلوّن أزرق بس عند الـ hover). الخطوتان ② و③ بيتطووا تلقائيًا لحد ما تفتحهم تاني</li>
               <li>أي تفاصيل أو أخطاء إضافية اتسجلت في تاب "سجل العمليات"</li>
-              <li>زرار "🆕 بدء منتج جديد" أسفل الخطوة ④ يصفّر كل حاجة (بما فيها حالة "تمت المراجعة")
+              <li>زرار "إبدأ ربط منتج جديد" أسفل الخطوة ④ يصفّر كل حاجة (بما فيها حالة "تمت المراجعة")
               ويرجّعك للخطوة ① لمنتج جديد من غير Refresh للصفحة. الضغط على عنوان أي خطوة متطوية بيفتحها
               تاني لو حبيت تراجعها من غير ما تصفّر النتيجة الحالية</li>
             </ol>
@@ -1120,7 +1124,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>openReviewConfirmModal()</code>/<code>closeReviewConfirmModal()</code>/<code>toggleReviewCheck()</code>/<code>confirmProductReviewed()</code> (v2.10.0) — نافذة تأكيد إلزامية (<code>#reviewConfirmOverlay</code>) ببندين checkbox، زرار "تأكيد المراجعة" معطّل لحد ما الاتنين يتأكدوا؛ التأكيد بينادي <code>markProductReviewed()</code></li>
               <li><code>markProductReviewed()</code> (v2.9.0، بيتنادى من <code>confirmProductReviewed()</code> بدل onclick مباشر من v2.10.0) — هو اللي بيفتح خطوة ③ لأول مرة (بدل ما تفتح تلقائيًا مع نجاح البحث زي قبل كده)</li>
               <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر اختياري مع بعض، كل واحد في صندوق <code>.opt-block</code> مستقل)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي، و<code>runSync()</code> برضه بيرفض لو <code>productReviewed !== true</code></li>
-              <li><code>renderSyncResult()</code> — خطوة ④: تفاصيل بيانات المنتج + جدول "📦 المقاسات" (+ صفوف Brand/Slug من v2.6.0، عنوان الجدول اتغيّر v2.10.0) + جدول فرق السعر تحت الجدول لو <code>priceApplied</code> (اتنقل تحت v2.10.0، كان صف فوق الجدول)، وبعدهم بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + زرار "بدء منتج جديد" كامل العرض في آخر الخطوة (v2.9.0)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
+              <li><code>renderSyncResult()</code> — خطوة ④: تفاصيل بيانات المنتج + جدول "📦 المقاسات" (+ صفوف Brand/Slug من v2.6.0، عنوان الجدول اتغيّر v2.10.0) + جدول فرق السعر تحت الجدول لو <code>priceApplied</code> (اتنقل تحت v2.10.0، كان صف فوق الجدول)، وبعدهم بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + زرار "إبدأ ربط منتج جديد" كامل العرض في آخر الخطوة (<code>.btn-primary.btn-block</code> من v2.10.1 — كان <code>.btn-new-product</code> بتصميم منفصل أبيض/أزرق عند hover)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
               <li><code>openBrandMissingModal()</code>/<code>closeBrandMissingModal()</code> (v2.6.0) — نافذة خطأ مخصصة (<code>#brandMissingOverlay</code>) لما <code>runSync()</code> يلقى <code>e.data.code === 'brand_missing'</code>؛ <code>apiRequest()</code> بقى يحط رد الـ Worker كامل على <code>err.data</code> مش بس <code>err.message</code> عشان الكود ده يتقرا</li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
               <li><code>§LOG-ENDPOINTS</code> — get_logs / get_logs_count / get_logs_export (v2، بدون تغيير في العقد)</li>
@@ -1140,6 +1144,12 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 
             <h4>NOTES</h4>
             <ul>
+              <li>v2.10.1 (27-08-2026) — تعديل واحد بطلب صاحب الأداة، <strong>صفر تغيير في الـ Worker أو أي
+              payload</strong>: زرار "بدء منتج جديد" في آخر خطوة ④ اتغيّر اسمه لـ"إبدأ ربط منتج جديد" وبقى
+              يستخدم كلاس <code>.btn-primary.btn-block</code> (نفس تصميم أزرار الأداة الزرقاء التانية، لون
+              ثابت لا يتغيّر إلا بتغميقه شوية عند hover) بدل كلاس <code>.btn-new-product</code> المخصص القديم
+              (أبيض بإطار أزرق، بيتحوّل لخلفية زرقاء كاملة بس عند مرور الماوس — بطلب المستخدم استبداله بلون
+              ثابت زي باقي أزرار الأداة). كلاس <code>.btn-new-product</code> اتشال بالكامل من الـ CSS.</li>
               <li>v2.10.0 (27-08-2026) — ثلاث تعديلات UI بطلب صاحب الأداة، <strong>صفر تغيير في الـ Worker
               أو أي payload</strong>: (1) نافذة تأكيد إلزامية جديدة (<code>#reviewConfirmOverlay</code>) بعد
               الضغط على زرار "راجع صور + كاتيجوريز المنتج قبل الربط" — بندان checkbox ("تم مراجعة جميع صور
@@ -1313,7 +1323,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.10.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.10.1'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة (v2.7.0) — منفصلة تمامًا عن TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
 // أي لمس للـ Worker — راجع checkWorkerVersion() تحت)
@@ -1990,7 +2000,7 @@ function resetFindStep() {
   setStepCollapsed('Find', false);
 }
 
-// زرار "🆕 بدء منتج جديد" (طلب المستخدم 27-08-2026) — إعادة ضبط كاملة بدون Refresh للصفحة
+// زرار "إبدأ ربط منتج جديد" (طلب المستخدم 27-08-2026، اسم ولون الزرار اتعدّلوا v2.10.1) — إعادة ضبط كاملة بدون Refresh للصفحة
 function startNewProduct() {
   resetFindStep();
   resetSyncOptions();
