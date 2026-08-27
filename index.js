@@ -5,6 +5,16 @@
 // Account: ecommoda-dev.workers.dev
 // skills: worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 · html-builder v1.0.0 — 27-08-2026
 //
+// ⚠️ v2.7.0 (27-08-2026) — حارس جديد إلزامي على أكشن find_product (خطوة 1 في
+//   الواجهة)، بطلب صاحب الأداة: قبل أي بحث في ووكومرس، الـ Worker بيتحقق أول
+//   حاجة من metafield custom.wordpress_id على منتج شوبيفاي المطلوب — لو فيها
+//   قيمة (مش فاضية)، يبقى المنتج ده اتربط قبل كده، وبيرجع
+//   {ok:true, alreadyLinked:true, wordpressId, productTitle} بدل ما يكمل بحث
+//   WC عادي. الواجهة بتعرض رسالة "هذا المنتج تم ربطه من قبل" ومتفتحش خطوة
+//   الربط خالص. لو المنتج لسه مش مربوط، السلوك زي ما هو بالظبط (نفس بحث
+//   findWcProductByShopifyId). راجع checkShopifyAlreadyLinked()/
+//   PRODUCT_WPID_CHECK_QUERY في §FIND.
+//
 // ⚠️ v2.6.0 (27-08-2026) — تعديلان جديدان إلزاميان في syncProduct، بطلب صاحب الأداة:
 //   1) حارس البراند (قبل أي كتابة): الـ Vendor على شوبيفاي لازم يكون له براند
 //      بنفس الاسم بالظبط (case-insensitive) على تاكسونومي product_brand في
@@ -132,7 +142,7 @@
 // بتاعه بيبدأ حرفيًا بالرقم المطلوب).
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.6.0';
+const WORKER_VERSION = 'v2.7.0';
 
 // الـ Tag اللي بيتضاف لكل منتج مربوط — آخر خطوة في syncProduct، فورًا بدون
 // انتظار (كان فيه TAG_DELAY_MS 10 ثواني قبل الخطوة دي، اتلغى بالكامل 26-08-2026
@@ -447,6 +457,19 @@ const VARIANTS_QUERY = `
   }
 `;
 
+// ─── §SHOPIFY::PRODUCT_WPID_CHECK_QUERY — v2.7.0 (حارس "اتربط قبل كده") ───
+// خطوة 1 في الواجهة بتنادي بيها قبل أي بحث في ووكومرس: لو المنتج ده أصلاً
+// عنده قيمة في custom.wordpress_id، يبقى اتربط قبل كده. راجع
+// checkShopifyAlreadyLinked() في §FIND.
+const PRODUCT_WPID_CHECK_QUERY = `
+  query checkAlreadyLinked($id: ID!) {
+    product(id: $id) {
+      title
+      metafield(namespace: "custom", key: "wordpress_id") { value }
+    }
+  }
+`;
+
 const SET_VARIATION_ID_MUTATION = `
   mutation setVariationId($metafields: [MetafieldsSetInput!]!) {
     metafieldsSet(metafields: $metafields) {
@@ -645,6 +668,28 @@ function extractGtinFromSku(sku) {
   const match = sku.match(/^(\d{6,})-(.+)$/);
   if (!match) return null;
   return { gtin: match[1], sku: match[2] };
+}
+
+// ─── §FIND::checkShopifyAlreadyLinked — v2.7.0 ───
+// أول حاجة بتتنفّذ في find_product، قبل أي بحث في ووكومرس: لو منتج شوبيفاي
+// ده أصلاً عنده قيمة في metafield custom.wordpress_id، يبقى اتربط قبل كده —
+// بنوقف هنا ونرجّع alreadyLinked بدل ما نكمل بحث WC عادي زي أي منتج جديد.
+// راجع PRODUCT_WPID_CHECK_QUERY و§HANDLER.
+async function checkShopifyAlreadyLinked(env, shopifyProductId) {
+  assertEnv(env, 'shopify');
+  const token = await getAccessToken(env);
+  const resp = await shopifyGQL(
+    env, token, PRODUCT_WPID_CHECK_QUERY,
+    { id: `gid://shopify/Product/${shopifyProductId}` },
+    'find_product:checkAlreadyLinked'
+  );
+  const product = resp?.data?.product;
+  const wpId = product?.metafield?.value || null;
+  return {
+    linked:       !!wpId,
+    wordpressId:  wpId,
+    productTitle: product?.title || null,
+  };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1276,8 +1321,20 @@ export default {
         if (!/^\d+$/.test(shopifyProductId)) {
           return json({ error: 'shopify_product_id لازم يكون رقم فقط' }, 400, request);
         }
+        // v2.7.0 — قبل أي بحث في ووكومرس: المنتج ده اتربط قبل كده؟ (custom.wordpress_id
+        // مش فاضي على شوبيفاي). لو اتربط، بنوقف هنا ومنكملش بحث WC — راجع
+        // checkShopifyAlreadyLinked().
+        const alreadyLinked = await checkShopifyAlreadyLinked(env, shopifyProductId);
+        if (alreadyLinked.linked) {
+          return json({
+            ok: true,
+            alreadyLinked: true,
+            wordpressId:   alreadyLinked.wordpressId,
+            productTitle:  alreadyLinked.productTitle,
+          }, 200, request);
+        }
         const result = await findWcProductByShopifyId(env, shopifyProductId);
-        return json({ ok: true, ...result }, 200, request);
+        return json({ ok: true, alreadyLinked: false, ...result }, 200, request);
       }
       // ──────────────────────────────────────────────────────────────
 
