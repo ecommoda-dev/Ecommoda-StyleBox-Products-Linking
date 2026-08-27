@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ecommoda StyleBox Products Linking</title>
-<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (خطوة ③: مفيش اختيار افتراضي جاهز للحالة/النجمة، ومربع فرق السعر بقى برقم افتراضي 100 + زرار "تأكيد فرق السعر" إلزامي — index.html v2.11.0، صفر تغيير في index.js) -->
+<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (البحث بقى محصّن ضد فروق العنوان: تنضيف المسافات + أول 4 كلمات + مسح احتياطي بالـ SKU — index.js v2.8.0؛ وتكبير جدول فرق السعر + توحيد صيغة ملخّص البانر — index.html v2.12.0) -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
@@ -309,6 +309,10 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .variant-table th:first-child, .variant-table td:first-child { border-inline-start: none; }
 .variant-table td.mono { font-family: var(--font-mono); direction: ltr; }
 .variant-table td.right { text-align: right; }
+/* جدول فرق السعر (v2.12.0) — خط أكبر وBold، كان بحجم جدول المقاسات العادي (13px) ومش واضح */
+.price-diff-table { font-size: 16px; }
+.price-diff-table th { font-size: 14.5px; font-weight: 800; color: var(--text-primary); }
+.price-diff-table td { font-weight: 800; color: var(--text-primary); padding: 13px 10px; }
 
 /* ══════════════════════════════════════════════════════════════
    §DATA-TABLE-CSS — القسم الموحّد (فلاتر + جدول) — تاب سجل العمليات
@@ -858,6 +862,16 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">27-08-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>البحث في خطوة ① بقى بيلاقي المنتج حتى لو العنوان مختلف بين المنصتين</strong> (Worker v2.8.0) — البحث بعنوان شوبيفاي بقى بينضّف المسافات الزيادة وبيبعت أول 4 كلمات بس بدل العنوان كامل، وضاف ملاذ أخير بيمسح منتجات ووردبريس بالـ SKU مباشرةً لو ده مارجّعش نتيجة. سبب التعديل: حالة حقيقية مالقتش المنتج بسبب <strong>مسافة واحدة زيادة</strong> في العنوان على شوبيفاي.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>خطوة ④: جدول "فرق السعر المستخدم" بقى بخط أكبر وBold (كان مش واضح)، وسطر ملخّص بانر "تم الربط بنجاح" بقى بنفس صيغة عنوان جدول المقاسات بالظبط — "المقاسات: ✓ تمت (N) | ⚠ تحذير (N) | تخطي (N)" بدل "N مقاس — ✓ N تمت المزامنة · ⚠ N تحذير · تخطي N".</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.11.0</span>
+            <span class="cl-ver-date">27-08-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>الأسئلة التلاتة في خطوة ③ (حالة المنتج / النجمة / تحديث السعر) بقت من غير أي اختيار افتراضي جاهز — الموظف لازم يضغط بنفسه على إجابة لكل سؤال في كل تشغيلة، وإلا زرار "ابدأ ربط المنتج" بيرفض ويظهر تنبيه.</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>سؤال تحديث السعر بقى "💰 تحديث السعر على ووكومرس؟" (اتشالت "(اختياري)")، والمربع بقى فيه رقم افتراضي 100 مع زرار جديد "تأكيد فرق السعر (+100) جنيه" جنبه — نص الزرار بيتحدّث لايف مع أي رقم تاني (مثلاً "(+50) جنيه")، وأي تعديل في الرقم بعد الضغط بيلغي التأكيد ولازم يتضغط تاني قبل الربط.</span></li>
           </ul>
@@ -1058,14 +1072,17 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               بيتنفّذ فورًا بعد كل اللي فوق (دائمًا وبدون خيار، وبدون أي انتظار من v2.4.0)</li>
             </ul>
 
-            <h4>كيف تعمل — Workflow (4 خطوات مرقّمة قابلة للطي — v2.11.0)</h4>
+            <h4>كيف تعمل — Workflow (4 خطوات مرقّمة قابلة للطي — v2.12.0)</h4>
             <ol>
               <li>سجّل دخولك من شاشة الدخول</li>
               <li><strong>الخطوة ① — بحث:</strong> حط رقم منتج شوبيفاي أو الصق رابط صفحة المنتج بالكامل من
               أدمن شوبيفاي (الأداة بتستخرج الرقم من الرابط تلقائيًا) واضغط "بحث" (أو Enter) — الـ Worker
               بيتحقق الأول (v2.7.0) من إن المنتج ده مش اتربط قبل كده (<code>custom.wordpress_id</code> على
-              شوبيفاي)، وبعدين لو لسه مش مربوط بيدوّر عليه في ووردبريس (خانة GTIN، أو بحث بعنوان المنتج
-              لتضييق النطاق ثم تأكيد قاطع بالـ SKU/GTIN)</li>
+              شوبيفاي)، وبعدين لو لسه مش مربوط بيدوّر عليه في ووردبريس على تلات مراحل: خانة GTIN، ثم بحث
+              بأول 4 كلمات من عنوان المنتج لتضييق النطاق (v2.8.0 — المسافات بتتنضّف وبنبعت أول كلمات بس
+              عشان فرق مسافة أو كلمة في العنوان مايكسرش البحث)، وأخيرًا — لو الاتنين رجّعوا صفر — مسح
+              مباشر لمنتجات ووردبريس بالـ SKU (v2.8.0، مستقل تمامًا عن العنوان). التأكيد النهائي في كل
+              الحالات قاطع بالـ SKU/GTIN، أبدًا مش بالعنوان</li>
               <li><strong>الخطوة ② — نتيجة البحث</strong> (خطوة مستقلة لوحدها): لو المنتج <strong>اتربط قبل
               كده</strong>، بتعرض رسالة "هذا المنتج تم ربطه من قبل" ووقف — خطوة ③ ما بتظهرش خالص. لو لقى
               تطابق جديد، بتعرض بيانات المنتج + زرار كبير كامل عرض الصفحة <strong>"🔗 راجع صور + كاتيجوريز
@@ -1345,11 +1362,11 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.11.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.12.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة (v2.7.0) — منفصلة تمامًا عن TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
 // أي لمس للـ Worker — راجع checkWorkerVersion() تحت)
-const EXPECTED_WORKER_VERSION = 'v2.7.0';
+const EXPECTED_WORKER_VERSION = 'v2.8.0';
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
@@ -1944,7 +1961,11 @@ function renderFindResult(data) {
     return;
   }
   if (!data.found) {
-    wrap.innerHTML = `<div class="result-note err">مفيش منتج على ووردبريس بيحمل الرقم ده — لا في خانة GTIN ولا في بداية الـ SKU (اتفحص ${(data.scanned ?? 0).toLocaleString('en-US')} منتج مرشّح). تأكد من الرقم أو الرابط من صفحة المنتج على شوبيفاي أدمن.</div>`;
+    // v2.12.0: الـ Worker (v2.8.0) بقى بيمسح المنتجات بالـ SKU كملاذ أخير.
+    // scannedAll:false معناها المسح وقف عند سقف الصفحات (أو فشل) — يبقى "مش
+    // لقيته" مش قاطعة، ولازم الموظف يعرف الفرق ده.
+    const incomplete = data.scannedAll === false;
+    wrap.innerHTML = `<div class="result-note err">مفيش منتج على ووردبريس بيحمل الرقم ده — لا في خانة GTIN ولا في بداية الـ SKU (اتفحص ${(data.scanned ?? 0).toLocaleString('en-US')} منتج). تأكد من الرقم أو الرابط من صفحة المنتج على شوبيفاي أدمن.${incomplete ? ' <strong>⚠️ ملحوظة: البحث مافحصش كل المنتجات على ووردبريس، فاحتمال يكون موجود — الحل اليدوي: افتح المنتج على ووردبريس وحط الرقم في خانة GTIN، والبحث هيلاقيه فورًا.</strong>' : ''}</div>`;
     return;
   }
   wrap.innerHTML = `
@@ -2185,7 +2206,9 @@ function renderSyncResult(data) {
     warning: { cls: 'warn', icon: '⚠️', title: 'تم الربط جزئيًا — راجع التحذيرات تحت' },
     error:   { cls: 'err',  icon: '❌', title: 'فشل الربط — راجع التفاصيل تحت' },
   }[status] || { cls: 'err', icon: '❌', title: 'فشل الربط' };
-  const bannerSub = `${variants.length.toLocaleString('en-US')} مقاس — ✓ ${syncedCountEarly.toLocaleString('en-US')} تمت المزامنة · ⚠ ${warnCountEarly.toLocaleString('en-US')} تحذير · تخطي ${skippedCountEarly.toLocaleString('en-US')}`;
+  // v2.12.0: نفس صيغة عنوان جدول المقاسات بالظبط (طلب صاحب الأداة) — كان
+  // "N مقاس — ✓ N تمت المزامنة · ⚠ N تحذير · تخطي N"
+  const bannerSub = `المقاسات: ✓ تمت (${syncedCountEarly.toLocaleString('en-US')}) | ⚠ تحذير (${warnCountEarly.toLocaleString('en-US')}) | تخطي (${skippedCountEarly.toLocaleString('en-US')})`;
   document.getElementById('syncStatusBannerWrap').innerHTML = `
     <div class="status-banner ${bannerCfg.cls}">
       <div class="status-banner-icon">${bannerCfg.icon}</div>
@@ -2298,10 +2321,12 @@ function renderSyncResult(data) {
     </tr>`;
   }).join('');
 
-  // فرق السعر (v2.5.0) — عرضه اتنقل تحت الجدول وبقى جدول مستقل واضح بصريًا (v2.10.0)
+  // فرق السعر (v2.5.0) — عرضه اتنقل تحت الجدول وبقى جدول مستقل واضح بصريًا
+  // (v2.10.0)، وخطه بقى أكبر وBold (v2.12.0، .price-diff-table) لأنه كان
+  // مش واضح بحجم خط جدول المقاسات العادي.
   const priceDiffTable = priceApplied ? `
       <div style="overflow-x:auto;margin-top:16px;">
-        <table class="variant-table" style="max-width:340px;">
+        <table class="variant-table price-diff-table" style="max-width:380px;">
           <tr><th colspan="2">💰 فرق السعر المستخدم في هذه العملية</th></tr>
           <tr><td>القيمة</td><td class="mono">${r.priceDifference ?? '—'}</td></tr>
         </table>
