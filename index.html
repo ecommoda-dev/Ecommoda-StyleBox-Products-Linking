@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ecommoda StyleBox Products Linking</title>
-<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (حارس البراند + تصحيح الـ Slug — منطق فعلي جديد في index.js، مش UI بس) -->
+<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (حارس "اتربط قبل كده" — منطق فعلي جديد في index.js v2.7.0 — + مراجعة إلزامية قبل الربط، إعادة تصميم قسم "تعديلات تلقائي"، ونقل قسمي النتيجة/بدء منتج جديد لآخر الخطوة — index.html v2.9.0) -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
@@ -239,12 +239,13 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .opt-choice:has(input:checked) { border-color: var(--accent); background: var(--accent-light); color: var(--accent-dark); }
 .price-inline-input { width: 180px; text-align: center; }
 
-/* صندوق "بيحصل دايمًا بدون خيار" — ثابت وظاهر دايمًا 27-08-2026 (v2.7.0)، مش chip قابل للطي
-   زي باقي الأسئلة، عشان يبان إنه إجباري ومش سؤال محتاج إجابة من المستخدم */
-.always-box { display: flex; gap: 14px; align-items: flex-start; background: var(--surface-2); border: 1.5px dashed var(--border-strong); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 18px; }
-.always-box-icon { font-size: 22px; line-height: 1; flex-shrink: 0; }
-.always-box-text { font-size: 13px; color: var(--text-secondary); line-height: 1.75; }
-.always-box-text strong { display: block; color: var(--text-primary); font-size: 13.5px; margin-bottom: 4px; }
+/* "تعديلات أخرى تحدث تلقائي عند الربط" — v2.9.0: بقت صندوق .opt-block زي باقي
+   الأسئلة بالظبط (نفس الإطار والتصميم)، لكن عرض فقط بدون أي اختيار — راجع
+   .opt-readonly-title/.opt-readonly-list تحت. (كان اسمها .always-box لحد v2.7.0،
+   صندوق منفصل بتصميم مختلف — اتشالت واستُبدلت v2.9.0.) */
+.opt-readonly-title { font-size: 13.5px; font-weight: 800; color: var(--text-primary); margin: 14px 0 6px; }
+.opt-readonly-title:first-of-type { margin-top: 2px; }
+.opt-readonly-list { padding-inline-start: 20px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
 
 /* تفاصيل إضافية اختيارية — بديل الفقرات الطويلة الظاهرة دايمًا (ملحوظة المستخدم: "مليانة placeholders") */
 .info-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-light); border: 1px solid #bfdbfe; border-radius: 20px; padding: 4px 12px; margin-top: 9px; cursor: pointer; user-select: none; transition: background .15s; }
@@ -298,11 +299,11 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .variant-table td.mono { font-family: var(--font-mono); direction: ltr; }
 .variant-table td.right { text-align: right; }
 
-/* ── زرار "بدء منتج جديد" — إعادة ضبط كاملة للأداة لأول مرحلة (طلب المستخدم 27-08-2026) ── */
-.new-product-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: var(--surface); border: 1.5px dashed var(--border-strong); border-radius: var(--radius-lg); padding: 18px 24px; margin-bottom: 20px; }
-.new-product-bar .np-text { font-size: 14px; font-weight: 700; color: var(--text-secondary); }
+/* ── زرار "بدء منتج جديد" — إعادة ضبط كاملة للأداة لأول مرحلة. بقى زرار كامل عرض الصفحة
+   لوحده أسفل خطوة النتيجة خالص (v2.9.0 — كان شريط فيه نص + زرار صغير جنبه لحد v2.8.0) ── */
 .btn-new-product { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: var(--surface); color: var(--accent); border: 1.5px solid var(--accent); border-radius: 10px; font-family: inherit; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: all .15s; white-space: nowrap; }
 .btn-new-product:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
+.btn-new-product.btn-block { width: 100%; justify-content: center; padding: 18px 24px; font-size: 16.5px; margin-top: 18px; }
 
 /* ══════════════════════════════════════════════════════════════
    §DATA-TABLE-CSS — القسم الموحّد (فلاتر + جدول) — تاب سجل العمليات
@@ -532,15 +533,22 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
       <div class="step-card-body" id="stepSyncBody">
         <div class="result-row" style="margin-bottom:16px;"><span>المنتج على ووردبريس</span><span id="foundProductLabel" class="mono"></span></div>
 
-        <!-- صندوق ثابت وظاهر دايمًا (مش تفصيلة قابلة للطي) — ده إجراء إجباري مش سؤال للمستخدم -->
-        <div class="always-box">
-          <div class="always-box-icon">🔒</div>
-          <div class="always-box-text">
-            <strong>يحصل دائمًا في كل تشغيلة — بدون أي اختيار:</strong>
-            نشر المنتج على ووردبريس (<code>stylebox.online</code> → <code>status = publish</code>)، الـ metafield
-            <code>wordpress_id</code>، مزامنة الـ SKU/المخزون لكل Variation، وأخيرًا Tag
-            <code>stylebox</code> على شوبيفاي — فورًا كآخر خطوة.
+        <!-- صندوق .opt-block زي باقي الأسئلة (v2.9.0) — عرض فقط بدون أي اختيار، ده إجراء إجباري مش سؤال للمستخدم -->
+        <div class="opt-block">
+          <div class="opt-block-row">
+            <div class="opt-q">🔒 تعديلات أخرى تحدث تلقائي عند الربط:</div>
           </div>
+          <div class="opt-readonly-title">على Stylebox.online:</div>
+          <ul class="opt-readonly-list">
+            <li>تغيير حالة المنتج على <code>stylebox.online</code> إلى: <strong>Published</strong></li>
+            <li>إضافة البراند مثل الـ Vendor على شوبيفاي</li>
+            <li>مزامنة كمية المخزون لكل مقاس / SKU</li>
+          </ul>
+          <div class="opt-readonly-title">وعلى Ecommoda.com:</div>
+          <ul class="opt-readonly-list">
+            <li>إضافة Wordpress Ids على المنتج وعلى كل مقاس داخل المنتج على شوبيفاي</li>
+            <li>إضافة تاج على شوبيفاي (<code>stylebox</code>)</li>
+          </ul>
         </div>
 
         <!-- الخيارين دول كانوا checkboxes "تخطي..." لحد v2.0.0 — أسئلة صريحة باختيارات من v2.1.0،
@@ -592,12 +600,9 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         </div>
       </div>
       <div class="step-card-body" style="padding-top:22px;">
-        <div class="new-product-bar">
-          <span class="np-text">خلصت من المنتج ده؟ ابدأ منتج جديد وارجع للخطوة 1 من غير ما تعمل Refresh للصفحة.</span>
-          <button class="btn-new-product" onclick="startNewProduct()">🆕 بدء منتج جديد</button>
-        </div>
-        <div id="syncStatusBannerWrap"></div>
         <div id="syncResultWrap"></div>
+        <div id="syncStatusBannerWrap"></div>
+        <button class="btn-new-product btn-block" onclick="startNewProduct()">🆕 بدء منتج جديد</button>
       </div>
     </div>
 
@@ -840,6 +845,19 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">27-08-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>حارس جديد إلزامي على أكشن <code>find_product</code> (على مستوى الـ Worker، v2.7.0): قبل أي بحث في ووكومرس، الأداة بتتحقق أول حاجة من metafield <code>custom.wordpress_id</code> على منتج شوبيفاي — لو مش فاضية، يبقى المنتج ده اتربط قبل كده، وتظهر رسالة <strong>"هذا المنتج تم ربطه من قبل"</strong> وما تفتحش خطوة الربط خالص. لو لسه مش مربوط، البحث بيكمل زي ما هو بالظبط.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>خطوة ② "نتيجة البحث" — اتشال صف SKU وصف "اتلقى عن طريق"، وزرار "عرض المنتج على وردبريس للمراجعة" اتغيّر اسمه لـ<strong>"راجع صور + كاتيجوريز المنتج قبل الربط"</strong> وبقى <strong>إلزامي الضغط عليه</strong> — خطوة ③ (الربط) ما بتفتحش خالص إلا بعد الضغط على الزرار ده.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>نافذة "البراند غير موجود" — اتشالت جملة "(Vendor على شوبيفاي)" من نص الرسالة.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>قسم "يحصل دائمًا بدون خيار" في خطوة ③ اتعاد تصميمه ليكون صندوق <code>.opt-block</code> بنفس تصميم باقي الأسئلة (عرض فقط، بدون اختيار) بعنوان جديد <strong>"تعديلات أخرى تحدث تلقائي عند الربط:"</strong>، مقسّم لقسمين: على Stylebox.online (نشر Published + ربط البراند + مزامنة المخزون) وعلى Ecommoda.com (Wordpress IDs + تاج stylebox).</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>خطوة ④ "النتيجة" — بانر "✅ تم الربط بنجاح" وزرار "🆕 بدء منتج جديد" اتنقلوا لآخر الخطوة (بعد تفاصيل بيانات المنتج والـ Variations)، وزرار "بدء منتج جديد" بقى زرار كامل عرض الصفحة لوحده (اتشال النص اللي كان جنبه). كلمة "Variation" في سطر ملخّص البانر اتغيّرت لـ"مقاس"، وكلمة "تمت" لـ"تمت المزامنة".</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.8.0</span>
+            <span class="cl-ver-date">27-08-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>حارس براند إلزامي جديد قبل أي كتابة في <code>sync_product</code> (على مستوى الـ Worker، v2.6.0): الـ Vendor على شوبيفاي لازم يكون له براند بنفس الاسم بالظبط على تاكسونومي البراندات في ووردبريس. لو مفيش، الربط بالكامل بيتوقف من غير أي تعديل على أي منصة، وتظهر نافذة خطأ مخصصة فيها زرار <strong>"➕ إضافة البراند على StyleBox"</strong> بيفتح صفحة إضافة البراند مباشرة. لو البراند موجود، بيتربط بالمنتج تلقائيًا وبيظهر صف "Brand" في نتيجة الربط.</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>تصحيح Slug إلزامي بدون خيار (على مستوى الـ Worker، v2.6.0): عند كل ربط، لو الـ Slug بتاع منتج ووردبريس مش مطابق لعنوانه، الأداة بتصلّحه تلقائيًا ليطابق العنوان (نفس نمط ووردبريس القياسي — أحرف صغيرة وشرطات بدل المسافات). صف "Slug" جديد في نتيجة الربط بيوضّح القديم والجديد.</span></li>
           </ul>
@@ -997,31 +1015,36 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               بيتنفّذ فورًا بعد كل اللي فوق (دائمًا وبدون خيار، وبدون أي انتظار من v2.4.0)</li>
             </ul>
 
-            <h4>كيف تعمل — Workflow (4 خطوات مرقّمة قابلة للطي — v2.7.0)</h4>
+            <h4>كيف تعمل — Workflow (4 خطوات مرقّمة قابلة للطي — v2.9.0)</h4>
             <ol>
               <li>سجّل دخولك من شاشة الدخول</li>
               <li><strong>الخطوة ① — بحث:</strong> حط رقم منتج شوبيفاي أو الصق رابط صفحة المنتج بالكامل من
-              أدمن شوبيفاي (الأداة بتستخرج الرقم من الرابط تلقائيًا) واضغط "بحث" (أو Enter) — الأداة بتدوّر
-              على الرقم في ووردبريس (خانة GTIN، أو بحث بعنوان المنتج لتضييق النطاق ثم تأكيد قاطع بالـ SKU/GTIN)</li>
-              <li><strong>الخطوة ② — نتيجة البحث</strong> (خطوة مستقلة لوحدها): بتعرض بيانات المنتج (أو رسالة
-              "مفيش تطابق") + زرار كبير كامل عرض الصفحة "🔗 عرض المنتج على وردبريس للمراجعة" (بيفتح صفحة
-              التعديل في تاب جديد). الخطوة ① بتتطوى تلقائيًا (بعلامة ✓ خضرا) وتفتح الخطوتان ② و③ تلقائيًا لو
-              لقى تطابق</li>
-              <li><strong>الخطوة ③ — الربط (+ تحديث السعر اختياري):</strong> صندوق ثابت أعلى الخطوة يوضّح
-              "🔒 يحصل دائمًا بدون خيار" (نشر ووردبريس + metafield + مزامنة الـ Variations + Tag)، وتحته ثلاثة
-              صناديق مستقلة بإطار — كل واحد فيه عنوان السؤال واختياراته في نفس الصف: <strong>حالة المنتج على
+              أدمن شوبيفاي (الأداة بتستخرج الرقم من الرابط تلقائيًا) واضغط "بحث" (أو Enter) — الـ Worker
+              بيتحقق الأول (v2.7.0) من إن المنتج ده مش اتربط قبل كده (<code>custom.wordpress_id</code> على
+              شوبيفاي)، وبعدين لو لسه مش مربوط بيدوّر عليه في ووردبريس (خانة GTIN، أو بحث بعنوان المنتج
+              لتضييق النطاق ثم تأكيد قاطع بالـ SKU/GTIN)</li>
+              <li><strong>الخطوة ② — نتيجة البحث</strong> (خطوة مستقلة لوحدها): لو المنتج <strong>اتربط قبل
+              كده</strong>، بتعرض رسالة "هذا المنتج تم ربطه من قبل" ووقف — خطوة ③ ما بتظهرش خالص. لو لقى
+              تطابق جديد، بتعرض بيانات المنتج + زرار كبير كامل عرض الصفحة <strong>"🔗 راجع صور + كاتيجوريز
+              المنتج قبل الربط"</strong> — الزرار ده <strong>إلزامي</strong> (v2.9.0): خطوة ③ ما بتظهرش إلا
+              بعد الضغط عليه. الخطوة ① بتتطوى تلقائيًا (بعلامة ✓ خضرا) وتفتح خطوة ② تلقائيًا</li>
+              <li><strong>الخطوة ③ — الربط (+ تحديث السعر اختياري):</strong> صندوق <code>.opt-block</code>
+              أعلى الخطوة بنفس تصميم باقي الأسئلة (عرض فقط) بعنوان "🔒 تعديلات أخرى تحدث تلقائي عند الربط:" —
+              مقسّم لقسمين (على Stylebox.online / وعلى Ecommoda.com)، وتحته ثلاثة صناديق مستقلة بإطار قابلة
+              للاختيار — كل واحد فيه عنوان السؤال واختياراته في نفس الصف: <strong>حالة المنتج على
               شوبيفاي بعد الربط؟</strong> — Active / Draft / تبقى كما هي، <strong>هل تريد إضافة نجمة ⭐
               للعنوان؟</strong> — نعم / لا، و<strong>فرق السعر</strong> (اختياري — سيبه فاضي لتخطّي تحديث
               السعر). التلاتة مستقلّون تمامًا عن بعض، وكلهم بيتنفذوا مع بعض بضغطة زرار كبير كامل عرض الصفحة
               "▶ ابدأ ربط المنتج بين الموقعين الآن" واحدة (single call، مفيش sync_all ومفيش أكشن منفصل لتحديث
               السعر)</li>
-              <li><strong>الخطوة ④ — النتيجة:</strong> بانر كبير ملوّن (أخضر/أصفر/أحمر) بالحالة العامة، بعده
-              بيانات المنتج + جدول الـ Variations اللي اتزامنت أو اتخطّت (مع السبب، وعمودي السعر لو فرق
-              السعر اتحط). الخطوتان ② و③ بيتطووا تلقائيًا لحد ما تفتحهم تاني</li>
+              <li><strong>الخطوة ④ — النتيجة:</strong> بيانات المنتج + جدول الـ Variations اللي اتزامنت أو
+              اتخطّت (مع السبب، وعمودي السعر لو فرق السعر اتحط) أولاً، وبعدهم في آخر الخطوة (v2.9.0) بانر
+              كبير ملوّن (أخضر/أصفر/أحمر) بالحالة العامة، ثم زرار "🆕 بدء منتج جديد" كامل عرض الصفحة لوحده.
+              الخطوتان ② و③ بيتطووا تلقائيًا لحد ما تفتحهم تاني</li>
               <li>أي تفاصيل أو أخطاء إضافية اتسجلت في تاب "سجل العمليات"</li>
-              <li>زرار "🆕 بدء منتج جديد" أعلى الخطوة ④ يصفّر كل حاجة ويرجّعك للخطوة ① لمنتج جديد من غير
-              Refresh للصفحة. الضغط على عنوان أي خطوة متطوية بيفتحها تاني لو حبيت تراجعها من غير ما تصفّر
-              النتيجة الحالية</li>
+              <li>زرار "🆕 بدء منتج جديد" أسفل الخطوة ④ يصفّر كل حاجة (بما فيها حالة "تمت المراجعة")
+              ويرجّعك للخطوة ① لمنتج جديد من غير Refresh للصفحة. الضغط على عنوان أي خطوة متطوية بيفتحها
+              تاني لو حبيت تراجعها من غير ما تصفّر النتيجة الحالية</li>
             </ol>
 
             <h4>⚙️ إجراءات كل اختيار</h4>
@@ -1034,7 +1057,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <tr><td>النجمة → <strong>لا</strong></td><td><code>productUpdate</code> ميبعتش <code>title</code> — العنوان يفضل زي ما هو</td></tr>
               <tr><td>فرق السعر → <strong>رقم</strong></td><td>كل Variation على ووكومرس بياخد <code>regular_price</code>/<code>sale_price</code> = سعر شوبيفاي + الفرق ده (نفس معادلة أداة "مزامنة أسعار Stylebox")</td></tr>
               <tr><td>فرق السعر → <strong>فاضي</strong> (افتراضي)</td><td>تحديث السعر يتخطّى تمامًا — regular_price/sale_price متتلمسش</td></tr>
-              <tr><td>(في كل الحالات — بدون خيار)</td><td>نشر المنتج على ووردبريس (<code>status=publish</code>) + metafield <code>wordpress_id</code> + تصحيح <code>slug</code> ليطابق العنوان (v2.6.0) + مزامنة كل الـ SKU/المخزون لكل Variation + Tag <code>stylebox</code> فورًا في آخر العملية</td></tr>
+              <tr><td>(في كل الحالات — بدون خيار، "تعديلات أخرى تحدث تلقائي عند الربط")</td><td>نشر المنتج على ووردبريس (<code>status=publish</code>) + metafield <code>wordpress_id</code> + تصحيح <code>slug</code> ليطابق العنوان (v2.6.0) + مزامنة كل الـ SKU/المخزون لكل Variation + Tag <code>stylebox</code> فورًا في آخر العملية</td></tr>
               <tr><td>(حارس إلزامي قبل أي كتابة — v2.6.0)</td><td>لازم يكون فيه براند على ووردبريس بنفس اسم الـ Vendor على شوبيفاي — لو موجود بيتربط بالمنتج تلقائيًا، لو مفيش الربط بالكامل يتوقف (نافذة خطأ + زرار "إضافة البراند")</td></tr>
             </table>
 
@@ -1046,7 +1069,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <tr><td><code>verify_employee</code></td><td>POST — تسجيل الدخول</td></tr>
               <tr><td><code>log_logout</code></td><td>GET — تسجيل خروج</td></tr>
               <tr><td><code>get_employees</code></td><td>GET — قائمة الموظفين النشطين</td></tr>
-              <tr><td><code>find_product</code></td><td>GET — أكشن قراءة بس (خطوة 1): بياخد <code>shopify_product_id</code> ويدوّر على منتج ووكومرس المطابق (GTIN، أو بحث بالعنوان لتضييق النطاق + تأكيد قاطع بالـ SKU)، ويرجّع <code>wp_product_id</code> + <code>wpEditUrl</code></td></tr>
+              <tr><td><code>find_product</code></td><td>GET — أكشن قراءة بس (خطوة 1): بياخد <code>shopify_product_id</code>. <strong>(v2.7.0)</strong> أول حاجة بيتحقق من <code>custom.wordpress_id</code> على شوبيفاي — لو مش فاضية بيرجع <code>{alreadyLinked:true, wordpressId, productTitle}</code> ويوقف. لو فاضية، يدوّر على منتج ووكومرس المطابق (GTIN، أو بحث بالعنوان لتضييق النطاق + تأكيد قاطع بالـ SKU)، ويرجّع <code>{alreadyLinked:false, wp_product_id, wpEditUrl, ...}</code></td></tr>
               <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code>، <code>add_star</code>: <code>true</code>/<code>false</code>، و<code>price_difference</code>: رقم اختياري لتحديث السعر في نفس التشغيلة — الثلاثة اختياريون، الافتراضي <code>DRAFT</code> + <code>true</code> + بدون تحديث سعر). <strong>(v2.6.0)</strong> ممكن يرجع HTTP 409 بـ <code>{code:'brand_missing', vendor, addBrandUrl}</code> لو مفيش براند مطابق على ووردبريس — الربط بيتوقف كامل من غير أي كتابة</td></tr>
               <tr><td><code>diag</code></td><td>GET — فحص ذاتي كامل (env، صلاحيات شوبيفاي، اتصال WooCommerce، D1) بدون كتابة</td></tr>
               <tr><td><code>get_config</code></td><td>GET — يرجّع نسخة الـ Worker لمقارنتها بنسخة الواجهة</td></tr>
@@ -1065,11 +1088,13 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <ul>
               <li><code>§AUTH</code> — Universal D1 Auth كاملة (اتضافت 25-08-2026 — الأداة كانت استثناء بدون Login)</li>
               <li><code>§TOOL-JS::steps</code> (UI فقط) — <code>toggleStep()</code>/<code>setStepCollapsed()</code> لطي وفتح البطاقات المرقّمة الأربعة، و<code>toggleHint()</code> لإظهار/إخفاء تفاصيل خطوة البحث (الشيبس التانية اتشالت v2.7.0)</li>
-              <li><code>§TOOL-JS::find</code> — خطوة ①: نموذج تشغيل <code>find_product</code> (بحث برقم أو رابط شوبيفاي — <code>extractShopifyProductId()</code> بيستخرج الرقم من الرابط لو اتحط، Enter أو زرار) + <code>resetFindStep()</code>/<code>startNewProduct()</code> لإعادة الضبط الكامل</li>
-              <li><code>§FIND::findWcProductByShopifyId</code> (Worker) — منطق البحث (فلتر GTIN مباشر + بحث بعنوان شوبيفاي لتضييق النطاق + تأكيد قاطع بالـ SKU/GTIN)</li>
-              <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (لقيته/مش لقيته) في خطوتها المستقلة + زرار "عرض على وردبريس" كامل العرض (<code>.btn-block</code>)</li>
-              <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر اختياري مع بعض، كل واحد في صندوق <code>.opt-block</code> مستقل)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي</li>
-              <li><code>renderSyncResult()</code> — خطوة ④: بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + عرض نتيجة 3 حالات (نجاح/تحذير/فشل) + جدول Variations (+ صفوف Brand/Slug من v2.6.0)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
+              <li><code>§TOOL-JS::find</code> — خطوة ①: نموذج تشغيل <code>find_product</code> (بحث برقم أو رابط شوبيفاي — <code>extractShopifyProductId()</code> بيستخرج الرقم من الرابط لو اتحط، Enter أو زرار) + <code>resetFindStep()</code>/<code>startNewProduct()</code> لإعادة الضبط الكامل (بما فيها <code>productReviewed</code>)</li>
+              <li><code>§FIND::checkShopifyAlreadyLinked</code> (Worker، v2.7.0) — أول فحص في <code>find_product</code>: بيقرا <code>custom.wordpress_id</code> على شوبيفاي قبل أي بحث في ووكومرس</li>
+              <li><code>§FIND::findWcProductByShopifyId</code> (Worker) — منطق البحث لو المنتج لسه مش مربوط (فلتر GTIN مباشر + بحث بعنوان شوبيفاي لتضييق النطاق + تأكيد قاطع بالـ SKU/GTIN)</li>
+              <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (اتربط قبل كده / لقيته / مش لقيته) في خطوتها المستقلة + زرار "راجع صور + كاتيجوريز المنتج قبل الربط" كامل العرض (<code>.btn-block</code>)، إلزامي — راجع <code>markProductReviewed()</code></li>
+              <li><code>markProductReviewed()</code> (v2.9.0) — بيتنادى من زرار المراجعة الإلزامي؛ هو اللي بيفتح خطوة ③ لأول مرة (بدل ما تفتح تلقائيًا مع نجاح البحث زي قبل كده)</li>
+              <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر اختياري مع بعض، كل واحد في صندوق <code>.opt-block</code> مستقل)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي، و<code>runSync()</code> برضه بيرفض لو <code>productReviewed !== true</code></li>
+              <li><code>renderSyncResult()</code> — خطوة ④: تفاصيل بيانات المنتج + جدول Variations (+ صفوف Brand/Slug من v2.6.0) أولاً، وبعدهم بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + زرار "بدء منتج جديد" كامل العرض في آخر الخطوة (v2.9.0)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
               <li><code>openBrandMissingModal()</code>/<code>closeBrandMissingModal()</code> (v2.6.0) — نافذة خطأ مخصصة (<code>#brandMissingOverlay</code>) لما <code>runSync()</code> يلقى <code>e.data.code === 'brand_missing'</code>؛ <code>apiRequest()</code> بقى يحط رد الـ Worker كامل على <code>err.data</code> مش بس <code>err.message</code> عشان الكود ده يتقرا</li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
               <li><code>§LOG-ENDPOINTS</code> — get_logs / get_logs_count / get_logs_export (v2، بدون تغيير في العقد)</li>
@@ -1079,15 +1104,27 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <ul>
               <li><code>currentEmployee</code> — { username, displayName } في الذاكرة فقط، مش localStorage</li>
               <li><code>foundWpProductId</code> — رقم منتج ووكومرس اللي رجعته خطوة 1 (<code>find_product</code>)، في الذاكرة فقط. <code>runSync()</code> بيستخدمه بدل حقل إدخال يدوي — <code>null</code> لحد ما بحث ينجح، و<code>resetFindStep()</code> بيصفّره</li>
+              <li><code>productReviewed</code> (v2.9.0) — بيبقى <code>true</code> بس بعد الضغط على زرار "راجع صور + كاتيجوريز المنتج قبل الربط" في خطوة ②. <code>runSync()</code> بيرفض لو مش <code>true</code>، و<code>resetFindStep()</code>/<code>startNewProduct()</code> بيصفّروه</li>
               <li><code>LS_URL = 'stylebox_link_worker_url'</code> · <code>LS_SECRET = 'stylebox_link_worker_secret'</code> — تغيّرت بريفكس المفاتيح مع إعادة التسمية (كانت <code>wcsync_worker_*</code>)</li>
               <li><code>LS_PRICE_DIFF = 'stylebox_link_price_difference'</code> — آخر قيمة "فرق السعر" استُخدمت، للراحة بس (تعبئة تلقائية)، مش Settings حقيقي ومش مرسل تلقائيًا من غير ما المستخدم يضغط "تشغيل الربط"</li>
               <li><code>TOOL_NAME = 'stylebox_products_linking'</code> — قيمة <code>tool</code> في جدول <code>logs</code> (كانت <code>shopify_woo_sync</code> قبل الرينيم)</li>
               <li><code>ALLOWED_SIZE_ATTRIBUTE_NAMES = ['Shoe size','Size','size']</code> — مصدر الحقيقة لمطابقة المقاس بين المنصتين (في الـ Worker)</li>
-              <li><code>EXPECTED_WORKER_VERSION</code> (v2.6.0) — نسخة الـ Worker المتوقعة لغرض تنبيه "نسخة الـ Worker مختلفة" فقط، منفصلة تمامًا عن <code>TOOL_VERSION</code> (نسخة الواجهة). تتحدّث يدويًا هنا بس لو <code>index.js</code> نفسه اتغيّر فعلاً وترقّى على Cloudflare — تعديل UI بحت زي ده ميلزمهاش تتغيّر</li>
+              <li><code>EXPECTED_WORKER_VERSION</code> (v2.7.0) — نسخة الـ Worker المتوقعة لغرض تنبيه "نسخة الـ Worker مختلفة" فقط، منفصلة تمامًا عن <code>TOOL_VERSION</code> (نسخة الواجهة). تتحدّث يدويًا هنا بس لو <code>index.js</code> نفسه اتغيّر فعلاً وترقّى على Cloudflare — تعديل UI بحت زي ده ميلزمهاش تتغيّر</li>
             </ul>
 
             <h4>NOTES</h4>
             <ul>
+              <li>v2.9.0 (27-08-2026) — خمس تعديلات بطلب صاحب الأداة: (1) حارس جديد <strong>على مستوى الـ
+              Worker (v2.7.0)</strong> في <code>find_product</code> — لو منتج شوبيفاي أصلاً عنده قيمة في
+              <code>custom.wordpress_id</code>، البحث بيوقف فورًا برسالة "هذا المنتج تم ربطه من قبل" قبل أي
+              محاولة بحث في ووكومرس. (2) زرار مراجعة خطوة ② بقى إلزامي الضغط عليه (<code>productReviewed</code>)
+              قبل ظهور خطوة الربط، واسمه اتغيّر لـ"راجع صور + كاتيجوريز المنتج قبل الربط"، مع حذف صفّي SKU
+              و"اتلقى عن طريق". (3) نافذة "البراند غير موجود" اتشالت منها جملة "(Vendor على شوبيفاي)".
+              (4) قسم "يحصل دائمًا بدون خيار" بقى صندوق <code>.opt-block</code> عرض فقط بعنوان "تعديلات أخرى
+              تحدث تلقائي عند الربط:" مقسّم Stylebox.online/Ecommoda.com. (5) بانر النتيجة وزرار "بدء منتج
+              جديد" اتنقلوا لآخر خطوة ④، والزرار بقى كامل عرض الصفحة لوحده، وتغيّرت كلمتا "Variation"/"تمت"
+              في نص البانر لـ"مقاس"/"تمت المزامنة". <strong>البند (1) بس هو اللي فيه منطق فعلي جديد في
+              الـ Worker</strong> — باقي البنود UI بحت في <code>index.html</code>.</li>
               <li>v2.8.0 (27-08-2026) — تعديلان جديدان بطلب صاحب الأداة، <strong>منطق فعلي في الـ Worker
               (v2.6.0) مش UI بس</strong>: (1) حارس براند إلزامي قبل أي كتابة في <code>sync_product</code> — لو
               الـ Vendor على شوبيفاي معندوش براند مطابق بنفس الاسم على تاكسونومي <code>product_brand</code>
@@ -1136,7 +1173,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
       <div class="eco-modal-body">
         <p style="margin:0 0 14px;line-height:1.9;">
           لا يوجد براند بنفس اسم <strong style="color:var(--accent);" id="brandMissingVendor">—</strong>
-          (Vendor على شوبيفاي) على ووردبريس. الربط بين المنتجين تم إيقافه بالكامل —
+          على ووردبريس. الربط بين المنتجين تم إيقافه بالكامل —
           مفيش أي تعديل حصل لا على شوبيفاي ولا على ووكومرس.
         </p>
         <p style="margin:0 0 18px;line-height:1.9;color:var(--text-secondary);font-size:13px;">
@@ -1214,11 +1251,11 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.8.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
-// نسخة الـ Worker المتوقعة (v2.6.0) — منفصلة تمامًا عن TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
+const TOOL_VERSION = 'v2.9.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+// نسخة الـ Worker المتوقعة (v2.7.0) — منفصلة تمامًا عن TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
 // أي لمس للـ Worker — راجع checkWorkerVersion() تحت)
-const EXPECTED_WORKER_VERSION = 'v2.6.0';
+const EXPECTED_WORKER_VERSION = 'v2.7.0';
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
@@ -1751,25 +1788,38 @@ async function runFindProduct() {
     const data = await apiGet('find_product', { shopify_product_id: productId });
     document.getElementById('stepFoundCard').style.display = 'block';
     renderFindResult(data);
-    if (data.found) {
+    if (data.alreadyLinked) {
+      // v2.7.0 — المنتج ده اتربط قبل كده (custom.wordpress_id مش فاضي على شوبيفاي)
+      // — بنوقف هنا تمامًا، مفيش خطوة ربط تتفتح خالص.
+      foundWpProductId = null;
+      productReviewed  = false;
+      document.getElementById('stepFoundBadge').className = 'step-badge err';
+      document.getElementById('stepFoundBadge').textContent = '✗';
+      document.getElementById('stepFoundSubtitle').textContent = 'هذا المنتج تم ربطه من قبل';
+      setStepCollapsed('Found', false);
+      document.getElementById('stepSyncCard').style.display = 'none';
+      document.getElementById('stepFoundCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      showToast('هذا المنتج تم ربطه من قبل', 'error');
+    } else if (data.found) {
       foundWpProductId = data.wp_product_id;
+      productReviewed   = false; // خطوة ② (v2.9.0) — لازم يراجع المنتج الأول قبل ما خطوة ③ تظهر
       const label = `#${data.wp_product_id}${data.productName ? ' — ' + data.productName : ''}`;
       document.getElementById('foundProductLabel').textContent = label;
       document.getElementById('stepFoundBadge').className = 'step-badge ok';
       document.getElementById('stepFoundBadge').textContent = '✓';
       document.getElementById('stepFoundSubtitle').textContent = `تم العثور على المنتج — ${label}`;
       document.getElementById('stepSyncSubtitle').textContent = `المنتج: ${label}`;
-      document.getElementById('stepSyncCard').style.display = 'block';
+      document.getElementById('stepSyncCard').style.display = 'none'; // متفتحش إلا بعد markProductReviewed()
       document.getElementById('stepFindCard').classList.add('done');
       document.getElementById('stepFindBadge').textContent = '✓';
       document.getElementById('stepFindSubtitle').textContent = `✓ تم العثور على المنتج — ${label}`;
       setStepCollapsed('Find', true);
       setStepCollapsed('Found', false);
-      setStepCollapsed('Sync', false);
       document.getElementById('stepFoundCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
       showToast('لقينا المنتج ✓', 'success');
     } else {
       foundWpProductId = null;
+      productReviewed  = false;
       document.getElementById('stepFoundBadge').className = 'step-badge err';
       document.getElementById('stepFoundBadge').textContent = '✗';
       document.getElementById('stepFoundSubtitle').textContent = 'مفيش تطابق';
@@ -1788,9 +1838,17 @@ async function runFindProduct() {
   }
 }
 
-// خطوة 2 (v2.7.0) — نتيجة البحث في خطوتها المستقلة، بزرار مراجعة كبير كامل العرض
+// خطوة 2 — نتيجة البحث في خطوتها المستقلة، بزرار مراجعة كبير كامل العرض إلزامي
+// (v2.9.0): زرار المراجعة (markProductReviewed()) هو اللي بيفتح خطوة ③ —
+// مفيش وصول للربط قبل ما يتضغط. راجع runFindProduct()/runSync().
+let productReviewed = false;
+
 function renderFindResult(data) {
   const wrap = document.getElementById('findResultWrap');
+  if (data.alreadyLinked) {
+    wrap.innerHTML = `<div class="result-note err">⚠️ هذا المنتج تم ربطه من قبل${data.wordpressId ? ` — رقمه على ووردبريس: <span class="mono">${data.wordpressId}</span>` : ''}${data.productTitle ? ` (${data.productTitle})` : ''}. لا يمكن استكمال عملية الربط لمنتج مربوط بالفعل.</div>`;
+    return;
+  }
   if (!data.found) {
     wrap.innerHTML = `<div class="result-note err">مفيش منتج على ووردبريس بيحمل الرقم ده — لا في خانة GTIN ولا في بداية الـ SKU (اتفحص ${(data.scanned ?? 0).toLocaleString('en-US')} منتج مرشّح). تأكد من الرقم أو الرابط من صفحة المنتج على شوبيفاي أدمن.</div>`;
     return;
@@ -1798,16 +1856,28 @@ function renderFindResult(data) {
   wrap.innerHTML = `
     <div class="result-row"><span>رقم المنتج على ووردبريس</span><span class="mono">${data.wp_product_id}</span></div>
     ${data.productName ? `<div class="result-row"><span>اسم المنتج</span><span>${data.productName}</span></div>` : ''}
-    ${data.sku ? `<div class="result-row"><span>SKU</span><span class="mono">${data.sku}</span></div>` : ''}
-    <div class="result-row"><span>اتلقى عن طريق</span><span>${data.matchedBy === 'gtin' ? 'خانة GTIN' : 'بداية الـ SKU'}</span></div>
     <div style="margin-top:18px;">
-      <a class="btn-primary btn-block" href="${data.wpEditUrl}" target="_blank" rel="noopener">🔗 عرض المنتج على وردبريس للمراجعة</a>
+      <a class="btn-primary btn-block" id="reviewProductBtn" href="${data.wpEditUrl}" target="_blank" rel="noopener" onclick="markProductReviewed()">🔗 راجع صور + كاتيجوريز المنتج قبل الربط</a>
+      <div class="result-note warn" id="reviewRequiredNote" style="margin-top:10px;">⚠️ الزرار ده إلزامي — لازم تضغطه وتراجع المنتج على ووردبريس قبل ما تقدر تكمل لخطوة الربط.</div>
     </div>`;
+}
+
+// v2.9.0 — بيتنادى من زرار المراجعة الإلزامي فوق: بيفتح خطوة ③ للمرة الأولى
+// (كانت بتتفتح تلقائيًا مع نجاح البحث قبل كده). لو ضغط الزرار تاني بعد ما فتح
+// الخطوة، مفيش أي أثر إضافي.
+function markProductReviewed() {
+  if (!foundWpProductId) return;
+  productReviewed = true;
+  const note = document.getElementById('reviewRequiredNote');
+  if (note) note.style.display = 'none';
+  document.getElementById('stepSyncCard').style.display = 'block';
+  setStepCollapsed('Sync', false);
 }
 
 // تصفير كامل لخطوة البحث — بتترجع الأداة لأول مرحلة بصريًا (خطوة 1 مفتوحة، 2 و3 و4 مخفيين)
 function resetFindStep() {
   foundWpProductId = null;
+  productReviewed  = false;
   document.getElementById('shopifyProductIdInput').value = '';
   document.getElementById('stepFoundCard').style.display = 'none';
   document.getElementById('findResultWrap').innerHTML = '';
@@ -1872,6 +1942,7 @@ function loadPriceDiffPref() {
 async function runSync() {
   if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'error'); return; }
   if (!foundWpProductId) { showToast('ابحث عن المنتج الأول (الخطوة 1)', 'error'); return; }
+  if (!productReviewed) { showToast('راجع صور وكاتيجوريز المنتج الأول (زرار المراجعة في نتيجة البحث)', 'error'); return; }
   const { shopifyStatus, addStar } = readSyncOptions();
 
   // فرق السعر (v2.5.0) — اختياري تمامًا. فاضي = مفيش تحديث سعر في التشغيلة دي.
@@ -1951,7 +2022,7 @@ function renderSyncResult(data) {
     warning: { cls: 'warn', icon: '⚠️', title: 'تم الربط جزئيًا — راجع التحذيرات تحت' },
     error:   { cls: 'err',  icon: '❌', title: 'فشل الربط — راجع التفاصيل تحت' },
   }[status] || { cls: 'err', icon: '❌', title: 'فشل الربط' };
-  const bannerSub = `${variants.length.toLocaleString('en-US')} Variation — ✓ ${syncedCountEarly.toLocaleString('en-US')} تمت · ⚠ ${warnCountEarly.toLocaleString('en-US')} تحذير · تخطي ${skippedCountEarly.toLocaleString('en-US')}`;
+  const bannerSub = `${variants.length.toLocaleString('en-US')} مقاس — ✓ ${syncedCountEarly.toLocaleString('en-US')} تمت المزامنة · ⚠ ${warnCountEarly.toLocaleString('en-US')} تحذير · تخطي ${skippedCountEarly.toLocaleString('en-US')}`;
   document.getElementById('syncStatusBannerWrap').innerHTML = `
     <div class="status-banner ${bannerCfg.cls}">
       <div class="status-banner-icon">${bannerCfg.icon}</div>
