@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ecommoda StyleBox Products Linking</title>
-<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (زرار "إبدأ ربط منتج جديد" بقى بنفس تصميم أزرار الأداة التانية الثابتة اللون بدل أبيض/أزرق عند hover — index.html v2.10.1، صفر تغيير في index.js) -->
+<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (خطوة ③: مفيش اختيار افتراضي جاهز للحالة/النجمة، ومربع فرق السعر بقى برقم افتراضي 100 + زرار "تأكيد فرق السعر" إلزامي — index.html v2.11.0، صفر تغيير في index.js) -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
@@ -238,6 +238,9 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .opt-choice input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; margin: 0; }
 .opt-choice:has(input:checked) { border-color: var(--accent); background: var(--accent-light); color: var(--accent-dark); }
 .price-inline-input { width: 180px; text-align: center; }
+.price-confirm-btn { padding: 12px 20px; font-size: 14px; margin-top: 0; }
+.price-confirm-btn.confirmed { background: var(--green); box-shadow: 0 4px 12px rgba(22,163,74,.28); }
+.price-confirm-btn.confirmed:hover:not(:disabled) { background: #15803d; }
 
 /* "تعديلات أخرى تحدث تلقائي عند الربط" — v2.9.0: بقت صندوق .opt-block زي باقي
    الأسئلة بالظبط (نفس الإطار والتصميم)، لكن عرض فقط بدون أي اختيار — راجع
@@ -536,13 +539,15 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         <div class="result-row" style="margin-bottom:16px;"><span>المنتج على ووردبريس</span><span id="foundProductLabel" class="mono"></span></div>
 
         <!-- الخيارين دول كانوا checkboxes "تخطي..." لحد v2.0.0 — أسئلة صريحة باختيارات من v2.1.0،
-             ومستقلّين تمامًا عن بعض. كل خيار بقى صندوق لوحده من v2.7.0. -->
+             ومستقلّين تمامًا عن بعض. كل خيار بقى صندوق لوحده من v2.7.0.
+             ⚠️ v2.11.0: مفيش اختيار افتراضي جاهز — الموظف لازم يضغط بنفسه على إجابة لكل سؤال
+             في كل تشغيلة، وإلا runSync() بيرفض ويطلع تنبيه (راجع readSyncOptions()/resetSyncOptions()). -->
         <div class="opt-block">
           <div class="opt-block-row">
             <div class="opt-q">حالة المنتج على شوبيفاي بعد الربط؟</div>
             <div class="opt-choices">
               <label class="opt-choice"><input type="radio" name="shopifyStatus" value="ACTIVE" /><span>Active</span></label>
-              <label class="opt-choice"><input type="radio" name="shopifyStatus" value="DRAFT" checked /><span>Draft</span></label>
+              <label class="opt-choice"><input type="radio" name="shopifyStatus" value="DRAFT" /><span>Draft</span></label>
               <label class="opt-choice"><input type="radio" name="shopifyStatus" value="KEEP" /><span>تبقى كما هي (بدون تعديل)</span></label>
             </div>
           </div>
@@ -552,20 +557,24 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
           <div class="opt-block-row">
             <div class="opt-q">هل تريد إضافة نجمة ⭐ للعنوان؟</div>
             <div class="opt-choices">
-              <label class="opt-choice"><input type="radio" name="addStar" value="yes" checked /><span>نعم</span></label>
+              <label class="opt-choice"><input type="radio" name="addStar" value="yes" /><span>نعم</span></label>
               <label class="opt-choice"><input type="radio" name="addStar" value="no" /><span>لا</span></label>
             </div>
           </div>
         </div>
 
+        <!-- فرق السعر: مربع برقم افتراضي 100 + زرار تأكيد إلزامي (v2.11.0) — لازم يتضغط في كل
+             تشغيلة (زي أي اختيار تاني في الخطوة دي)، نص الزرار بيتحدّث لايف مع أي تعديل في الرقم،
+             وأي تعديل في الرقم بعد التأكيد بيلغي التأكيد ولازم يتضغط تاني. -->
         <div class="opt-block">
           <div class="opt-block-row">
-            <div class="opt-q">💰 تحديث السعر على ووكومرس؟ (اختياري)</div>
+            <div class="opt-q">💰 تحديث السعر على ووكومرس؟</div>
             <div class="opt-choices">
-              <input type="number" class="field-input price-inline-input" id="priceDifference" step="0.01" placeholder="فرق السعر">
+              <input type="number" class="field-input price-inline-input" id="priceDifference" step="0.01" value="100" oninput="onPriceDiffInput()">
+              <button type="button" class="btn-primary price-confirm-btn" id="priceConfirmBtn" onclick="confirmPriceDiff()">تأكيد فرق السعر</button>
             </div>
           </div>
-          <div class="opt-block-note">سيبه فاضي لتخطّي تحديث السعر في التشغيلة دي.</div>
+          <div class="opt-block-note">سيبه فاضي لتخطّي تحديث السعر، ثم اضغط الزرار للتأكيد في كل الحالتين.</div>
         </div>
 
         <!-- صندوق .opt-block زي باقي الأسئلة (v2.9.0) — عرض فقط بدون أي اختيار، ده إجراء إجباري مش سؤال للمستخدم.
@@ -849,6 +858,16 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">27-08-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>الأسئلة التلاتة في خطوة ③ (حالة المنتج / النجمة / تحديث السعر) بقت من غير أي اختيار افتراضي جاهز — الموظف لازم يضغط بنفسه على إجابة لكل سؤال في كل تشغيلة، وإلا زرار "ابدأ ربط المنتج" بيرفض ويظهر تنبيه.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>سؤال تحديث السعر بقى "💰 تحديث السعر على ووكومرس؟" (اتشالت "(اختياري)")، والمربع بقى فيه رقم افتراضي 100 مع زرار جديد "تأكيد فرق السعر (+100) جنيه" جنبه — نص الزرار بيتحدّث لايف مع أي رقم تاني (مثلاً "(+50) جنيه")، وأي تعديل في الرقم بعد الضغط بيلغي التأكيد ولازم يتضغط تاني قبل الربط.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.10.1</span>
+            <span class="cl-ver-date">27-08-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>زرار "إبدأ ربط منتج جديد" (اتغيّر اسمه من "🆕 بدء منتج جديد") في آخر خطوة ④ بقى بنفس تصميم الأزرار الزرقاء الثابتة التانية في الأداة (لون واحد ثابت، بيغمق شوية عند hover بس) بدل التصميم القديم (أبيض بإطار أزرق، بيتلوّن أزرق كامل عند مرور الماوس بس).</span></li>
           </ul>
         </div>
@@ -1039,7 +1058,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               بيتنفّذ فورًا بعد كل اللي فوق (دائمًا وبدون خيار، وبدون أي انتظار من v2.4.0)</li>
             </ul>
 
-            <h4>كيف تعمل — Workflow (4 خطوات مرقّمة قابلة للطي — v2.10.1)</h4>
+            <h4>كيف تعمل — Workflow (4 خطوات مرقّمة قابلة للطي — v2.11.0)</h4>
             <ol>
               <li>سجّل دخولك من شاشة الدخول</li>
               <li><strong>الخطوة ① — بحث:</strong> حط رقم منتج شوبيفاي أو الصق رابط صفحة المنتج بالكامل من
@@ -1055,15 +1074,18 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               المنتج" و"تم اضافة كاتيجوري فئة الشوز + كاتيجوري البراند" — زرار "تأكيد المراجعة" في النافذة
               فاضل معطّل لحد ما الاتنين يتأكدوا. خطوة ③ ما بتظهرش إلا بعد الضغط على "تأكيد المراجعة". الخطوة
               ① بتتطوى تلقائيًا (بعلامة ✓ خضرا) وتفتح خطوة ② تلقائيًا</li>
-              <li><strong>الخطوة ③ — الربط (+ تحديث السعر اختياري):</strong> ثلاثة صناديق مستقلة بإطار قابلة
-              للاختيار أولاً — كل واحد فيه عنوان السؤال واختياراته في نفس الصف: <strong>حالة المنتج على
-              شوبيفاي بعد الربط؟</strong> — Active / Draft / تبقى كما هي، <strong>هل تريد إضافة نجمة ⭐
-              للعنوان؟</strong> — نعم / لا، و<strong>فرق السعر</strong> (اختياري — سيبه فاضي لتخطّي تحديث
-              السعر). وتحتهم في آخر الخطوة (v2.10.0) صندوق <code>.opt-block</code> عرض فقط بعنوان "🔒 تعديلات
-              أخرى تحدث تلقائي عند الربط:" مقسّم لقسمين (على Stylebox.online — من ضمنها ضبط رابط المنتج
-              URL/Slug — / وعلى Ecommoda.com). التلاتة أسئلة مستقلّون تمامًا عن بعض، وكلهم بيتنفذوا مع بعض
-              بضغطة زرار كبير كامل عرض الصفحة "▶ ابدأ ربط المنتج بين الموقعين الآن" واحدة (single call، مفيش
-              sync_all ومفيش أكشن منفصل لتحديث السعر)</li>
+              <li><strong>الخطوة ③ — الربط (+ تحديث السعر):</strong> ثلاثة صناديق مستقلة بإطار — كل واحد فيه
+              عنوان السؤال واختياراته في نفس الصف، <strong>ومن غير أي اختيار افتراضي جاهز (v2.11.0)</strong> —
+              الموظف لازم يضغط بنفسه على إجابة لكل سؤال في كل تشغيلة: <strong>حالة المنتج على شوبيفاي بعد
+              الربط؟</strong> — Active / Draft / تبقى كما هي، <strong>هل تريد إضافة نجمة ⭐ للعنوان؟</strong> —
+              نعم / لا، و<strong>فرق السعر</strong> — مربع فيه رقم افتراضي 100 (سيبه فاضي لتخطّي تحديث السعر)
+              + زرار "تأكيد فرق السعر (+100) جنيه" لازم يتضغط في كل تشغيلة (نص الزرار بيتحدّث لايف مع أي رقم
+              تاني، وأي تعديل في الرقم بعد الضغط بيلغي التأكيد). لو أي سؤال من التلاتة من غير إجابة/تأكيد، زرار
+              "ابدأ ربط المنتج" بيرفض ويظهر تنبيه. وتحتهم في آخر الخطوة (v2.10.0) صندوق <code>.opt-block</code>
+              عرض فقط بعنوان "🔒 تعديلات أخرى تحدث تلقائي عند الربط:" مقسّم لقسمين (على Stylebox.online — من
+              ضمنها ضبط رابط المنتج URL/Slug — / وعلى Ecommoda.com). التلاتة أسئلة مستقلّون تمامًا عن بعض،
+              وكلهم بيتنفذوا مع بعض بضغطة زرار كبير كامل عرض الصفحة "▶ ابدأ ربط المنتج بين الموقعين الآن"
+              واحدة (single call، مفيش sync_all ومفيش أكشن منفصل لتحديث السعر)</li>
               <li><strong>الخطوة ④ — النتيجة:</strong> بيانات المنتج + جدول الـ Variations اللي اتزامنت أو
               اتخطّت (مع السبب) أولاً — عنوان الجدول بقى (v2.10.0) "📦 المقاسات: ✓ تمت (N) | ⚠ تحذير (N) |
               تخطي (N)"، وتحت الجدول (لو فرق السعر اتحط) جدول مستقل واضح بصريًا لقيمة "فرق السعر المستخدم في
@@ -1123,7 +1145,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (اتربط قبل كده / لقيته / مش لقيته) في خطوتها المستقلة + زرار "راجع صور + كاتيجوريز المنتج قبل الربط" كامل العرض (<code>.btn-block</code>)، إلزامي — بيفتح صفحة ووردبريس في تاب جديد ونادي <code>openReviewConfirmModal()</code></li>
               <li><code>openReviewConfirmModal()</code>/<code>closeReviewConfirmModal()</code>/<code>toggleReviewCheck()</code>/<code>confirmProductReviewed()</code> (v2.10.0) — نافذة تأكيد إلزامية (<code>#reviewConfirmOverlay</code>) ببندين checkbox، زرار "تأكيد المراجعة" معطّل لحد ما الاتنين يتأكدوا؛ التأكيد بينادي <code>markProductReviewed()</code></li>
               <li><code>markProductReviewed()</code> (v2.9.0، بيتنادى من <code>confirmProductReviewed()</code> بدل onclick مباشر من v2.10.0) — هو اللي بيفتح خطوة ③ لأول مرة (بدل ما تفتح تلقائيًا مع نجاح البحث زي قبل كده)</li>
-              <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر اختياري مع بعض، كل واحد في صندوق <code>.opt-block</code> مستقل)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي، و<code>runSync()</code> برضه بيرفض لو <code>productReviewed !== true</code></li>
+              <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر، كل واحد في صندوق <code>.opt-block</code> مستقل، من غير أي اختيار افتراضي جاهز من v2.11.0)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي، و<code>runSync()</code> بيرفض لو <code>productReviewed !== true</code> أو لو أي سؤال من التلاتة من غير إجابة/تأكيد (<code>readSyncOptions()</code>/<code>priceDiffConfirmed</code>)</li>
               <li><code>renderSyncResult()</code> — خطوة ④: تفاصيل بيانات المنتج + جدول "📦 المقاسات" (+ صفوف Brand/Slug من v2.6.0، عنوان الجدول اتغيّر v2.10.0) + جدول فرق السعر تحت الجدول لو <code>priceApplied</code> (اتنقل تحت v2.10.0، كان صف فوق الجدول)، وبعدهم بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + زرار "إبدأ ربط منتج جديد" كامل العرض في آخر الخطوة (<code>.btn-primary.btn-block</code> من v2.10.1 — كان <code>.btn-new-product</code> بتصميم منفصل أبيض/أزرق عند hover)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
               <li><code>openBrandMissingModal()</code>/<code>closeBrandMissingModal()</code> (v2.6.0) — نافذة خطأ مخصصة (<code>#brandMissingOverlay</code>) لما <code>runSync()</code> يلقى <code>e.data.code === 'brand_missing'</code>؛ <code>apiRequest()</code> بقى يحط رد الـ Worker كامل على <code>err.data</code> مش بس <code>err.message</code> عشان الكود ده يتقرا</li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
@@ -1323,7 +1345,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.10.1'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.11.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة (v2.7.0) — منفصلة تمامًا عن TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
 // أي لمس للـ Worker — راجع checkWorkerVersion() تحت)
@@ -2017,20 +2039,23 @@ function setSyncBusy(active) {
   btn.innerHTML = active ? '<span class="mini-spinner"></span> جاري الربط...' : '▶ ابدأ ربط المنتج بين الموقعين الآن';
 }
 
-// القيم الافتراضية = سلوك v2.0.0 نفسه: Draft + إضافة ⭐
+// v2.11.0: مفيش اختيار افتراضي جاهز — الموظف لازم يضغط بنفسه على إجابة لكل سؤال
+// (الحالة / النجمة / تأكيد فرق السعر) في كل تشغيلة. راجع runSync() للحارس المزدوج.
 function resetSyncOptions() {
-  const st = document.querySelector('input[name="shopifyStatus"][value="DRAFT"]');
-  if (st) st.checked = true;
-  const star = document.querySelector('input[name="addStar"][value="yes"]');
-  if (star) star.checked = true;
+  document.querySelectorAll('input[name="shopifyStatus"]').forEach(r => { r.checked = false; });
+  document.querySelectorAll('input[name="addStar"]').forEach(r => { r.checked = false; });
+  priceDiffConfirmed = false;
+  const btn = document.getElementById('priceConfirmBtn');
+  if (btn) btn.classList.remove('confirmed');
+  updatePriceConfirmLabel();
 }
 
 function readSyncOptions() {
   const st   = document.querySelector('input[name="shopifyStatus"]:checked');
   const star = document.querySelector('input[name="addStar"]:checked');
   return {
-    shopifyStatus: st ? st.value : 'DRAFT',
-    addStar:       star ? star.value === 'yes' : true,
+    shopifyStatus: st ? st.value : null,
+    addStar:       star ? star.value === 'yes' : null,
   };
 }
 
@@ -2038,7 +2063,39 @@ const LS_PRICE_DIFF = 'stylebox_link_price_difference'; // آخر قيمة اس�
 
 function loadPriceDiffPref() {
   const saved = localStorage.getItem(LS_PRICE_DIFF);
-  if (saved !== null) document.getElementById('priceDifference').value = saved;
+  document.getElementById('priceDifference').value = saved !== null ? saved : '100';
+  updatePriceConfirmLabel();
+}
+
+// زرار "تأكيد فرق السعر" — v2.11.0: نص الزرار بيتحدّث لايف مع الرقم، ولازم يتضغط
+// إلزاميًا في كل تشغيلة (زي أي اختيار تاني في الخطوة دي) قبل ما runSync() يقبل يكمل.
+let priceDiffConfirmed = false;
+
+function updatePriceConfirmLabel() {
+  const btn = document.getElementById('priceConfirmBtn');
+  if (!btn) return;
+  const raw = document.getElementById('priceDifference').value.trim();
+  if (raw === '' || !Number.isFinite(Number(raw))) {
+    btn.textContent = 'تأكيد تخطي تحديث السعر';
+  } else {
+    const n = Number(raw);
+    btn.textContent = `تأكيد فرق السعر (${n >= 0 ? '+' : ''}${n}) جنيه`;
+  }
+}
+
+function onPriceDiffInput() {
+  priceDiffConfirmed = false;
+  const btn = document.getElementById('priceConfirmBtn');
+  if (btn) btn.classList.remove('confirmed');
+  updatePriceConfirmLabel();
+}
+
+function confirmPriceDiff() {
+  const raw = document.getElementById('priceDifference').value.trim();
+  if (raw !== '' && !Number.isFinite(Number(raw))) { showToast('فرق السعر لازم يكون رقم', 'error'); return; }
+  priceDiffConfirmed = true;
+  const btn = document.getElementById('priceConfirmBtn');
+  if (btn) btn.classList.add('confirmed');
 }
 
 async function runSync() {
@@ -2046,6 +2103,10 @@ async function runSync() {
   if (!foundWpProductId) { showToast('ابحث عن المنتج الأول (الخطوة 1)', 'error'); return; }
   if (!productReviewed) { showToast('راجع صور وكاتيجوريز المنتج الأول (زرار المراجعة في نتيجة البحث)', 'error'); return; }
   const { shopifyStatus, addStar } = readSyncOptions();
+  if (shopifyStatus === null || addStar === null || !priceDiffConfirmed) {
+    showToast('لازم تختار إجابة لكل الأسئلة الثلاثة (الحالة / النجمة / تأكيد فرق السعر) قبل الربط', 'error');
+    return;
+  }
 
   // فرق السعر (v2.5.0) — اختياري تمامًا. فاضي = مفيش تحديث سعر في التشغيلة دي.
   const rawDiff = document.getElementById('priceDifference').value.trim();
