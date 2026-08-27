@@ -410,7 +410,8 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 
       <div class="field-row">
         <label>Shopify Product ID</label>
-        <input type="number" class="field-input" id="shopifyProductIdInput" inputmode="numeric" />
+        <input type="number" class="field-input" id="shopifyProductIdInput" inputmode="numeric"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();runFindProduct();}" />
       </div>
 
       <div class="opt-hint" style="margin-bottom:14px;">
@@ -459,6 +460,23 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
         </div>
       </div>
 
+      <div class="opt-block">
+        <div class="opt-q">💰 هل تريد تحديث السعر على ووكومرس في نفس التشغيلة؟</div>
+        <div class="field-row" style="margin-top:6px;">
+          <label>فرق السعر (سيبه فاضي لتخطّي تحديث السعر)</label>
+          <input type="number" class="field-input" id="priceDifference" step="0.01" />
+        </div>
+        <div class="opt-hint">
+          بيحسب سعر كل Variation على ووكومرس = سعر شوبيفاي + الفرق ده — نفس فكرة
+          هامش <code>PRICE_DIFFERENCE</code> في أداة "مزامنة أسعار Stylebox"، لكن
+          هنا بتتحدد لحظيًا من هنا مش من إعدادات الـ Worker. لو فيه خصم فعلي على
+          شوبيفاي (compare at price)، الأساسي (Regular) بياخد compare_at+الفرق
+          والخصم (Sale) بياخد price+الفرق — وإلا الأساسي بس بياخد price+الفرق
+          ويتشال أي خصم قديم. الحقل فاضي = مفيش تحديث سعر في التشغيلة دي خالص،
+          مستقل تمامًا عن سؤالي الحالة والنجمة فوق.
+        </div>
+      </div>
+
       <div class="opt-hint" style="margin-bottom:14px;">
         <strong>بيحصل دايمًا في كل تشغيلة بدون خيار:</strong> نشر المنتج على ووردبريس
         (<code>stylebox.online</code> → <code>status = publish</code>)، الـ metafield
@@ -469,29 +487,6 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
       <button class="btn-primary" id="syncBtn" onclick="runSync()">▶ تشغيل الربط</button>
 
       <div id="syncResultWrap" style="display:none;"></div>
-
-      <div class="section-divider" style="margin:20px 0;"></div>
-
-      <h4 style="margin:0 0 12px;color:var(--accent);">💰 تحديث السعر (WooCommerce)</h4>
-
-      <div class="field-row">
-        <label>فرق السعر (بيتضاف على سعر شوبيفاي)</label>
-        <input type="number" class="field-input" id="priceDifference" step="0.01" />
-      </div>
-
-      <div class="opt-hint" style="margin-bottom:14px;">
-        بيحسب سعر كل Variation على ووكومرس = سعر شوبيفاي + الفرق ده — نفس فكرة
-        هامش <code>PRICE_DIFFERENCE</code> في أداة "مزامنة أسعار Stylebox"، لكن
-        هنا بتتحدد لحظيًا من هنا مش من إعدادات الـ Worker. لو فيه خصم فعلي على
-        شوبيفاي (compare at price)، الأساسي (Regular) بياخد compare_at+الفرق
-        والخصم (Sale) بياخد price+الفرق — وإلا الأساسي بس بياخد price+الفرق
-        ويتشال أي خصم قديم. <strong>المنتج لازم يكون اتربط الأول</strong> (زرار
-        "تشغيل الربط" فوق) قبل ما تحدّث السعر.
-      </div>
-
-      <button class="btn-primary" id="updatePriceBtn" onclick="runUpdatePrice()">💰 تحديث السعر</button>
-
-      <div id="priceResultWrap" style="display:none;"></div>
     </div>
 
   </div>
@@ -733,6 +728,17 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
             <span class="cl-ver-date">26-08-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>تحديث السعر بقى خطوة اختيارية جوه "تشغيل الربط" نفسه (زي سؤالي الحالة والنجمة بالظبط) — أكشن <code>update_price</code> المنفصل اتشال بالكامل. حقل "فرق السعر" فاضي = تخطّي تحديث السعر في التشغيلة دي.</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>مربع "Shopify Product ID" في خطوة البحث بقى بيستجيب لضغطة Enter (كان محتاج ضغط زرار "بحث" بالماوس بس).</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>بحث الخطوة 1 بقى بيجرّب بحث بعنوان المنتج على شوبيفاي لتضييق نطاق البحث (بعد فلتر GTIN المباشر) بدل البحث النصي بالرقم نفسه، اللي تجربة حقيقية أثبتت إنه مبيدوّرش على الـ SKU في ووكومرس هنا. العنوان بيُستخدم لتضييق النطاق بس — التأكيد النهائي القاطع لسه GTIN أو SKU زي ما كان، أبدًا مش بالعنوان.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.4.0</span>
+            <span class="cl-ver-date">26-08-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>إعادة تصميم خطوات "ربط منتج" بالكامل — <strong>الخطوة 1</strong> بقت البحث برقم منتج شوبيفاي (Product ID)؛ الأداة بتدوّر عليه في ووردبريس في خانة GTIN أو بداية الـ SKU، وبتعرض زرار "عرض المنتج على وردبريس للمراجعة". <strong>الخطوة 2</strong> (بعد نجاح البحث) فيها كل خيارات الربط الحالية + تحديث السعر مع بعض. الإدخال اليدوي القديم لـ WooCommerce Product ID اتشال بالكامل.</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>اتلغى انتظار الـ 10 ثواني قبل إضافة Tag <code>stylebox</code> (<code>TAG_DELAY_MS</code>) بالكامل — الـ Tag لسه بيتضاف كآخر خطوة في <code>sync_product</code>، بس دلوقتي فورًا من غير أي انتظار.</span></li>
           </ul>
@@ -843,21 +849,22 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
               بيتنفّذ فورًا بعد كل اللي فوق (دائمًا وبدون خيار، وبدون أي انتظار من v2.4.0)</li>
             </ul>
 
-            <h4>كيف تعمل — Workflow (v2.4.0 — خطوتان)</h4>
+            <h4>كيف تعمل — Workflow (v2.5.0 — خطوتان)</h4>
             <ol>
               <li>سجّل دخولك من شاشة الدخول</li>
               <li><strong>الخطوة 1 — بحث:</strong> حط رقم منتج شوبيفاي (Shopify Product ID، من رابط
-              المنتج على أدمن شوبيفاي) واضغط "بحث" — الأداة بتدوّر عليه في ووردبريس (خانة GTIN أو بداية الـ SKU)</li>
+              المنتج على أدمن شوبيفاي) واضغط "بحث" (أو Enter) — الأداة بتدوّر عليه في ووردبريس (خانة GTIN، أو
+              بحث بعنوان المنتج لتضييق النطاق ثم تأكيد قاطع بالـ SKU/GTIN)</li>
               <li>لو لقت تطابق، بتعرض اسم المنتج + زرار "عرض المنتج على وردبريس للمراجعة" (بيفتح صفحة
               التعديل في تاب جديد)، وتفتح الخطوة 2 تلقائيًا</li>
-              <li><strong>الخطوة 2 — الربط:</strong> جاوب: <strong>حالة المنتج على شوبيفاي بعد الربط؟</strong>
-              — Active / Draft / تبقى كما هي، و<strong>هل تريد إضافة نجمة ⭐ للعنوان؟</strong> — نعم / لا
-              (مستقلّان تمامًا)، واضغط "تشغيل الربط" (single call، مفيش sync_all)</li>
-              <li>راجع نتيجة بيانات المنتج + جدول الـ Variations اللي اتزامنت أو اتخطّت (مع السبب)</li>
+              <li><strong>الخطوة 2 — الربط (+ تحديث السعر اختياري):</strong> جاوب: <strong>حالة المنتج على
+              شوبيفاي بعد الربط؟</strong> — Active / Draft / تبقى كما هي، و<strong>هل تريد إضافة نجمة ⭐
+              للعنوان؟</strong> — نعم / لا، و<strong>فرق السعر</strong> (اختياري — سيبه فاضي لتخطّي تحديث
+              السعر). التلاتة مستقلّون تمامًا عن بعض، وكلهم بيتنفذوا مع بعض بضغطة "تشغيل الربط" واحدة
+              (single call، مفيش sync_all ومفيش أكشن منفصل لتحديث السعر)</li>
+              <li>راجع نتيجة بيانات المنتج + جدول الـ Variations اللي اتزامنت أو اتخطّت (مع السبب، وعمودي
+              السعر لو فرق السعر اتحط)</li>
               <li>أي تفاصيل أو أخطاء إضافية اتسجلت في تاب "سجل العمليات"</li>
-              <li><strong>تحديث السعر (اختياري، منفصل، في نفس الخطوة 2):</strong> بعد ما المنتج يتربط، حط
-              "فرق السعر" واضغط "تحديث السعر" — بيحدّث <code>regular_price</code>/<code>sale_price</code> لكل
-              Variation على ووكومرس = سعر شوبيفاي + الفرق ده (single call منفصل عن الربط)</li>
               <li>"🔄 بحث عن منتج تاني" في أعلى الخطوة 2 يرجّعك للخطوة 1 لمنتج جديد</li>
             </ol>
 
@@ -869,6 +876,8 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
               <tr><td>الحالة → <strong>تبقى كما هي</strong></td><td><code>productUpdate</code> ميبعتش <code>status</code> خالص — حالة المنتج متتلمسش</td></tr>
               <tr><td>النجمة → <strong>نعم</strong> (افتراضي)</td><td>"⭐ " تتضاف لبداية العنوان (idempotent — مايتكررش لو موجود بالفعل)</td></tr>
               <tr><td>النجمة → <strong>لا</strong></td><td><code>productUpdate</code> ميبعتش <code>title</code> — العنوان يفضل زي ما هو</td></tr>
+              <tr><td>فرق السعر → <strong>رقم</strong></td><td>كل Variation على ووكومرس بياخد <code>regular_price</code>/<code>sale_price</code> = سعر شوبيفاي + الفرق ده (نفس معادلة أداة "مزامنة أسعار Stylebox")</td></tr>
+              <tr><td>فرق السعر → <strong>فاضي</strong> (افتراضي)</td><td>تحديث السعر يتخطّى تمامًا — regular_price/sale_price متتلمسش</td></tr>
               <tr><td>(في كل الحالات — بدون خيار)</td><td>نشر المنتج على ووردبريس (<code>status=publish</code>) + metafield <code>wordpress_id</code> + مزامنة كل الـ SKU/المخزون لكل Variation + Tag <code>stylebox</code> فورًا في آخر العملية</td></tr>
             </table>
 
@@ -880,9 +889,8 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
               <tr><td><code>verify_employee</code></td><td>POST — تسجيل الدخول</td></tr>
               <tr><td><code>log_logout</code></td><td>GET — تسجيل خروج</td></tr>
               <tr><td><code>get_employees</code></td><td>GET — قائمة الموظفين النشطين</td></tr>
-              <tr><td><code>find_product</code></td><td>GET — أكشن قراءة بس (v2.4.0، خطوة 1): بياخد <code>shopify_product_id</code> ويدوّر على منتج ووكومرس المطابق (GTIN أو بداية SKU)، ويرجّع <code>wp_product_id</code> + <code>wpEditUrl</code></td></tr>
-              <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code> و<code>add_star</code>: <code>true</code>/<code>false</code> — الاتنين اختياريين، الافتراضي <code>DRAFT</code> + <code>true</code>)</td></tr>
-              <tr><td><code>update_price</code></td><td>POST — أكشن منفصل (v2.3.0): بيحدّث سعر كل Variation مربوطة بمنتج <code>wp_product_id</code> = سعر شوبيفاي + <code>price_difference</code> (رقم مطلوب، بيتحدد من الواجهة). المنتج لازم يكون اتربط الأول</td></tr>
+              <tr><td><code>find_product</code></td><td>GET — أكشن قراءة بس (خطوة 1): بياخد <code>shopify_product_id</code> ويدوّر على منتج ووكومرس المطابق (GTIN، أو بحث بالعنوان لتضييق النطاق + تأكيد قاطع بالـ SKU)، ويرجّع <code>wp_product_id</code> + <code>wpEditUrl</code></td></tr>
+              <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code>، <code>add_star</code>: <code>true</code>/<code>false</code>، و<code>price_difference</code>: رقم اختياري لتحديث السعر في نفس التشغيلة — الثلاثة اختياريون، الافتراضي <code>DRAFT</code> + <code>true</code> + بدون تحديث سعر)</td></tr>
               <tr><td><code>diag</code></td><td>GET — فحص ذاتي كامل (env، صلاحيات شوبيفاي، اتصال WooCommerce، D1) بدون كتابة</td></tr>
               <tr><td><code>get_config</code></td><td>GET — يرجّع نسخة الـ Worker لمقارنتها بنسخة الواجهة</td></tr>
               <tr><td><code>get_logs</code></td><td>GET — سجل مُقسّم صفحات (حتى 100 لكل صفحة)</td></tr>
@@ -899,11 +907,9 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
             <h4>FEATURE MAP</h4>
             <ul>
               <li><code>§AUTH</code> — Universal D1 Auth كاملة (اتضافت 25-08-2026 — الأداة كانت استثناء بدون Login)</li>
-              <li><code>§TOOL-JS::find</code> — خطوة 1 (v2.4.0): نموذج تشغيل <code>find_product</code> (بحث برقم شوبيفاي) + عرض نتيجة (لقيته/مش لقيته) + زرار "عرض على وردبريس"</li>
-              <li><code>§FIND::findWcProductByShopifyId</code> (Worker) — منطق البحث (فلتر GTIN مباشر + بحث نصي fallback + تحقق فعلي من كل نتيجة)</li>
-              <li><code>§TOOL-JS::sync</code> — خطوة 2: نموذج تشغيل <code>sync_product</code> + عرض نتيجة 3 حالات (نجاح/تحذير/فشل)، بيستخدم <code>foundWpProductId</code> من خطوة 1 بدل إدخال يدوي</li>
-              <li><code>§TOOL-JS::updatePrice</code> — بطاقة "تحديث السعر" (v2.3.0)، جوه نفس خطوة 2: نموذج تشغيل <code>update_price</code> + عرض نتيجة 3 حالات، مستقل تمامًا عن <code>runSync()</code></li>
-              <li><code>§PRICE::updateProductPrice</code> (Worker) — منطق حساب وتحديث السعر، بيستخدم نفس <code>findWcSize</code>/<code>findShopifyVariantBySize</code> بتوع <code>syncProduct</code></li>
+              <li><code>§TOOL-JS::find</code> — خطوة 1: نموذج تشغيل <code>find_product</code> (بحث برقم شوبيفاي، Enter أو زرار) + عرض نتيجة (لقيته/مش لقيته) + زرار "عرض على وردبريس"</li>
+              <li><code>§FIND::findWcProductByShopifyId</code> (Worker) — منطق البحث (فلتر GTIN مباشر + بحث بعنوان شوبيفاي لتضييق النطاق + تأكيد قاطع بالـ SKU/GTIN)</li>
+              <li><code>§TOOL-JS::sync</code> — خطوة 2: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر اختياري مع بعض) + عرض نتيجة 3 حالات (نجاح/تحذير/فشل)، بيستخدم <code>foundWpProductId</code> من خطوة 1 بدل إدخال يدوي</li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
               <li><code>§LOG-ENDPOINTS</code> — get_logs / get_logs_count / get_logs_export (v2، بدون تغيير في العقد)</li>
             </ul>
@@ -911,9 +917,9 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
             <h4>KEY VARIABLES</h4>
             <ul>
               <li><code>currentEmployee</code> — { username, displayName } في الذاكرة فقط، مش localStorage</li>
-              <li><code>foundWpProductId</code> (v2.4.0) — رقم منتج ووكومرس اللي رجعته خطوة 1 (<code>find_product</code>)، في الذاكرة فقط. <code>runSync()</code>/<code>runUpdatePrice()</code> بيستخدموه بدل حقل إدخال يدوي — <code>null</code> لحد ما بحث ينجح، و<code>resetFindStep()</code> بيصفّره</li>
+              <li><code>foundWpProductId</code> — رقم منتج ووكومرس اللي رجعته خطوة 1 (<code>find_product</code>)، في الذاكرة فقط. <code>runSync()</code> بيستخدمه بدل حقل إدخال يدوي — <code>null</code> لحد ما بحث ينجح، و<code>resetFindStep()</code> بيصفّره</li>
               <li><code>LS_URL = 'stylebox_link_worker_url'</code> · <code>LS_SECRET = 'stylebox_link_worker_secret'</code> — تغيّرت بريفكس المفاتيح مع إعادة التسمية (كانت <code>wcsync_worker_*</code>)</li>
-              <li><code>LS_PRICE_DIFF = 'stylebox_link_price_difference'</code> (v2.3.0) — آخر قيمة "فرق السعر" استُخدمت، للراحة بس (تعبئة تلقائية)، مش Settings حقيقي ومش مرسل تلقائيًا من غير ما المستخدم يضغط الزرار</li>
+              <li><code>LS_PRICE_DIFF = 'stylebox_link_price_difference'</code> — آخر قيمة "فرق السعر" استُخدمت، للراحة بس (تعبئة تلقائية)، مش Settings حقيقي ومش مرسل تلقائيًا من غير ما المستخدم يضغط "تشغيل الربط"</li>
               <li><code>TOOL_NAME = 'stylebox_products_linking'</code> — قيمة <code>tool</code> في جدول <code>logs</code> (كانت <code>shopify_woo_sync</code> قبل الرينيم)</li>
               <li><code>ALLOWED_SIZE_ATTRIBUTE_NAMES = ['Shoe size','Size','size']</code> — مصدر الحقيقة لمطابقة المقاس بين المنصتين (في الـ Worker)</li>
             </ul>
@@ -922,11 +928,11 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
             <ul>
               <li>الأداة manual-only بالتصميم — مفيش <code>sync_all</code> ومفيش Cron، تشغيلة واحدة = منتج واحد (Worker Builder Step 5A + woocommerce-sync-helper Step 6)</li>
               <li>فشل الخطوة على مستوى المنتج (metafield/status/title) بيتسجل في اللوج كـ <code>error</code> لكن ما بيوقفش باقي الخطوات — نشر ووردبريس، مزامنة الـ Variations، والـ Tag كلهم معزولين في try/catch منفصلة</li>
-              <li>ترتيب التنفيذ في <code>syncProduct</code> مقصود: شوبيفاي (status/⭐/metafield) ← ووردبريس (publish + meta) ← كل الـ Variations ← <code>tagsAdd("stylebox")</code> فورًا. الـ Tag آخر أثر بيظهر على المنتج — متغيّرش الترتيب ده من غير سبب (كان فيه انتظار <code>TAG_DELAY_MS</code> 10 ثواني قبل الـ Tag لحد v2.3.0 — اتلغى بالكامل v2.4.0)</li>
+              <li>ترتيب التنفيذ في <code>syncProduct</code> مقصود: شوبيفاي (status/⭐/metafield) ← ووردبريس (publish + meta) ← كل الـ Variations (SKU/مخزون + سعر اختياري مع بعض في نفس نداء <code>wcUpdateVariation</code>) ← <code>tagsAdd("stylebox")</code> فورًا. الـ Tag آخر أثر بيظهر على المنتج — متغيّرش الترتيب ده من غير سبب (كان فيه انتظار <code>TAG_DELAY_MS</code> 10 ثواني قبل الـ Tag لحد v2.3.0 — اتلغى بالكامل v2.4.0)</li>
               <li>الحقل <code>global_unique_id</code> (GTIN) على مستوى المنتج في ووكومرس هو اللي بيربط المنتجين — لو فاضي، الـ Worker (26-08-2026) بيدوّر على رقم شوبيفاي في بداية الـ <code>SKU</code> (نمط "رقم-slug")، ولو لقاه بيكتبه في GTIN وبيشيله من الـ SKU تلقائيًا قبل ما يكمّل. لو مفيش رقم في الـ SKU برضه، بيرجّع خطأ فورًا زي الأول</li>
               <li>سجلات D1 القديمة تحت اسم <code>shopify_woo_sync</code> (523 صف حتى 25-08-2026) اتنقلت لـ <code>stylebox_products_linking</code> — راجع ملخّص التسليم لتوقيت الـ SQL بالظبط</li>
-              <li><code>update_price</code> (v2.3.0) بيتطلّب المنتج يكون اتربط الأول (<code>global_unique_id</code> موجود) — مفيش GTIN-from-SKU fallback هنا، ده بتاع <code>syncProduct</code> بس. D1 بيستخدم نفس <code>type='synced'/'error'</code> المسجّلين للأداة دي (مش <code>type</code> جديد) مع <code>extra.operation='price_update'</code> كمُميِّز — لو محتاج فلترة منفصلة في تاب السجل مستقبلًا، سجّل <code>type</code> مخصّص في <code>ecommoda-constants</code> §7 الأول</li>
-              <li><code>find_product</code> (v2.4.0) بيجرّب فلتر <code>global_unique_id</code> المباشر على <code>/wc/v3/products</code> الأول (رسمي في ووكومرس 9.2+)، وبيرجع لبحث نصي (<code>search=</code>) كـ fallback لو مش مدعوم أو مرجعش نتيجة — كل نتيجة من الاتنين بتتفحص فعليًا (GTIN حرفيًا أو SKU يبدأ بالرقم) قبل القبول. أكشن قراءة بس، مفيش D1 log ليه (زي diag/get_config)</li>
+              <li>تحديث السعر (<code>price_difference</code>) اندمج v2.5.0 جوه <code>sync_product</code> نفسها — كان أكشن <code>update_price</code> منفصل في v2.3.0، اتشال بالكامل. مفيش GTIN-from-SKU fallback لتحديث السعر — لو المنتج لسه مش مربوط (<code>global_unique_id</code> فاضي)، خطوة السعر ببساطة مش هتلاقي <code>shopifyProductId</code> والعملية كلها بترفض زي أي محاولة ربط تانية بمنتج مش لاقي رقمه. D1 بيستخدم نفس <code>type='synced'/'error'</code> الأصليين لكل variation، مع <code>extra.priceApplied=true</code> كمُميِّز لو الخطوة دي اتنفذت</li>
+              <li><code>find_product</code> بيجرّب فلتر <code>global_unique_id</code> المباشر على <code>/wc/v3/products</code> الأول — ✅ مؤكَّد شغّال فعليًا على <code>stylebox.online</code> (تجربة حقيقية 26-08-2026). المحاولة التانية (v2.5.0): بحث بعنوان المنتج على شوبيفاي (<code>search=</code>) **لتضييق النطاق بس** — القبول النهائي القاطع لسه GTIN أو SKU زي فوق، أبدًا مش بالعنوان. البحث النصي القديم بالرقم نفسه (<code>search=idStr</code>) اتشال — تجربة حقيقية أثبتت إن ووكومرس هنا مبيدوّرش بيه على الـ SKU (رجّع صفر مرشّحين حتى لمنتج SKU بتاعه بيبدأ حرفيًا بالرقم). أكشن قراءة بس، مفيش D1 log ليه (زي diag/get_config)</li>
             </ul>
           </div>
         </details>
@@ -1000,7 +1006,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text-p
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.4.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.5.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
@@ -1470,7 +1476,7 @@ function updateLoginSettingsBtn() {
 // ══════════════════════════════════════════════════════════════
 // §TOOL-JS::find — تاب "ربط منتج": خطوة 1 (v2.4.0) — البحث بمعرف شوبيفاي
 // ══════════════════════════════════════════════════════════════
-let foundWpProductId = null; // بيتملى بعد نجاح runFindProduct() — ده اللي runSync()/runUpdatePrice() بيستخدموه
+let foundWpProductId = null; // بيتملى بعد نجاح runFindProduct() — ده اللي runSync() بيستخدمه
 
 function setFindBusy(active) {
   const btn = document.getElementById('findBtn');
@@ -1538,8 +1544,6 @@ function resetFindStep() {
   document.getElementById('optionsCard').style.display = 'none';
   document.getElementById('syncResultWrap').style.display = 'none';
   document.getElementById('syncResultWrap').innerHTML = '';
-  document.getElementById('priceResultWrap').style.display = 'none';
-  document.getElementById('priceResultWrap').innerHTML = '';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1568,19 +1572,36 @@ function readSyncOptions() {
   };
 }
 
+const LS_PRICE_DIFF = 'stylebox_link_price_difference'; // آخر قيمة استُخدمت — للراحة بس، مش مصدر حقيقة
+
+function loadPriceDiffPref() {
+  const saved = localStorage.getItem(LS_PRICE_DIFF);
+  if (saved !== null) document.getElementById('priceDifference').value = saved;
+}
+
 async function runSync() {
   if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'error'); return; }
   if (!foundWpProductId) { showToast('ابحث عن المنتج الأول (الخطوة 1)', 'error'); return; }
   const { shopifyStatus, addStar } = readSyncOptions();
 
+  // فرق السعر (v2.5.0) — اختياري تمامًا. فاضي = مفيش تحديث سعر في التشغيلة دي.
+  const rawDiff = document.getElementById('priceDifference').value.trim();
+  let priceDifference = null;
+  if (rawDiff !== '') {
+    priceDifference = Number(rawDiff);
+    if (!Number.isFinite(priceDifference)) { showToast('فرق السعر لازم يكون رقم', 'error'); return; }
+  }
+
   setSyncBusy(true);
   try {
     const data = await apiPost('sync_product', {
-      wp_product_id:  foundWpProductId,
-      shopify_status: shopifyStatus,
-      add_star:       addStar,
-      employee:       currentEmployee.username,
+      wp_product_id:    foundWpProductId,
+      shopify_status:   shopifyStatus,
+      add_star:         addStar,
+      price_difference: priceDifference,
+      employee:         currentEmployee.username,
     });
+    if (priceDifference !== null) localStorage.setItem(LS_PRICE_DIFF, String(priceDifference));
     renderSyncResult(data);
     const st = data.results ? data.results.status : 'error';
     showToast(st === 'success' ? 'تم الربط ✓' : st === 'warning' ? 'تم الربط جزئيًا ⚠' : 'فشل الربط ✗', st === 'error' ? 'error' : 'success');
@@ -1649,7 +1670,15 @@ function renderSyncResult(data) {
   const warnCount    = variants.filter(v => v.status === 'warning').length;
   const skippedCount = variants.filter(v => v.status === 'skipped').length;
 
+  // أعمدة السعر (v2.5.0) — بتتعرض بس لو priceApplied (فرق السعر اتبعت في التشغيلة دي)
+  const priceApplied = !!r.priceApplied;
+  const priceCols     = priceApplied ? '<th>السعر الأساسي</th><th>سعر الخصم</th>' : '';
+  const priceColCount = priceApplied ? 2 : 0;
+
   const rows = variants.map(v => {
+    const priceCells = priceApplied
+      ? `<td class="mono">${v.regularPrice ?? '—'}</td><td class="mono">${v.salePrice || '—'}</td>`
+      : '';
     if (v.status === 'synced') {
       return `<tr>
         <td class="mono">${v.variationId}</td>
@@ -1658,6 +1687,7 @@ function renderSyncResult(data) {
         <td class="mono">${v.sku || '—'}</td>
         <td class="mono">${(v.stock ?? 0).toLocaleString('en-US')}</td>
         <td class="mono">${v.shopifyVariantId}</td>
+        ${priceCells}
       </tr>`;
     }
     if (v.status === 'warning') {
@@ -1668,124 +1698,27 @@ function renderSyncResult(data) {
         <td class="mono">${v.sku || '—'}</td>
         <td class="mono">${(v.stock ?? 0).toLocaleString('en-US')}</td>
         <td class="right" style="color:var(--amber);font-size:11px;">${v.warning || '—'}</td>
+        ${priceCells}
       </tr>`;
     }
     return `<tr>
       <td class="mono">${v.variationId}</td>
       <td>${v.size || '—'}</td>
       <td><span class="badge-skip">تخطي</span></td>
-      <td colspan="3" class="right" style="color:var(--text-secondary);">${v.reason || '—'}</td>
+      <td colspan="${3 + priceColCount}" class="right" style="color:var(--text-secondary);">${v.reason || '—'}</td>
     </tr>`;
   }).join('');
 
   wrap.innerHTML = plHtml + `
     <div class="result-card">
       <h4>📦 الـ Variations — ✓ ${syncedCount.toLocaleString('en-US')} تمت | ⚠ ${warnCount.toLocaleString('en-US')} تحذير | تخطي ${skippedCount.toLocaleString('en-US')} — من أصل ${variants.length.toLocaleString('en-US')}</h4>
+      ${priceApplied ? `<div class="result-row"><span>فرق السعر المستخدم</span><span class="mono">${r.priceDifference ?? '—'}</span></div>` : ''}
       <div style="overflow-x:auto;">
         <table class="variant-table">
-          <tr><th>Variation ID</th><th>المقاس</th><th>الحالة</th><th>SKU</th><th>المخزون</th><th>Shopify Variant ID / التفاصيل</th></tr>
-          ${rows || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px;">لا توجد Variations</td></tr>'}
+          <tr><th>Variation ID</th><th>المقاس</th><th>الحالة</th><th>SKU</th><th>المخزون</th><th>Shopify Variant ID / التفاصيل</th>${priceCols}</tr>
+          ${rows || `<tr><td colspan="${6 + priceColCount}" style="text-align:center;color:var(--text-muted);padding:16px;">لا توجد Variations</td></tr>`}
         </table>
       </div>
-    </div>`;
-}
-
-// ══════════════════════════════════════════════════════════════
-// §TOOL-JS::updatePrice — تاب "ربط منتج": بطاقة "تحديث السعر" (v2.3.0)
-// أكشن منفصل عن runSync() — بينده action=update_price، مش sync_product.
-// ══════════════════════════════════════════════════════════════
-const LS_PRICE_DIFF = 'stylebox_link_price_difference'; // آخر قيمة استُخدمت — للراحة بس، مش مصدر حقيقة
-
-function loadPriceDiffPref() {
-  const saved = localStorage.getItem(LS_PRICE_DIFF);
-  if (saved !== null) document.getElementById('priceDifference').value = saved;
-}
-
-function setPriceBusy(active) {
-  const btn = document.getElementById('updatePriceBtn');
-  btn.disabled = active;
-  btn.innerHTML = active ? '<span class="mini-spinner"></span> جاري تحديث السعر...' : '💰 تحديث السعر';
-}
-
-async function runUpdatePrice() {
-  if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'error'); return; }
-  if (!foundWpProductId) { showToast('ابحث عن المنتج الأول (الخطوة 1)', 'error'); return; }
-
-  const rawDiff = document.getElementById('priceDifference').value.trim();
-  if (rawDiff === '') { showToast('من فضلك أدخل فرق السعر', 'error'); return; }
-  const priceDifference = Number(rawDiff);
-  if (!Number.isFinite(priceDifference)) { showToast('فرق السعر لازم يكون رقم', 'error'); return; }
-
-  setPriceBusy(true);
-  try {
-    const data = await apiPost('update_price', {
-      wp_product_id:    foundWpProductId,
-      price_difference: priceDifference,
-      employee:         currentEmployee.username,
-    });
-    localStorage.setItem(LS_PRICE_DIFF, String(priceDifference));
-    renderPriceResult(data);
-    const st = data.results ? data.results.status : 'error';
-    showToast(st === 'warning' ? 'تم تحديث السعر جزئيًا ⚠' : 'تم تحديث السعر ✓', 'success');
-  } catch (e) {
-    showToast('خطأ: ' + e.message, 'error');
-  } finally {
-    setPriceBusy(false);
-  }
-}
-
-// عرض 3 حالات (نجاح / تحذير / فشل) — Step 3C إلزامي
-function renderPriceResult(data) {
-  const wrap = document.getElementById('priceResultWrap');
-  wrap.style.display = 'block';
-  const r = data.results || {};
-  const variants = r.variants || [];
-
-  const overallBadge = r.status === 'warning'
-    ? '<span class="badge-warn">⚠ تم جزئيًا</span>'
-    : '<span class="badge-success">✓ تم</span>';
-
-  const syncedCount  = variants.filter(v => v.status === 'synced').length;
-  const warnCount    = variants.filter(v => v.status === 'warning').length;
-  const skippedCount = variants.filter(v => v.status === 'skipped').length;
-
-  const rows = variants.map(v => {
-    if (v.status === 'synced') {
-      return `<tr>
-        <td class="mono">${v.variationId}</td>
-        <td>${v.size || '—'}</td>
-        <td><span class="badge-ok">✓ اتحدّث</span></td>
-        <td class="mono">${v.regularPrice ?? '—'}</td>
-        <td class="mono">${v.salePrice || '—'}</td>
-      </tr>`;
-    }
-    if (v.status === 'warning') {
-      return `<tr>
-        <td class="mono">${v.variationId}</td>
-        <td>${v.size || '—'}</td>
-        <td><span class="badge-warn">⚠ تحذير</span></td>
-        <td colspan="2" class="right" style="color:var(--amber);font-size:11px;">${v.warning || '—'}</td>
-      </tr>`;
-    }
-    return `<tr>
-      <td class="mono">${v.variationId}</td>
-      <td>${v.size || '—'}</td>
-      <td><span class="badge-skip">تخطي</span></td>
-      <td colspan="2" class="right" style="color:var(--text-secondary);">${v.reason || '—'}</td>
-    </tr>`;
-  }).join('');
-
-  wrap.innerHTML = `
-    <div class="result-card">
-      <h4>💰 تحديث السعر ${overallBadge} — ✓ ${syncedCount.toLocaleString('en-US')} تم | ⚠ ${warnCount.toLocaleString('en-US')} تحذير | تخطي ${skippedCount.toLocaleString('en-US')} — من أصل ${variants.length.toLocaleString('en-US')}</h4>
-      <div class="result-row"><span>فرق السعر المستخدم</span><span class="mono">${r.priceDifference ?? '—'}</span></div>
-      <div style="overflow-x:auto;">
-        <table class="variant-table">
-          <tr><th>Variation ID</th><th>المقاس</th><th>الحالة</th><th>السعر الأساسي</th><th>سعر الخصم</th></tr>
-          ${rows || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:16px;">لا توجد Variations</td></tr>'}
-        </table>
-      </div>
-      ${data.logged === false || r.logged === false ? `<div class="result-note warn">⚠️ العملية تمت لكن جزء منها ما اتسجلش في السجل (logged: false)</div>` : ''}
     </div>`;
 }
 
