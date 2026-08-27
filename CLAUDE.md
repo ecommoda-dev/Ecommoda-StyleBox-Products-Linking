@@ -12,7 +12,53 @@
 `global_unique_id`)، بتزامن الـ SKU/المخزون/الـ metafields لكل Variation، بتحدّث
 حالة وعنوان وتاج المنتج على شوبيفاي، وبتنشر المنتج على ووردبريس (`status=publish`).
 **مين بيستخدمها:** فريق ربط المنتجات (WooCommerce ↔ Shopify).
-**الإصدار:** Worker `v2.5.0` · الواجهة `v2.7.0`.
+**الإصدار:** Worker `v2.6.0` · الواجهة `v2.8.0`.
+
+## حارس البراند + تصحيح الـ Slug — v2.6.0 (27-08-2026)
+
+بطلب صريح من صاحب الأداة — تعديلان جديدان في منطق `sync_product` نفسه (على
+عكس v2.6.0/v2.7.0 اللي فوق، اللي كانت UI بحت). **الاتنين في الـ Worker
+(`index.js`) — الواجهة (v2.8.0) بتعرض النتيجة/الخطأ بس، صفر منطق جديد
+فيها.**
+
+### 1) حارس براند إلزامي — قبل أي كتابة في `syncProduct`
+
+- الـ Vendor على شوبيفاي (حقل `vendor` على المنتج) لازم يكون له براند بنفس
+  الاسم بالظبط (مطابقة حرفية case-insensitive بعد trim) على تاكسونومي
+  `product_brand` في ووردبريس — نفس التاكسونومي اللي شاشة تحرير المنتج على
+  ووردبريس بتاعته فيها "All Brands" checkboxes + "+ Add New Brand"
+  (`/wp-admin/edit-tags.php?taxonomy=product_brand&post_type=product`).
+- **لو مفيش براند مطابق: الربط بالكامل بيتوقف من غير أي كتابة على أي منصة**
+  (لا شوبيفاي ولا ووكومرس اتلمسوا) — رد مُبنيَن من الـ Worker
+  `{ok:false, code:'brand_missing', vendor, addBrandUrl}` بـ HTTP 409. الواجهة
+  بتعرض نافذة خطأ فيها زرار **"➕ إضافة البراند على StyleBox"** بيفتح صفحة
+  إضافة البراند مباشرة في تاب جديد.
+- **لو موجود:** بيتربط بالمنتج تلقائيًا (`brands:[{id}]`) في نفس نداء
+  `status=publish` (خطوة 3 تحت) — مفيش نداء PUT إضافي.
+- الـ Vendor فاضي على شوبيفاي = الحارس بيتخطّى تمامًا (مفيش حاجة تتطابق
+  أصلاً) — مش اعتباره "براند موجود".
+- راجع `BrandNotFoundError`/`wcFindBrandByName()`/`wcSearchBrands()` في
+  `index.js`.
+
+⚠️ **لسه مش مؤكَّد فعليًا** إن `/wc/v3/products/brands` REST endpoint شغّال
+على `stylebox.online` (زي فلتر `global_unique_id` قبل ما يتأكد فعليًا
+26-08-2026) — الافتراض إنه تاكسونومي البراندات الأصلي في ووكومرس 9.4+ بناءً
+على شكل الشاشة في السكرين المرفق مع الطلب (نفس تصميم Categories/Tags +
+"+ Add New Brand"). راجع "مسائل مفتوحة" تحت.
+
+### 2) تصحيح الـ Slug — إلزامي بدون خيار
+
+- عند كل `sync_product`، لو الـ `slug` بتاع منتج ووردبريس مش مطابق
+  للـ slug المتوقع من عنوانه (`slugify(wooProduct.name)` — أحرف صغيرة،
+  استبدال أي حرف مش a-z0-9 بشرطة، دمج الشرطات المتتالية، قص الشرطات من
+  الطرفين)، بيتصلّح تلقائيًا في نفس نداء `status=publish` (خطوة 3 في ترتيب
+  التنفيذ تحت) — مفيش نداء PUT إضافي.
+- مثال: `The North Face Vectiv Enduris 3 - in Beige` →
+  `the-north-face-vectiv-enduris-3-in-beige`.
+- مفيش خيار لتعطيل الخطوة دي — زي نشر ووردبريس (`status=publish`) بالظبط.
+- العنوان المصدر هو عنوان **ووكومرس** (`wooProduct.name`) — مش عنوان شوبيفاي
+  (اللي ممكن يكون فيه "⭐ " مُضافة من الأداة نفسها).
+- راجع `slugify()`/`slugFixed` في `index.js`.
 
 ## تعديلات UI إضافية — v2.7.0 (27-08-2026)
 
@@ -71,13 +117,18 @@
 
 ```
 1. قراءة منتج ووكومرس + الـ Variations + منتج شوبيفاي
+1.5. ⚠️ حارس إلزامي (v2.6.0) : لازم براند على ووردبريس بنفس اسم الـ Vendor
+     على شوبيفاي — وإلا الربط بالكامل يتوقف من غير أي كتابة (BrandNotFoundError)
 2. Shopify product-level : status (حسب الخيار) + ⭐ (حسب الخيار) + metafield wordpress_id
 3. WooCommerce product-level : status='publish' (دايمًا، بدون خيار) + meta _shopify_product_id
+   + slug fix (v2.6.0، دايمًا بدون خيار) + ربط الـ Brand (v2.6.0، لو الخطوة 1.5 لقت تطابق)
 4. لكل Variation : SKU/مخزون/meta على ووكومرس + wordpress_variation_id على شوبيفاي
 5. tagsAdd("stylebox") فورًا ← آخر خطوة على الإطلاق (بدون أي انتظار)
 ```
 
-الخطوات 2 و3 و5 كل واحدة معزولة في `try/catch` لوحدها — فشل واحدة مايوقفش التانية.
+الخطوة 1.5 بتوقف العملية بالكامل لو فشلت (زي فشل `no global_unique_id`) —
+مش معزولة في `try/catch` مستقل زي 2/3/5. الخطوات 2 و3 و5 كل واحدة معزولة في
+`try/catch` لوحدها — فشل واحدة مايوقفش التانية.
 
 > تعديل 26-08-2026 (v2.2.1): الانتظار كان 5 ثواني، اتغيّر لـ 10 ثواني بناءً على طلب
 > صاحب الأداة. راجع `TAG_DELAY_MS` في `index.js` (وقتها).
@@ -204,7 +255,7 @@ GET ?action=find_product&shopify_product_id=10468878713154
 | `?action=` | بيعمل إيه |
 |---|---|
 | `find_product` | البحث بمعرف شوبيفاي (v2.4.0، بحث بالعنوان اتضاف v2.5.0) — خطوة 1، GET، قراءة بس (`shopify_product_id` مطلوب) — راجع القسم فوق |
-| `sync_product` | العملية الأساسية — ربط/مزامنة منتج واحد (POST، `wp_product_id` مطلوب، + `shopify_status`/`add_star`/`price_difference` اختياريين — راجع القسم فوق) |
+| `sync_product` | العملية الأساسية — ربط/مزامنة منتج واحد (POST، `wp_product_id` مطلوب، + `shopify_status`/`add_star`/`price_difference` اختياريين — راجع القسم فوق). ⚠️ (v2.6.0) ممكن يرجع HTTP 409 `{code:'brand_missing', vendor, addBrandUrl}` لو مفيش براند مطابق على ووردبريس |
 | `check_employee` / `register_pin` / `verify_employee` / `log_logout` / `get_employees` | Universal D1 Auth |
 | `diag` | تشخيص env/Shopify/WC/D1 |
 | `get_config` | نسخة الـ Worker |
@@ -276,6 +327,14 @@ Build watch paths : * الافتراضي
   التأكيد بيتقرا من رد ووكومرس نفسه (`status === 'publish'`) مش من HTTP 200.
 - كل عملية `sync_product` لازم تكون من موظف مسجّل دخول (Universal D1 Auth) —
   مفيش استثناء "تشغيل يدوي بدون تسجيل دخول" هنا رغم إن الأداة manual-only.
+- **(v2.6.0) حارس البراند بيوقف العملية بالكامل** — لو الـ Vendor على شوبيفاي
+  معندوش براند مطابق على ووردبريس، الحارس ده **قبل** أي كتابة (حتى قبل
+  الخطوة 2 Shopify product-level) — مش زي فشل باقي البلوكات (2/3/5) اللي كل
+  واحد معزول في `try/catch` مايوقفش التانية. أي طلب "خلّي الربط يكمل حتى لو
+  البراند مفقود" = رجوع عن تصميم مقصود صريح — يحتاج طلب جديد.
+- **(v2.6.0) تصحيح الـ Slug بدون خيار** — بيحصل في كل تشغيلة زي
+  `status=publish` بالظبط، مفيش parameter لتعطيله. العنوان المصدر هو عنوان
+  ووكومرس (`wooProduct.name`) — مش عنوان شوبيفاي (اللي ممكن يحمل "⭐ ").
 - تحديث السعر (`price_difference`) **جزء من `sync_product` نفسها من v2.5.0** —
   مفيش أكشن `update_price` منفصل خالص (اتشال بالكامل، كان موجود في v2.3.0
   بس). أي طلب لفصله تاني عن الربط = رجوع لتصميم قديم اتشال عمدًا بطلب صاحب
@@ -306,7 +365,7 @@ git checkout 3234fb1 -- index.js index.html
 | ecommoda-html-builder | v1.0.0 |
 | woocommerce-sync-helper | v1.0.0 |
 
-آخر مطابقة: 27-08-2026 · `index.js` v2.5.0 (ماتلمسش) · `index.html` v2.7.0
+آخر مطابقة: 27-08-2026 · `index.js` v2.6.0 (حارس البراند + تصحيح الـ Slug) · `index.html` v2.8.0
 🔴 معلّقة: — لا شيء
 
 > سطر **🔴 معلّقة** = أي بند كاسر **معروف ومتقرر تأجيله**، بسببه.
@@ -315,6 +374,19 @@ git checkout 3234fb1 -- index.js index.html
 
 ## مسائل مفتوحة
 
+- **⚠️ (v2.6.0) `/wc/v3/products/brands` REST endpoint لسه مش مؤكَّد فعليًا
+  ضد `stylebox.online`** — حارس البراند الجديد في `sync_product`
+  (`wcSearchBrands()`/`wcFindBrandByName()`) بيفترض إن تاكسونومي `product_brand`
+  هو Product Brands الأصلي في ووكومرس (اتضاف رسميًا 9.4+، ومتاح فيه REST
+  endpoint بنفس شكل `products/categories`/`products/tags` — `brands:[{id}]`
+  في الـ PUT). الافتراض ده مبني على شكل شاشة تحرير المنتج في السكرين المرفق
+  مع الطلب ("All Brands" checkboxes + "+ Add New Brand" + رابط
+  `edit-tags.php?taxonomy=product_brand`) — **لسه محتاج اختبار حقيقي بعد أول
+  نشر** (زي ما اتأكد فلتر `global_unique_id` قبل كده 26-08-2026). لو الـ
+  endpoint رجّع 404/401، يبقى المنصة مستخدمة تصنيف مخصّص من پلجن تاني (مش
+  الـ Brands الأصلي)، ويحتاج تعديل `wcSearchBrands()`/تحديث المنتج ليستخدم
+  endpoint مختلف (مثلاً `wp/v2/product_brand` عبر WP REST العام لو التاكسونومي
+  `show_in_rest`).
 - تأكيد ما إذا كانت WooCommerce REST secrets (`WC_BASE_URL` / `WC_CONSUMER_KEY` /
   `WC_CONSUMER_SECRET`) لازم تتضاف كأسرار — الكود بيستخدمها فعليًا (`wcGetProduct`
   وغيرها) رغم إن الوصف الأصلي قال "Shopify OAuth بس". لو الأداة رجّعت خطأ ناقص
