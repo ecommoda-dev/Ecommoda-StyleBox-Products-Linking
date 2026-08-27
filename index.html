@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ecommoda StyleBox Products Linking</title>
-<!-- skills: html-builder v1.0.0 — 27-08-2026 (إعادة تصميم UI فقط — worker-builder/woocommerce-sync-helper ماتلمسوش) -->
+<!-- skills: html-builder v1.0.0 — 27-08-2026 (تعديلات UI إضافية — worker-builder/woocommerce-sync-helper ماتلمسوش) -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
@@ -92,7 +92,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .btn-modal-cancel:hover { color: var(--text-primary); }
 .btn-modal-save { padding: 10px 20px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; }
 .btn-modal-save:hover { background: var(--accent-dark); }
-.btn-outline { padding: 9px 16px; background: var(--surface); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; }
+.btn-outline { padding: 9px 16px; background: var(--surface); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 .btn-sm { padding: 8px 14px; font-size: 12.5px; }
 
@@ -225,14 +225,26 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .step-card-body { padding: 0 24px 24px; border-top: 1px solid var(--border); padding-top: 22px; }
 .step-card-body.collapsed { display: none; }
 
-/* خيارات الربط — أسئلة صريحة باختيارات (v2.1.0)، تكبير + بطاقات أوضح 27-08-2026 */
-.opt-block { margin-bottom: 22px; max-width: 620px; }
-.opt-q { font-size: 15px; font-weight: 800; color: var(--text-primary); margin-bottom: 10px; }
-.opt-choices { display: flex; flex-wrap: wrap; gap: 10px; }
+/* خيارات الربط — أسئلة صريحة باختيارات (v2.1.0)، أقسام بإطارات مستقلة 27-08-2026 (v2.7.0):
+   كل خيار بقى صندوق لوحده (عنوان السؤال + المربعات في نفس الصف)، والصناديق مكدّسة تحت بعض. */
+.opt-block { border: 1.5px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); padding: 18px 22px; margin-bottom: 14px; transition: border-color .15s; }
+.opt-block:hover { border-color: var(--border-strong); }
+.opt-block-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.opt-block-note { font-size: 12.5px; color: var(--text-muted); margin-top: 10px; line-height: 1.6; }
+.opt-q { font-size: 15px; font-weight: 800; color: var(--text-primary); flex: 1 1 220px; min-width: 200px; }
+.opt-choices { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
 .opt-choice { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border: 1.5px solid var(--border-strong); border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--text-secondary); background: var(--surface); cursor: pointer; transition: border-color .15s, background .15s, color .15s; min-height: 46px; }
 .opt-choice:hover { border-color: var(--accent); }
 .opt-choice input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; margin: 0; }
 .opt-choice:has(input:checked) { border-color: var(--accent); background: var(--accent-light); color: var(--accent-dark); }
+.price-inline-input { width: 180px; text-align: center; }
+
+/* صندوق "بيحصل دايمًا بدون خيار" — ثابت وظاهر دايمًا 27-08-2026 (v2.7.0)، مش chip قابل للطي
+   زي باقي الأسئلة، عشان يبان إنه إجباري ومش سؤال محتاج إجابة من المستخدم */
+.always-box { display: flex; gap: 14px; align-items: flex-start; background: var(--surface-2); border: 1.5px dashed var(--border-strong); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 18px; }
+.always-box-icon { font-size: 22px; line-height: 1; flex-shrink: 0; }
+.always-box-text { font-size: 13px; color: var(--text-secondary); line-height: 1.75; }
+.always-box-text strong { display: block; color: var(--text-primary); font-size: 13.5px; margin-bottom: 4px; }
 
 /* تفاصيل إضافية اختيارية — بديل الفقرات الطويلة الظاهرة دايمًا (ملحوظة المستخدم: "مليانة placeholders") */
 .info-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-light); border: 1px solid #bfdbfe; border-radius: 20px; padding: 4px 12px; margin-top: 9px; cursor: pointer; user-select: none; transition: background .15s; }
@@ -242,12 +254,14 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .opt-hint { font-size: 12.5px; color: var(--text-muted); line-height: 1.75; margin-top: 9px; display: none; background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 13px; }
 .opt-hint.open { display: block; }
 
-.btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 30px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 15.5px; font-weight: 800; cursor: pointer; transition: background .15s, transform .1s, box-shadow .15s; margin-top: 6px; box-shadow: 0 4px 12px rgba(37,99,235,.28); }
+.btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 30px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 15.5px; font-weight: 800; cursor: pointer; transition: background .15s, transform .1s, box-shadow .15s; margin-top: 6px; box-shadow: 0 4px 12px rgba(37,99,235,.28); text-decoration: none; }
 .btn-primary:hover:not(:disabled) { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,.34); }
 .btn-primary:active:not(:disabled) { transform: translateY(0); }
 .btn-primary:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
 .btn-primary.success { background: var(--green); box-shadow: 0 4px 12px rgba(22,163,74,.28); }
 .btn-primary.success:hover:not(:disabled) { background: #15803d; box-shadow: 0 6px 16px rgba(22,163,74,.34); }
+/* زرار كامل العرض بارز — لأهم فعل في كل خطوة (زي زرار "تحديث الكل" في أدوات تانية) 27-08-2026 (v2.7.0) */
+.btn-block { display: flex; width: 100%; align-items: center; justify-content: center; gap: 10px; padding: 18px 24px; font-size: 16.5px; margin-top: 0; }
 .mini-spinner { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -460,38 +474,54 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
       <div class="step-card-hdr" onclick="toggleStep('Find')">
         <div class="step-badge" id="stepFindBadge">1</div>
         <div class="step-hdr-text">
-          <div class="step-title">🔍 البحث عن المنتج بمعرف شوبيفاي</div>
-          <div class="step-subtitle" id="stepFindSubtitle">حط رقم منتج شوبيفاي (Product ID) وابدأ البحث</div>
+          <div class="step-title">🔍 البحث عن المنتج</div>
+          <div class="step-subtitle" id="stepFindSubtitle">حط رقم أو رابط منتج شوبيفاي وابدأ البحث</div>
         </div>
         <span class="step-chevron open" id="stepFindChevron">▲</span>
       </div>
 
       <div class="step-card-body" id="stepFindBody">
         <div class="field-row">
-          <label>Shopify Product ID</label>
-          <input type="number" class="field-input" id="shopifyProductIdInput" inputmode="numeric"
+          <label>رقم أو رابط منتج شوبيفاي</label>
+          <input type="text" class="field-input" id="shopifyProductIdInput"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();runFindProduct();}" />
         </div>
 
-        <div class="info-toggle" onclick="toggleHint('findHint', this)"><span>ⓘ منين أجيب الرقم ده؟</span><span class="info-arrow">▾</span></div>
+        <div class="info-toggle" onclick="toggleHint('findHint', this)"><span>ⓘ منين أجيب الرقم أو الرابط ده؟</span><span class="info-arrow">▾</span></div>
         <div class="opt-hint" id="findHint">
-          الرقم ده بتلاقيه في رابط المنتج على شوبيفاي أدمن (اللي بعد <code>/products/</code>)،
-          زي <code>10468878713154</code>. الأداة بتدوّر عليه في ووردبريس — إما في
-          خانة GTIN، أو في بداية الـ SKU (لو المنتج لسه مش مربوط).
+          الصق رابط صفحة المنتج بالكامل من أدمن شوبيفاي — زي
+          <code>https://admin.shopify.com/store/xxx/products/10468876681538</code> — والأداة هتستخرج
+          رقم المنتج منه تلقائيًا. أو اكتب الرقم نفسه مباشرة (<code>10468876681538</code>) لو عندك.
+          الأداة بتدوّر بالرقم ده على المنتج في ووردبريس — إما في خانة GTIN، أو في بداية الـ SKU
+          (لو المنتج لسه مش مربوط).
         </div>
 
         <div style="margin-top:18px;">
           <button class="btn-primary" id="findBtn" onclick="runFindProduct()">🔍 بحث</button>
         </div>
-
-        <div id="findResultWrap" style="display:none;margin-top:18px;"></div>
       </div>
     </div>
 
-    <!-- ─── §TOOL::sync — خطوة 2: الربط + تحديث السعر (تظهر بعد نجاح البحث) ─── -->
+    <!-- ─── §TOOL::found (v2.7.0) — خطوة 2: نتيجة البحث، خطوة مستقلة بزرار مراجعة كبير ─── -->
+    <div class="step-card" id="stepFoundCard" style="display:none;">
+      <div class="step-card-hdr" onclick="toggleStep('Found')">
+        <div class="step-badge" id="stepFoundBadge">2</div>
+        <div class="step-hdr-text">
+          <div class="step-title">🔍 نتيجة البحث</div>
+          <div class="step-subtitle" id="stepFoundSubtitle">—</div>
+        </div>
+        <span class="step-chevron open" id="stepFoundChevron">▲</span>
+      </div>
+
+      <div class="step-card-body" id="stepFoundBody">
+        <div id="findResultWrap"></div>
+      </div>
+    </div>
+
+    <!-- ─── §TOOL::sync — خطوة 3: الربط + تحديث السعر (تظهر بعد نجاح البحث) ─── -->
     <div class="step-card" id="stepSyncCard" style="display:none;">
       <div class="step-card-hdr" onclick="toggleStep('Sync')">
-        <div class="step-badge" id="stepSyncBadge">2</div>
+        <div class="step-badge" id="stepSyncBadge">3</div>
         <div class="step-hdr-text">
           <div class="step-title">🔗 الربط وتحديث السعر</div>
           <div class="step-subtitle" id="stepSyncSubtitle">المنتج: —</div>
@@ -502,70 +532,60 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
       <div class="step-card-body" id="stepSyncBody">
         <div class="result-row" style="margin-bottom:16px;"><span>المنتج على ووردبريس</span><span id="foundProductLabel" class="mono"></span></div>
 
-        <!-- ⚠️ الخيارين دول كانوا checkboxes "تخطي..." لحد v2.0.0 — اتحوّلوا لأسئلة
-             صريحة باختيارات في v2.1.0. لسه مستقلّين تمامًا عن بعض. -->
-        <div class="opt-block">
-          <div class="opt-q">حالة المنتج على شوبيفاي بعد الربط؟</div>
-          <div class="opt-choices">
-            <label class="opt-choice"><input type="radio" name="shopifyStatus" value="ACTIVE" /><span>Active</span></label>
-            <label class="opt-choice"><input type="radio" name="shopifyStatus" value="DRAFT" checked /><span>Draft</span></label>
-            <label class="opt-choice"><input type="radio" name="shopifyStatus" value="KEEP" /><span>تبقى كما هي (بدون تعديل)</span></label>
-          </div>
-          <div class="info-toggle" onclick="toggleHint('statusHint', this)"><span>ⓘ تفاصيل</span><span class="info-arrow">▾</span></div>
-          <div class="opt-hint" id="statusHint">
-            "تبقى كما هي" معناها إن <code>productUpdate</code> مايبعتش <code>status</code> خالص —
-            حالة المنتج على شوبيفاي متتلمسش. مستقل تمامًا عن سؤال النجمة تحت.
+        <!-- صندوق ثابت وظاهر دايمًا (مش تفصيلة قابلة للطي) — ده إجراء إجباري مش سؤال للمستخدم -->
+        <div class="always-box">
+          <div class="always-box-icon">🔒</div>
+          <div class="always-box-text">
+            <strong>يحصل دائمًا في كل تشغيلة — بدون أي اختيار:</strong>
+            نشر المنتج على ووردبريس (<code>stylebox.online</code> → <code>status = publish</code>)، الـ metafield
+            <code>wordpress_id</code>، مزامنة الـ SKU/المخزون لكل Variation، وأخيرًا Tag
+            <code>stylebox</code> على شوبيفاي — فورًا كآخر خطوة.
           </div>
         </div>
 
+        <!-- الخيارين دول كانوا checkboxes "تخطي..." لحد v2.0.0 — أسئلة صريحة باختيارات من v2.1.0،
+             ومستقلّين تمامًا عن بعض. كل خيار بقى صندوق لوحده من v2.7.0. -->
         <div class="opt-block">
-          <div class="opt-q">هل تريد إضافة نجمة ⭐ للعنوان؟</div>
-          <div class="opt-choices">
-            <label class="opt-choice"><input type="radio" name="addStar" value="yes" checked /><span>نعم</span></label>
-            <label class="opt-choice"><input type="radio" name="addStar" value="no" /><span>لا</span></label>
-          </div>
-          <div class="info-toggle" onclick="toggleHint('starHint', this)"><span>ⓘ تفاصيل</span><span class="info-arrow">▾</span></div>
-          <div class="opt-hint" id="starHint">
-            "نعم" بتضيف "⭐ " لبداية العنوان مرة واحدة بس (idempotent — مبتتكررش لو النجمة موجودة).
-            "لا" معناها العنوان مايتلمسش. مستقل تمامًا عن سؤال الحالة فوق.
+          <div class="opt-block-row">
+            <div class="opt-q">حالة المنتج على شوبيفاي بعد الربط؟</div>
+            <div class="opt-choices">
+              <label class="opt-choice"><input type="radio" name="shopifyStatus" value="ACTIVE" /><span>Active</span></label>
+              <label class="opt-choice"><input type="radio" name="shopifyStatus" value="DRAFT" checked /><span>Draft</span></label>
+              <label class="opt-choice"><input type="radio" name="shopifyStatus" value="KEEP" /><span>تبقى كما هي (بدون تعديل)</span></label>
+            </div>
           </div>
         </div>
 
         <div class="opt-block">
-          <div class="opt-q">💰 هل تريد تحديث السعر على ووكومرس في نفس التشغيلة؟</div>
-          <div class="field-row" style="margin-top:8px;">
-            <label>فرق السعر (سيبه فاضي لتخطّي تحديث السعر)</label>
-            <input type="number" class="field-input" id="priceDifference" step="0.01" />
-          </div>
-          <div class="info-toggle" onclick="toggleHint('priceHint', this)"><span>ⓘ إزاي بيتحسب السعر؟</span><span class="info-arrow">▾</span></div>
-          <div class="opt-hint" id="priceHint">
-            بيحسب سعر كل Variation على ووكومرس = سعر شوبيفاي + الفرق ده — نفس فكرة
-            هامش <code>PRICE_DIFFERENCE</code> في أداة "مزامنة أسعار Stylebox"، لكن
-            هنا بتتحدد لحظيًا من هنا مش من إعدادات الـ Worker. لو فيه خصم فعلي على
-            شوبيفاي (compare at price)، الأساسي (Regular) بياخد compare_at+الفرق
-            والخصم (Sale) بياخد price+الفرق — وإلا الأساسي بس بياخد price+الفرق
-            ويتشال أي خصم قديم. الحقل فاضي = مفيش تحديث سعر في التشغيلة دي خالص،
-            مستقل تمامًا عن سؤالي الحالة والنجمة فوق.
+          <div class="opt-block-row">
+            <div class="opt-q">هل تريد إضافة نجمة ⭐ للعنوان؟</div>
+            <div class="opt-choices">
+              <label class="opt-choice"><input type="radio" name="addStar" value="yes" checked /><span>نعم</span></label>
+              <label class="opt-choice"><input type="radio" name="addStar" value="no" /><span>لا</span></label>
+            </div>
           </div>
         </div>
 
-        <div class="info-toggle" onclick="toggleHint('alwaysHint', this)"><span>ⓘ إيه اللي بيحصل دايمًا بدون خيار؟</span><span class="info-arrow">▾</span></div>
-        <div class="opt-hint" id="alwaysHint">
-          نشر المنتج على ووردبريس (<code>stylebox.online</code> → <code>status = publish</code>)، الـ metafield
-          <code>wordpress_id</code>، مزامنة الـ SKU/المخزون لكل Variation، وأخيرًا Tag
-          <code>stylebox</code> على شوبيفاي — فورًا كآخر خطوة.
+        <div class="opt-block">
+          <div class="opt-block-row">
+            <div class="opt-q">💰 تحديث السعر على ووكومرس؟ (اختياري)</div>
+            <div class="opt-choices">
+              <input type="number" class="field-input price-inline-input" id="priceDifference" step="0.01" placeholder="فرق السعر">
+            </div>
+          </div>
+          <div class="opt-block-note">سيبه فاضي لتخطّي تحديث السعر في التشغيلة دي.</div>
         </div>
 
-        <div style="margin-top:20px;">
-          <button class="btn-primary" id="syncBtn" onclick="runSync()">▶ تشغيل الربط</button>
+        <div style="margin-top:22px;">
+          <button class="btn-primary success btn-block" id="syncBtn" onclick="runSync()">▶ ابدأ ربط المنتج بين الموقعين الآن</button>
         </div>
       </div>
     </div>
 
-    <!-- ─── §TOOL::result — خطوة 3: النتيجة (تظهر بعد تشغيل الربط) + زرار "بدء منتج جديد" ─── -->
+    <!-- ─── §TOOL::result — خطوة 4: النتيجة (تظهر بعد تشغيل الربط) + زرار "بدء منتج جديد" ─── -->
     <div class="step-card" id="resultSection" style="display:none;">
       <div class="step-card-hdr no-toggle">
-        <div class="step-badge" id="resultBadge">3</div>
+        <div class="step-badge" id="resultBadge">4</div>
         <div class="step-hdr-text">
           <div class="step-title">📋 النتيجة</div>
           <div class="step-subtitle" id="resultSubtitle">—</div>
@@ -820,6 +840,18 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">27-08-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>"نتيجة البحث" بقت خطوة مستقلة لوحدها (② بدل ما تكون جوه خطوة البحث نفسها)، وزرار "🔗 عرض المنتج على وردبريس للمراجعة" بقى زرار كبير كامل عرض الصفحة بدل زرار صغير. نفس التصميم (كامل العرض) اتطبّق على زرار الربط النهائي واتغيّر اسمه لـ"▶ ابدأ ربط المنتج بين الموقعين الآن" (كان "▶ تشغيل الربط"). الخطوات بقت أربعة: ① بحث → ② نتيجة البحث → ③ الربط وتحديث السعر → ④ النتيجة.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>أسئلة الربط الثلاثة (الحالة/النجمة/السعر) بقت كل واحدة صندوق مستقل بإطار، وعنوان السؤال والاختيارات في نفس الصف بدل ما يكونوا فوق بعض. اتشالت شيبس "ⓘ تفاصيل" الخاصة بسؤالي الحالة والنجمة، وشيبس "ⓘ إزاي بيتحسب السعر؟" بالكامل. الجملة "إيه اللي بيحصل دايمًا بدون خيار" بقت صندوق ثابت وظاهر دايمًا (🔒) بدل ما تكون شيبس قابلة للطي زي باقي الأسئلة — عشان توضّح إنها إجراء إجباري مش سؤال للمستخدم.</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>خطوة ① بقت تقبل رابط منتج شوبيفاي بالكامل (من صفحة المنتج على أدمن شوبيفاي) مش بس الرقم الصريح — الأداة بتستخرج الرقم من الرابط تلقائيًا (<code>extractShopifyProductId()</code>). القيمة اللي بتتبعت لـ <code>find_product</code> لسه رقم صريح زي الأول، مفيش تغيير في العقد مع الـ Worker.</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>تنبيه "⚠️ نسخة الـ Worker مختلفة" كان بيقارن نسخة الواجهة (<code>TOOL_VERSION</code>) مباشرة بنسخة الـ Worker، فكان بيطلع خطأ زائف كل مرة تتعدّل فيها الواجهة بس من غير أي لمس للـ Worker — رغم إن الاتنين نسختين مستقلتين زي ما موثّق في CLAUDE.md. دلوقتي بيقارن بثابت جديد <code>EXPECTED_WORKER_VERSION</code> (نسخة الـ Worker اللي الواجهة اتبنت عليها فعليًا، بيتحدّث بس لو <code>index.js</code> نفسه اتغيّر).</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.6.0</span>
+            <span class="cl-ver-date">27-08-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>إعادة تصميم كاملة للواجهة (UI فقط، بدون أي تغيير في منطق الـ Worker أو الـ endpoints أو ترتيب التنفيذ): خطوات "ربط منتج" بقت بطاقات مرقّمة (① ② ③) بتتطوى تلقائيًا وهي بتتنقل من خطوة للتانية، خطوط ومسافات أكبر في كل الأداة، الشروحات الطويلة (اللي كانت ظاهرة دايمًا) بقت خلف زرار "ⓘ تفاصيل" اختياري، شاشة النتيجة اتعاد تصميمها ببانر حالة كبير ملوّن (أخضر/أصفر/أحمر)، وإضافة زرار "🆕 بدء منتج جديد" يرجّع الأداة لأول خطوة من غير Refresh.</span></li>
           </ul>
         </div>
@@ -950,27 +982,31 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               بيتنفّذ فورًا بعد كل اللي فوق (دائمًا وبدون خيار، وبدون أي انتظار من v2.4.0)</li>
             </ul>
 
-            <h4>كيف تعمل — Workflow (خطوات مرقّمة قابلة للطي — v2.6.0)</h4>
+            <h4>كيف تعمل — Workflow (4 خطوات مرقّمة قابلة للطي — v2.7.0)</h4>
             <ol>
               <li>سجّل دخولك من شاشة الدخول</li>
-              <li><strong>الخطوة ① — بحث:</strong> حط رقم منتج شوبيفاي (Shopify Product ID، من رابط
-              المنتج على أدمن شوبيفاي) واضغط "بحث" (أو Enter) — الأداة بتدوّر عليه في ووردبريس (خانة GTIN، أو
-              بحث بعنوان المنتج لتضييق النطاق ثم تأكيد قاطع بالـ SKU/GTIN)</li>
-              <li>لو لقت تطابق، بتعرض اسم المنتج + زرار "عرض المنتج على وردبريس للمراجعة" (بيفتح صفحة
-              التعديل في تاب جديد)، الخطوة ① بتتطوى تلقائيًا (بعلامة ✓ خضرا)، وتفتح الخطوة ② تلقائيًا</li>
-              <li><strong>الخطوة ② — الربط (+ تحديث السعر اختياري):</strong> جاوب: <strong>حالة المنتج على
-              شوبيفاي بعد الربط؟</strong> — Active / Draft / تبقى كما هي، و<strong>هل تريد إضافة نجمة ⭐
+              <li><strong>الخطوة ① — بحث:</strong> حط رقم منتج شوبيفاي أو الصق رابط صفحة المنتج بالكامل من
+              أدمن شوبيفاي (الأداة بتستخرج الرقم من الرابط تلقائيًا) واضغط "بحث" (أو Enter) — الأداة بتدوّر
+              على الرقم في ووردبريس (خانة GTIN، أو بحث بعنوان المنتج لتضييق النطاق ثم تأكيد قاطع بالـ SKU/GTIN)</li>
+              <li><strong>الخطوة ② — نتيجة البحث</strong> (خطوة مستقلة لوحدها): بتعرض بيانات المنتج (أو رسالة
+              "مفيش تطابق") + زرار كبير كامل عرض الصفحة "🔗 عرض المنتج على وردبريس للمراجعة" (بيفتح صفحة
+              التعديل في تاب جديد). الخطوة ① بتتطوى تلقائيًا (بعلامة ✓ خضرا) وتفتح الخطوتان ② و③ تلقائيًا لو
+              لقى تطابق</li>
+              <li><strong>الخطوة ③ — الربط (+ تحديث السعر اختياري):</strong> صندوق ثابت أعلى الخطوة يوضّح
+              "🔒 يحصل دائمًا بدون خيار" (نشر ووردبريس + metafield + مزامنة الـ Variations + Tag)، وتحته ثلاثة
+              صناديق مستقلة بإطار — كل واحد فيه عنوان السؤال واختياراته في نفس الصف: <strong>حالة المنتج على
+              شوبيفاي بعد الربط؟</strong> — Active / Draft / تبقى كما هي، <strong>هل تريد إضافة نجمة ⭐
               للعنوان؟</strong> — نعم / لا، و<strong>فرق السعر</strong> (اختياري — سيبه فاضي لتخطّي تحديث
-              السعر). التلاتة مستقلّون تمامًا عن بعض، وكلهم بيتنفذوا مع بعض بضغطة "تشغيل الربط" واحدة
-              (single call، مفيش sync_all ومفيش أكشن منفصل لتحديث السعر). تفاصيل كل سؤال متاحة اختياريًا خلف
-              زرار "ⓘ تفاصيل" — مش ظاهرة دايمًا عشان الشاشة تفضل مرتّبة</li>
-              <li><strong>الخطوة ③ — النتيجة:</strong> بانر كبير ملوّن (أخضر/أصفر/أحمر) بالحالة العامة، بعده
+              السعر). التلاتة مستقلّون تمامًا عن بعض، وكلهم بيتنفذوا مع بعض بضغطة زرار كبير كامل عرض الصفحة
+              "▶ ابدأ ربط المنتج بين الموقعين الآن" واحدة (single call، مفيش sync_all ومفيش أكشن منفصل لتحديث
+              السعر)</li>
+              <li><strong>الخطوة ④ — النتيجة:</strong> بانر كبير ملوّن (أخضر/أصفر/أحمر) بالحالة العامة، بعده
               بيانات المنتج + جدول الـ Variations اللي اتزامنت أو اتخطّت (مع السبب، وعمودي السعر لو فرق
-              السعر اتحط). الخطوة ② بتتطوى تلقائيًا لحد ما تفتحها تاني</li>
+              السعر اتحط). الخطوتان ② و③ بيتطووا تلقائيًا لحد ما تفتحهم تاني</li>
               <li>أي تفاصيل أو أخطاء إضافية اتسجلت في تاب "سجل العمليات"</li>
-              <li>زرار "🆕 بدء منتج جديد" أعلى الخطوة ③ يصفّر كل حاجة ويرجّعك للخطوة ① لمنتج جديد من غير
-              Refresh للصفحة. الضغط على عنوان الخطوة ① (وهي متطوية) بيفتحها تاني لو حبيت تبحث من غير ما
-              تصفّر النتيجة الحالية</li>
+              <li>زرار "🆕 بدء منتج جديد" أعلى الخطوة ④ يصفّر كل حاجة ويرجّعك للخطوة ① لمنتج جديد من غير
+              Refresh للصفحة. الضغط على عنوان أي خطوة متطوية بيفتحها تاني لو حبيت تراجعها من غير ما تصفّر
+              النتيجة الحالية</li>
             </ol>
 
             <h4>⚙️ إجراءات كل اختيار</h4>
@@ -1012,11 +1048,12 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <h4>FEATURE MAP</h4>
             <ul>
               <li><code>§AUTH</code> — Universal D1 Auth كاملة (اتضافت 25-08-2026 — الأداة كانت استثناء بدون Login)</li>
-              <li><code>§TOOL-JS::steps</code> (v2.6.0، UI فقط) — <code>toggleStep()</code>/<code>setStepCollapsed()</code> لطي وفتح البطاقات المرقّمة، و<code>toggleHint()</code> لإظهار/إخفاء تفاصيل الأسئلة الاختيارية</li>
-              <li><code>§TOOL-JS::find</code> — خطوة ①: نموذج تشغيل <code>find_product</code> (بحث برقم شوبيفاي، Enter أو زرار) + عرض نتيجة (لقيته/مش لقيته) + زرار "عرض على وردبريس" + <code>resetFindStep()</code>/<code>startNewProduct()</code> لإعادة الضبط الكامل</li>
+              <li><code>§TOOL-JS::steps</code> (UI فقط) — <code>toggleStep()</code>/<code>setStepCollapsed()</code> لطي وفتح البطاقات المرقّمة الأربعة، و<code>toggleHint()</code> لإظهار/إخفاء تفاصيل خطوة البحث (الشيبس التانية اتشالت v2.7.0)</li>
+              <li><code>§TOOL-JS::find</code> — خطوة ①: نموذج تشغيل <code>find_product</code> (بحث برقم أو رابط شوبيفاي — <code>extractShopifyProductId()</code> بيستخرج الرقم من الرابط لو اتحط، Enter أو زرار) + <code>resetFindStep()</code>/<code>startNewProduct()</code> لإعادة الضبط الكامل</li>
               <li><code>§FIND::findWcProductByShopifyId</code> (Worker) — منطق البحث (فلتر GTIN مباشر + بحث بعنوان شوبيفاي لتضييق النطاق + تأكيد قاطع بالـ SKU/GTIN)</li>
-              <li><code>§TOOL-JS::sync</code> — خطوة ②: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر اختياري مع بعض)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي</li>
-              <li><code>renderSyncResult()</code> — خطوة ③: بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + عرض نتيجة 3 حالات (نجاح/تحذير/فشل) + جدول Variations، وبيتحكم في طي خطوة ② وتلوين شارات الخطوتين ② و③</li>
+              <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (لقيته/مش لقيته) في خطوتها المستقلة + زرار "عرض على وردبريس" كامل العرض (<code>.btn-block</code>)</li>
+              <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر اختياري مع بعض، كل واحد في صندوق <code>.opt-block</code> مستقل)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي</li>
+              <li><code>renderSyncResult()</code> — خطوة ④: بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + عرض نتيجة 3 حالات (نجاح/تحذير/فشل) + جدول Variations، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
               <li><code>§LOG-ENDPOINTS</code> — get_logs / get_logs_count / get_logs_export (v2، بدون تغيير في العقد)</li>
             </ul>
@@ -1029,16 +1066,25 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>LS_PRICE_DIFF = 'stylebox_link_price_difference'</code> — آخر قيمة "فرق السعر" استُخدمت، للراحة بس (تعبئة تلقائية)، مش Settings حقيقي ومش مرسل تلقائيًا من غير ما المستخدم يضغط "تشغيل الربط"</li>
               <li><code>TOOL_NAME = 'stylebox_products_linking'</code> — قيمة <code>tool</code> في جدول <code>logs</code> (كانت <code>shopify_woo_sync</code> قبل الرينيم)</li>
               <li><code>ALLOWED_SIZE_ATTRIBUTE_NAMES = ['Shoe size','Size','size']</code> — مصدر الحقيقة لمطابقة المقاس بين المنصتين (في الـ Worker)</li>
+              <li><code>EXPECTED_WORKER_VERSION</code> (v2.7.0) — نسخة الـ Worker المتوقعة لغرض تنبيه "نسخة الـ Worker مختلفة" فقط، منفصلة تمامًا عن <code>TOOL_VERSION</code> (نسخة الواجهة). تتحدّث يدويًا هنا بس لو <code>index.js</code> نفسه اتغيّر فعلاً وترقّى على Cloudflare — تعديل UI بحت زي ده ميلزمهاش تتغيّر</li>
             </ul>
 
             <h4>NOTES</h4>
             <ul>
+              <li>v2.7.0 (27-08-2026) — تعديلات UI إضافية بطلب صاحب الأداة: "نتيجة البحث" بقت خطوة ②
+              مستقلة (كانت جوه خطوة البحث)، زرار "عرض على وردبريس" وزرار الربط النهائي (اتغيّر اسمه لـ"ابدأ
+              ربط المنتج بين الموقعين الآن") بقوا <code>.btn-block</code> كامل العرض، أسئلة الربط التلاتة
+              بقت صناديق <code>.opt-block</code> مستقلة بإطار (عنوان + اختيارات في نفس الصف)، شيبس "ⓘ
+              تفاصيل" (الحالة/النجمة) وشيبس "ⓘ إزاي بيتحسب السعر؟" اتشالوا بالكامل، والجملة "بيحصل دايمًا
+              بدون خيار" بقت <code>.always-box</code> ثابتة مش شيبس قابلة للطي. خطوة البحث بقت تقبل رابط
+              منتج شوبيفاي بالكامل (<code>extractShopifyProductId()</code>) مش الرقم بس. وأصلحنا تنبيه نسخة
+              الـ Worker (<code>EXPECTED_WORKER_VERSION</code> بدل المقارنة المباشرة بـ <code>TOOL_VERSION</code>).
+              <strong>برضه مفيش أي تغيير في منطق الـ Worker ولا الـ endpoints ولا payload النداءات</strong>.</li>
               <li>v2.6.0 (27-08-2026) — إعادة تصميم UI كاملة بطلب صريح من صاحب الأداة: خطوات مرقّمة قابلة
-              للطي، خطوط ومسافات أكبر، تفاصيل الأسئلة خلف "ⓘ تفاصيل" اختياري بدل ظهورها دايمًا، بانر حالة
-              كبير للنتيجة، وزرار "🆕 بدء منتج جديد". <strong>مفيش أي تغيير في منطق الـ Worker ولا الـ
-              endpoints ولا ترتيب التنفيذ في <code>sync_product</code></strong> — التعديل كله في
-              <code>index.html</code> فقط (CSS + هيكل HTML + JS عرض/تفاعل، بدون أي تعديل على payload
-              النداءات لـ <code>find_product</code>/<code>sync_product</code>)</li>
+              للطي، خطوط ومسافات أكبر، بانر حالة كبير للنتيجة، وزرار "🆕 بدء منتج جديد". <strong>مفيش أي
+              تغيير في منطق الـ Worker ولا الـ endpoints ولا ترتيب التنفيذ في <code>sync_product</code></strong>
+              — التعديل كله في <code>index.html</code> فقط (CSS + هيكل HTML + JS عرض/تفاعل، بدون أي تعديل
+              على payload النداءات لـ <code>find_product</code>/<code>sync_product</code>)</li>
               <li>الأداة manual-only بالتصميم — مفيش <code>sync_all</code> ومفيش Cron، تشغيلة واحدة = منتج واحد (Worker Builder Step 5A + woocommerce-sync-helper Step 6)</li>
               <li>فشل الخطوة على مستوى المنتج (metafield/status/title) بيتسجل في اللوج كـ <code>error</code> لكن ما بيوقفش باقي الخطوات — نشر ووردبريس، مزامنة الـ Variations، والـ Tag كلهم معزولين في try/catch منفصلة</li>
               <li>ترتيب التنفيذ في <code>syncProduct</code> مقصود: شوبيفاي (status/⭐/metafield) ← ووردبريس (publish + meta) ← كل الـ Variations (SKU/مخزون + سعر اختياري مع بعض في نفس نداء <code>wcUpdateVariation</code>) ← <code>tagsAdd("stylebox")</code> فورًا. الـ Tag آخر أثر بيظهر على المنتج — متغيّرش الترتيب ده من غير سبب (كان فيه انتظار <code>TAG_DELAY_MS</code> 10 ثواني قبل الـ Tag لحد v2.3.0 — اتلغى بالكامل v2.4.0)</li>
@@ -1119,7 +1165,11 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.6.0'; // مصدر واحد — هيدر + Changelog + شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.7.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+// نسخة الـ Worker المتوقعة (v2.7.0) — منفصلة تمامًا عن TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
+// (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
+// أي لمس للـ Worker — راجع checkWorkerVersion() تحت)
+const EXPECTED_WORKER_VERSION = 'v2.5.0';
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
@@ -1199,11 +1249,14 @@ async function checkWorkerVersion() {
     const d = await apiGet('get_config');
     workerVersion = d.version || null;
     const btn = document.getElementById('verMismatchBtn');
-    if (btn) btn.style.display = (workerVersion && workerVersion !== TOOL_VERSION) ? '' : 'none';
+    // المقارنة ضد EXPECTED_WORKER_VERSION مش TOOL_VERSION — نسخة الواجهة ونسخة الـ Worker مستقلتين
+    // تمامًا عن بعض (زي ما موثّق في CLAUDE.md)، فتعديل UI بحت زي ده بيزوّد TOOL_VERSION من غير أي
+    // داعي يتطابق مع نسخة الـ Worker.
+    if (btn) btn.style.display = (workerVersion && workerVersion !== EXPECTED_WORKER_VERSION) ? '' : 'none';
   } catch { /* الإعدادات ممكن تكون لسه مش مضبوطة */ }
 }
 function showVersionMismatch() {
-  showToast(`نسخة الواجهة ${TOOL_VERSION} ≠ نسخة الـ Worker ${workerVersion || '—'} — راجع الـ Promote في Cloudflare`, 'error', 5000);
+  showToast(`نسخة الـ Worker الفعلية ${workerVersion || '—'} ≠ النسخة المتوقعة ${EXPECTED_WORKER_VERSION} — راجع الـ Promote في Cloudflare`, 'error', 5000);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1602,7 +1655,7 @@ function toggleHint(id, toggleEl) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// §TOOL-JS::find — تاب "ربط منتج": خطوة 1 (v2.4.0) — البحث بمعرف شوبيفاي
+// §TOOL-JS::find — تاب "ربط منتج": خطوة 1 (v2.4.0) — البحث برقم أو رابط منتج شوبيفاي
 // ══════════════════════════════════════════════════════════════
 let foundWpProductId = null; // بيتملى بعد نجاح runFindProduct() — ده اللي runSync() بيستخدمه
 
@@ -1612,41 +1665,67 @@ function setFindBusy(active) {
   btn.innerHTML = active ? '<span class="mini-spinner"></span> جاري البحث...' : '🔍 بحث';
 }
 
+// v2.7.0 — بيقبل رقم مباشر أو رابط منتج شوبيفاي بالكامل (أدمن أو متجر) ويستخرج الرقم منه.
+// ده استخراج على مستوى الواجهة بس — القيمة اللي بتتبعت للـ Worker (find_product) لسه رقم صريح زي الأول.
+function extractShopifyProductId(raw) {
+  const val = (raw || '').trim();
+  if (!val) return null;
+  if (/^\d+$/.test(val)) return val;
+  const byPath = val.match(/\/products\/(\d{6,})/);
+  if (byPath) return byPath[1];
+  const anyNumber = val.match(/(\d{6,})/);
+  return anyNumber ? anyNumber[1] : null;
+}
+
 async function runFindProduct() {
   if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'error'); return; }
   const raw = document.getElementById('shopifyProductIdInput').value.trim();
-  if (!raw) { showToast('من فضلك أدخل Shopify Product ID', 'error'); return; }
-  if (!/^\d+$/.test(raw)) { showToast('الـ Product ID لازم يكون رقم فقط', 'error'); return; }
+  if (!raw) { showToast('من فضلك أدخل رقم أو رابط منتج شوبيفاي', 'error'); return; }
+  const productId = extractShopifyProductId(raw);
+  if (!productId) { showToast('تعذّر استخراج رقم منتج شوبيفاي من القيمة دي — تأكد من الرقم أو الرابط', 'error'); return; }
 
-  // بحث جديد = نطوي أي نتيجة ربط سابقة كانت ظاهرة (رجوع لمنتج تاني من غير Refresh)
+  // بحث جديد = نصفّر أي نتيجة سابقة (بحث أو ربط) كانت ظاهرة (رجوع لمنتج تاني من غير Refresh)
+  document.getElementById('stepFoundCard').style.display = 'none';
+  document.getElementById('stepSyncCard').style.display = 'none';
   document.getElementById('resultSection').style.display = 'none';
   document.getElementById('syncResultWrap').innerHTML = '';
   document.getElementById('syncStatusBannerWrap').innerHTML = '';
 
   setFindBusy(true);
   try {
-    const data = await apiGet('find_product', { shopify_product_id: raw });
+    const data = await apiGet('find_product', { shopify_product_id: productId });
+    document.getElementById('stepFoundCard').style.display = 'block';
     renderFindResult(data);
     if (data.found) {
       foundWpProductId = data.wp_product_id;
       const label = `#${data.wp_product_id}${data.productName ? ' — ' + data.productName : ''}`;
       document.getElementById('foundProductLabel').textContent = label;
+      document.getElementById('stepFoundBadge').className = 'step-badge ok';
+      document.getElementById('stepFoundBadge').textContent = '✓';
+      document.getElementById('stepFoundSubtitle').textContent = `تم العثور على المنتج — ${label}`;
       document.getElementById('stepSyncSubtitle').textContent = `المنتج: ${label}`;
       document.getElementById('stepSyncCard').style.display = 'block';
       document.getElementById('stepFindCard').classList.add('done');
       document.getElementById('stepFindBadge').textContent = '✓';
       document.getElementById('stepFindSubtitle').textContent = `✓ تم العثور على المنتج — ${label}`;
       setStepCollapsed('Find', true);
+      setStepCollapsed('Found', false);
       setStepCollapsed('Sync', false);
-      document.getElementById('stepSyncCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('stepFoundCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
       showToast('لقينا المنتج ✓', 'success');
     } else {
       foundWpProductId = null;
+      document.getElementById('stepFoundBadge').className = 'step-badge err';
+      document.getElementById('stepFoundBadge').textContent = '✗';
+      document.getElementById('stepFoundSubtitle').textContent = 'مفيش تطابق';
+      setStepCollapsed('Found', false);
       document.getElementById('stepSyncCard').style.display = 'none';
+      document.getElementById('stepFoundCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
       showToast('مفيش منتج على ووردبريس بالرقم ده', 'error');
     }
   } catch (e) {
     foundWpProductId = null;
+    document.getElementById('stepFoundCard').style.display = 'none';
     document.getElementById('stepSyncCard').style.display = 'none';
     showToast('خطأ: ' + e.message, 'error');
   } finally {
@@ -1654,33 +1733,28 @@ async function runFindProduct() {
   }
 }
 
+// خطوة 2 (v2.7.0) — نتيجة البحث في خطوتها المستقلة، بزرار مراجعة كبير كامل العرض
 function renderFindResult(data) {
   const wrap = document.getElementById('findResultWrap');
-  wrap.style.display = 'block';
   if (!data.found) {
-    wrap.innerHTML = `<div class="result-card">
-      <h4><span class="badge-danger">✗ مفيش تطابق</span></h4>
-      <div class="result-note err">مفيش منتج على ووردبريس بيحمل الرقم ده — لا في خانة GTIN ولا في بداية الـ SKU (اتفحص ${(data.scanned ?? 0).toLocaleString('en-US')} منتج مرشّح). تأكد من الرقم من رابط المنتج على شوبيفاي أدمن.</div>
-    </div>`;
+    wrap.innerHTML = `<div class="result-note err">مفيش منتج على ووردبريس بيحمل الرقم ده — لا في خانة GTIN ولا في بداية الـ SKU (اتفحص ${(data.scanned ?? 0).toLocaleString('en-US')} منتج مرشّح). تأكد من الرقم أو الرابط من صفحة المنتج على شوبيفاي أدمن.</div>`;
     return;
   }
-  wrap.innerHTML = `<div class="result-card">
-    <h4>🔍 نتيجة البحث <span class="badge-success">✓ اتلقى</span></h4>
+  wrap.innerHTML = `
     <div class="result-row"><span>رقم المنتج على ووردبريس</span><span class="mono">${data.wp_product_id}</span></div>
     ${data.productName ? `<div class="result-row"><span>اسم المنتج</span><span>${data.productName}</span></div>` : ''}
     ${data.sku ? `<div class="result-row"><span>SKU</span><span class="mono">${data.sku}</span></div>` : ''}
     <div class="result-row"><span>اتلقى عن طريق</span><span>${data.matchedBy === 'gtin' ? 'خانة GTIN' : 'بداية الـ SKU'}</span></div>
-    <div style="margin-top:14px;">
-      <a class="btn-outline btn-sm" href="${data.wpEditUrl}" target="_blank" rel="noopener">🔗 عرض المنتج على وردبريس للمراجعة</a>
-    </div>
-  </div>`;
+    <div style="margin-top:18px;">
+      <a class="btn-primary btn-block" href="${data.wpEditUrl}" target="_blank" rel="noopener">🔗 عرض المنتج على وردبريس للمراجعة</a>
+    </div>`;
 }
 
-// تصفير كامل لخطوة البحث — بتترجع الأداة لأول مرحلة بصريًا (خطوة 1 مفتوحة، 2 و3 مخفيين)
+// تصفير كامل لخطوة البحث — بتترجع الأداة لأول مرحلة بصريًا (خطوة 1 مفتوحة، 2 و3 و4 مخفيين)
 function resetFindStep() {
   foundWpProductId = null;
   document.getElementById('shopifyProductIdInput').value = '';
-  document.getElementById('findResultWrap').style.display = 'none';
+  document.getElementById('stepFoundCard').style.display = 'none';
   document.getElementById('findResultWrap').innerHTML = '';
   document.getElementById('stepSyncCard').style.display = 'none';
   document.getElementById('resultSection').style.display = 'none';
@@ -1689,10 +1763,13 @@ function resetFindStep() {
 
   document.getElementById('stepFindCard').classList.remove('done');
   document.getElementById('stepFindBadge').textContent = '1';
-  document.getElementById('stepFindSubtitle').textContent = 'حط رقم منتج شوبيفاي (Product ID) وابدأ البحث';
+  document.getElementById('stepFindSubtitle').textContent = 'حط رقم أو رابط منتج شوبيفاي وابدأ البحث';
+  document.getElementById('stepFoundBadge').className = 'step-badge';
+  document.getElementById('stepFoundBadge').textContent = '2';
+  document.getElementById('stepFoundSubtitle').textContent = '—';
   document.getElementById('stepSyncSubtitle').textContent = 'المنتج: —';
   document.getElementById('stepSyncBadge').className = 'step-badge';
-  document.getElementById('stepSyncBadge').textContent = '2';
+  document.getElementById('stepSyncBadge').textContent = '3';
   setStepCollapsed('Find', false);
 }
 
@@ -1705,12 +1782,12 @@ function startNewProduct() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// §TOOL-JS::sync — تاب "ربط منتج": خطوة 2 — الربط
+// §TOOL-JS::sync — تاب "ربط منتج": خطوة 3 — الربط
 // ══════════════════════════════════════════════════════════════
 function setSyncBusy(active) {
   const btn = document.getElementById('syncBtn');
   btn.disabled = active;
-  btn.innerHTML = active ? '<span class="mini-spinner"></span> جاري الربط...' : '▶ تشغيل الربط';
+  btn.innerHTML = active ? '<span class="mini-spinner"></span> جاري الربط...' : '▶ ابدأ ربط المنتج بين الموقعين الآن';
 }
 
 // القيم الافتراضية = سلوك v2.0.0 نفسه: Draft + إضافة ⭐
@@ -1779,8 +1856,9 @@ function renderSyncResult(data) {
   const variants = r.variants || [];
   const status = r.status || 'error';
 
-  // ── إظهار خطوة 3 (النتيجة) + طي خطوة 2 + تلوين الشارات حسب الحالة الفعلية ──
+  // ── إظهار خطوة 4 (النتيجة) + طي خطوتي 2 و3 + تلوين الشارات حسب الحالة الفعلية ──
   document.getElementById('resultSection').style.display = 'block';
+  setStepCollapsed('Found', true);
   setStepCollapsed('Sync', true);
   document.getElementById('stepSyncBadge').className = `step-badge ${status === 'success' ? 'ok' : status}`;
   document.getElementById('stepSyncBadge').textContent = status === 'success' ? '✓' : status === 'warning' ? '⚠' : '✗';
