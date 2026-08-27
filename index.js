@@ -140,9 +140,38 @@
 // البحث النصي القديم بالرقم نفسه (search=idStr) اتشال — تجربة حقيقية أثبتت
 // إن ووكومرس هنا مش بيدوّر بيه على الـ SKU (رجّع صفر مرشّحين حتى لمنتج SKU
 // بتاعه بيبدأ حرفيًا بالرقم المطلوب).
+//
+// ⚠️ v2.8.0 (27-08-2026) — تحصين البحث ضد فروق العنوان بين المنصتين، بعد
+// حالة حقيقية رجّعت "0 منتج مرشّح" لمنتج موجود فعلاً والـ SKU بتاعه بيبدأ
+// بالرقم المطلوب، والسبب كان **مسافة واحدة زيادة** في العنوان على شوبيفاي:
+//   (أ) العنوان بيتنضّف (أي تتابع مسافات → مسافة واحدة) وبيتبعت منه أول
+//       TITLE_SEARCH_WORDS كلمات بس بدل العنوان كامل — buildTitleSearchQuery().
+//   (ب) ملاذ أخير جديد: لو المحاولتين رجّعوا صفر مرشّحين، بيتعمل مسح مباشر
+//       لمنتجات ووكومرس (الأحدث الأول) ومطابقة محلية على بداية الـ SKU —
+//       wcScanProductsBySkuPrefix(). مستقل تمامًا عن العنوان، فبيغطي أي
+//       اختلاف مهما كان (حرف، كلمة، عنوان مختلف بالكامل).
+// الرد بقى فيه `scannedAll` — false معناها المسح وقف عند السقف (أو فشل)،
+// يعني "مش لقيته" مش قاطعة والواجهة بتقول للموظف كده صراحةً. القبول النهائي
+// **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.7.0';
+const WORKER_VERSION = 'v2.8.0';
+
+// ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
+// عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
+// أصلاً بيُستخدم **لتضييق النطاق بس** (التأكيد النهائي حرفي بالـ GTIN/SKU)،
+// فكل ما الاستعلام يقصر كل ما الشبكة تتوسّع والحساسية لفروق العنوان تقل.
+// 4 كلمات بتكفي عادةً لتمييز المنتج (براند + موديل) من غير ما ترجّع نص الكتالوج.
+const TITLE_SEARCH_WORDS = 4;
+
+// حدود المسح الاحتياطي بالـ SKU (الملاذ الأخير لما البحث بالـ GTIN وبالعنوان
+// يرجّعوا صفر مرشّحين). 100 هو أقصى per_page مسموح في ووكومرس REST.
+// السقف 30 صفحة = 3000 منتج = 30 subrequest كحد أقصى في الحالة النادرة دي —
+// تحت حد الـ subrequests بتاع Cloudflare Workers، ومعظم الحالات بتتلاقى في
+// أول صفحة أو صفحتين لأن الترتيب من الأحدث. لو المتجر عدّى 3000 منتج، زوّد
+// السقف ده (الواجهة بتنبّه الموظف لما المسح يقف من غير ما يخلص).
+const SKU_SCAN_PER_PAGE  = 100;
+const SKU_SCAN_MAX_PAGES = 30;
 
 // الـ Tag اللي بيتضاف لكل منتج مربوط — آخر خطوة في syncProduct، فورًا بدون
 // انتظار (كان فيه TAG_DELAY_MS 10 ثواني قبل الخطوة دي، اتلغى بالكامل 26-08-2026
@@ -560,6 +589,22 @@ async function wcFindBrandByName(env, vendorName) {
   return results.find(b => String(b?.name || '').trim().toLowerCase() === target) || null;
 }
 
+// ─── §HELPERS::buildTitleSearchQuery — v2.8.0 (تضييق نطاق البحث بالعنوان) ───
+// بياخد عنوان المنتج من شوبيفاي وبيرجّع الاستعلام اللي بيتبعت لـ search= بتاع
+// ووكومرس: أي تتابع مسافات (بما فيها المسافات غير العادية زي NBSP) بيبقى مسافة
+// واحدة، وبناخد أول TITLE_SEARCH_WORDS كلمات بس.
+// السبب (حالة حقيقية 27-08-2026): العنوان على شوبيفاي كان فيه **مسافة واحدة
+// زيادة** قبل "– in Dark brown" مقارنة بعنوان ووردبريس، والبحث بالعنوان كامل
+// رجّع صفر مرشّحين رغم إن المنتج موجود والـ SKU بتاعه بيبدأ بالرقم المطلوب.
+// تقصير الاستعلام بيخلي البحث محصّن كمان ضد أي اختلاف في الكلمات المتأخرة.
+// ⚠️ ده بيوسّع المرشّحين بس — التأكيد النهائي لسه حرفي بالـ GTIN/SKU
+// (wcProductMatchesShopifyId)، فمرشّح زيادة مالوش أي أثر غير إننا بنفحصه.
+function buildTitleSearchQuery(title) {
+  const normalized = String(title || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return '';
+  return normalized.split(' ').slice(0, TITLE_SEARCH_WORDS).join(' ');
+}
+
 // ─── §HELPERS::slugify — تعديل إلزامي جديد (v2.6.0): الـ Slug لازم يطابق العنوان ───
 function slugify(text) {
   return String(text || '')
@@ -693,13 +738,14 @@ async function checkShopifyAlreadyLinked(env, shopifyProductId) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// §FIND::findWcProductByShopifyId — v2.4.0 (بحث بالعنوان اتضاف v2.5.0)
+// §FIND::findWcProductByShopifyId — v2.4.0 (بحث بالعنوان اتضاف v2.5.0،
+// مسح الـ SKU الاحتياطي اتضاف v2.8.0)
 // الموظف بيدخل رقم منتج شوبيفاي، والدالة دي بتدوّر على منتج ووكومرس اللي
 // GTIN بتاعه (global_unique_id) بيساوي الرقم، أو الرقم في بداية الـ SKU —
 // نفس ريجيكس extractGtinFromSku فوق، لكن بالعكس (هنا الرقم معروف من الأول،
 // وبندوّر بيه على المنتج بدل ما نستخرجه من SKU منتج معروف).
 //
-// محاولتان لتجميع المرشحين، لكن **القبول النهائي بيعتمد على GTIN/SKU بس**:
+// تلات محاولات لتجميع المرشحين، لكن **القبول النهائي بيعتمد على GTIN/SKU بس**:
 //   1. فلتر global_unique_id مباشر على /wc/v3/products — رسمي في ووكومرس
 //      9.2+، بيرجّع تطابق دقيق فورًا. ✅ مؤكَّد شغّال على stylebox.online
 //      (تجربة حقيقية 26-08-2026 — راجع CLAUDE.md).
@@ -709,9 +755,66 @@ async function checkShopifyAlreadyLinked(env, shopifyProductId) {
 //      (search= بالرقم نفسه) اللي اتأكد فعليًا (26-08-2026) إن ووكومرس هنا
 //      مش بيدوّر بيها على الـ SKU — رجّعت صفر مرشّحين حتى لمنتج SKU بتاعه
 //      بيبدأ حرفيًا بالرقم المطلوب.
-// القبول النهائي القاطع من بين كل المرشّحين (من المحاولتين): GTIN == الرقم
-// حرفيًا، أو SKU يبدأ بالرقم ده تحديدًا — العنوان **مايُستخدمش أبدًا** كتأكيد.
+//      ⚠️ v2.8.0: العنوان بيتنضّف (تجميع أي تتابع مسافات لمسافة واحدة) وبيتبعت
+//      **أول TITLE_SEARCH_WORDS كلمات بس** بدل العنوان كامل — حالة حقيقية
+//      (27-08-2026) رجّعت صفر مرشّحين بسبب **مسافة واحدة زيادة** في نص العنوان
+//      على شوبيفاي مقارنة بووردبريس. تقصير الاستعلام بيوسّع شبكة المرشّحين،
+//      والمرشّحين الزيادة مالهمش أي ضرر لأن التأكيد النهائي حرفي (GTIN/SKU).
+//   3. (v2.8.0) **مسح احتياطي بالـ SKU** — بيشتغل بس لو 1 و2 رجّعوا صفر
+//      مرشّحين. بيمشي على منتجات ووكومرس صفحة صفحة (الأحدث الأول) وبيطابق
+//      محليًا على "الـ SKU بيبدأ بالرقم ده". مستقل تمامًا عن العنوان، فبيغطي
+//      أي اختلاف مهما كان (حرف، كلمة، عنوان مختلف بالكامل). راجع
+//      wcScanProductsBySkuPrefix().
+// القبول النهائي القاطع من بين كل المرشّحين: GTIN == الرقم حرفيًا، أو SKU
+// يبدأ بالرقم ده تحديدًا — العنوان **مايُستخدمش أبدًا** كتأكيد.
 // ══════════════════════════════════════════════════════════════
+
+// بيحدّد إذا كان منتج ووكومرس ده هو المطابق لرقم شوبيفاي المطلوب — التأكيد
+// القاطع الوحيد في الأداة كلها (GTIN حرفي أو SKU بيبدأ بالرقم)، مشترك بين
+// التأكيد على المرشّحين والمسح الاحتياطي عشان القاعدة تفضل في مكان واحد.
+function wcProductMatchesShopifyId(product, idStr) {
+  if (!product) return false;
+  if (String(product.global_unique_id || '').trim() === idStr) return true;
+  const skuMatch = String(product.sku || '').match(/^(\d{6,})-/);
+  return !!(skuMatch && skuMatch[1] === idStr);
+}
+
+// ─── §FIND::wcScanProductsBySkuPrefix — v2.8.0، الملاذ الأخير ───
+// بحث ووكومرس (search=) مش بيدوّر على الـ SKU خالص (مؤكَّد 26-08-2026)، وفلتر
+// الـ GTIN بيفشل لأي منتج لسه مش مربوط. فلما الاتنين يرجّعوا صفر، الطريقة
+// الوحيدة المضمونة للوصول لمنتج الـ SKU بتاعه بيبدأ بالرقم هي المرور على
+// المنتجات نفسها. `_fields` بيقلّل حجم الرد جدًا (4 حقول بس بدل الكائن
+// الكامل)، و orderby=date&order=desc بيخلي المنتجات المضافة حديثًا — وهي
+// الحالة الغالبة هنا — تتلاقى في أول صفحة أو صفحتين. بيقف فورًا أول ما يلاقي.
+async function wcScanProductsBySkuPrefix(env, idStr) {
+  for (let page = 1; page <= SKU_SCAN_MAX_PAGES; page++) {
+    const batch = await wcSearchProducts(env, {
+      per_page: SKU_SCAN_PER_PAGE,
+      page,
+      orderby: 'date',
+      order:   'desc',
+      _fields: 'id,name,sku,global_unique_id',
+    });
+    if (!Array.isArray(batch) || batch.length === 0) {
+      return { match: null, scanned: (page - 1) * SKU_SCAN_PER_PAGE, exhausted: true };
+    }
+
+    const hit = batch.find(p => wcProductMatchesShopifyId(p, idStr));
+    if (hit) {
+      return { match: hit, scanned: (page - 1) * SKU_SCAN_PER_PAGE + batch.length, exhausted: true };
+    }
+
+    // آخر صفحة (رجّعت أقل من المطلوب) — مفيش داعي نطلب صفحة تانية
+    if (batch.length < SKU_SCAN_PER_PAGE) {
+      return { match: null, scanned: (page - 1) * SKU_SCAN_PER_PAGE + batch.length, exhausted: true };
+    }
+  }
+  // وصلنا لسقف الصفحات من غير ما نخلّص المنتجات — النتيجة "مش لقيته" لكن
+  // المسح **مش كامل**، والواجهة بتقول للموظف كده صراحةً بدل ما توهمه إن
+  // المنتج مش موجود أصلاً.
+  return { match: null, scanned: SKU_SCAN_MAX_PAGES * SKU_SCAN_PER_PAGE, exhausted: false };
+}
+
 async function findWcProductByShopifyId(env, shopifyProductId) {
   assertEnv(env, 'shopify', 'woocommerce');
   const idStr = String(shopifyProductId);
@@ -735,8 +838,10 @@ async function findWcProductByShopifyId(env, shopifyProductId) {
       'find_product:getTitle'
     );
     const shopifyTitle = titleResp?.data?.product?.title || null;
-    if (shopifyTitle) {
-      const byTitle = await wcSearchProducts(env, { search: shopifyTitle, per_page: 25 });
+    // v2.8.0: تنضيف المسافات + أول كلمات بس — راجع تعليق المحاولة 2 فوق
+    const titleQuery = buildTitleSearchQuery(shopifyTitle);
+    if (titleQuery) {
+      const byTitle = await wcSearchProducts(env, { search: titleQuery, per_page: 50 });
       if (Array.isArray(byTitle)) candidates.push(...byTitle);
     }
   } catch (e) {
@@ -753,14 +858,29 @@ async function findWcProductByShopifyId(env, shopifyProductId) {
   });
 
   // ── التأكيد النهائي القاطع — GTIN أو SKU بس، أبدًا مش بالعنوان ──
-  const match = unique.find(p => {
-    if (String(p.global_unique_id || '').trim() === idStr) return true;
-    const skuMatch = String(p.sku || '').match(/^(\d{6,})-/);
-    return !!(skuMatch && skuMatch[1] === idStr);
-  });
+  let match      = unique.find(p => wcProductMatchesShopifyId(p, idStr)) || null;
+  let scanned    = unique.length;
+  let scannedAll = true;
+  let matchedVia = 'search';
+
+  // ── (v2.8.0) الملاذ الأخير: مسح بالـ SKU، مستقل تمامًا عن العنوان ──
+  if (!match) {
+    try {
+      const scan = await wcScanProductsBySkuPrefix(env, idStr);
+      match      = scan.match;
+      scanned    = unique.length + scan.scanned;
+      scannedAll = scan.exhausted;
+      if (match) matchedVia = 'scan';
+    } catch (e) {
+      // المسح آخر محاولة — فشله معناه إننا مش قادرين نجزم إن المنتج مش
+      // موجود، فبنقول كده صراحةً (scannedAll=false) بدل "مفيش تطابق" قاطعة
+      console.error('find_product: SKU prefix scan failed:', e);
+      scannedAll = false;
+    }
+  }
 
   if (!match) {
-    return { found: false, scanned: unique.length };
+    return { found: false, scanned, scannedAll };
   }
 
   return {
@@ -769,6 +889,7 @@ async function findWcProductByShopifyId(env, shopifyProductId) {
     productName: match.name,
     sku: match.sku,
     matchedBy: String(match.global_unique_id || '').trim() === idStr ? 'gtin' : 'sku',
+    matchedVia,
     wpEditUrl: `${wcBaseUrl(env)}/wp-admin/post.php?post=${match.id}&action=edit`,
   };
 }
