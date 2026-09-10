@@ -1013,17 +1013,16 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         <button class="modal-close-x" onclick="closeSettings()">✕</button>
       </div>
       <div class="settings-modal-body">
-        <div class="settings-field">
-          <label class="settings-label">WORKER URL</label>
-          <input type="text" class="settings-input" id="cfgUrl" />
-        </div>
+        <!-- ⛔ WORKER URL و ADMIN WORKER URL اتشالوا نهائيًا من هنا
+             (html-builder v2.2.0 · Standards #28). الاتنين مش سر: الحماية
+             الحقيقية في WORKER_SECRET + CORS allowlist، مش في إخفاء الرابط،
+             واسم الـ Worker ثابت من وقت الإنشاء. فتحويلهم لحقل إدخال كان عبء
+             على الموظف بلا أي مكسب أمني. WORKER_URL بقى ثابت في §CONFIG،
+             والأدمن بانل ماكانش مستخدم في الأداة دي أصلاً فاتشال بالكامل.
+             السر وحده هو اللي بيتكتب — الريبو Public فمينفعش يتكتب في الكود. -->
         <div class="settings-field">
           <label class="settings-label">WORKER SECRET</label>
           <input type="password" class="settings-input" id="cfgSecret" />
-        </div>
-        <div class="settings-field">
-          <label class="settings-label">ADMIN WORKER URL</label>
-          <input type="text" class="settings-input" id="cfgAdminUrl" />
         </div>
 
         <!-- Step 3C — زرار الفحص الذاتي، إلزامي لأي أداة بتكتب -->
@@ -1054,6 +1053,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">10-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>شاشة الإعدادات بقى فيها خانة واحدة بس — الـ Secret</strong>. خانتَي <strong>WORKER URL</strong> و<strong>ADMIN WORKER URL</strong> اتشالوا نهائيًا: الاتنين مش سر (الحماية في الـ Secret نفسه وفي قائمة النطاقات المسموحة، مش في إخفاء الرابط)، ورابط الـ Worker ثابت من يوم ما اتعمل. الموظف مبقاش محتاج يلزق حاجة غير السر، وخانة الأدمن بانل ماكانتش مستخدمة في الأداة دي من الأساس. <em>(لو حد كان حافظ الرابط في المتصفح، مش محتاج يعمل حاجة — الأداة بقت تعرفه لوحدها.)</em></span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>كل الأوقات في الأداة بقت بتتحسب بتوقيت القاهرة الحقيقي</strong> — كانت مكتوبة بإزاحة ثابتة (+3 ساعات)، والتوقيت الصيفي بيخلص <strong>29-10-2026</strong>. من اليوم ده كان كل وقت معروض في السجل وكل صف في التصدير هيغلط بساعة <strong>من غير أي رسالة</strong>. ومعاه: فلتر التاريخ كان بيقص على التوقيت العالمي بينما العمود المعروض بتوقيت القاهرة — فأي عملية بين 12 و3 الفجر كانت بتتحسب على اليوم اللي قبله. واسم ملف التصدير كمان بقى بتوقيت القاهرة (كان تصدير الساعة 1 صباحًا بياخد تاريخ إمبارح).</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>تاب السجل بقى بيقول لو المعروض مش كامل</strong> — الأداة بتحمّل السجل كله في نداء واحد بسقف 2000 صف، وكان بيتقص <strong>في السكوت</strong>: عدّاد "النتائج" والتصدير الاتنين بيعدّوا المحمّل بس، والموظف شايف رقم ناقص وهو فاكره الإجمالي. دلوقتي الـ Worker بيرجّع العدد الحقيقي في القاعدة، وبيظهر <strong>بانر ثابت فوق الجدول</strong> بالرقمين، ورسالة "تم تصدير N ✓" الخضرا مابقتش تظهر على ملف ناقص.</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>"مرفوض" بقت حالة رابعة مستقلة بدل ما تتحسب فشل</strong> — البراند الناقص، والتعارض في الربط، والمنتج المش موجود: تلاتتهم بيوقفوا <strong>قبل</strong> أي تعديل على أي منصة، ومع ذلك كانوا بيتعلّموا ✗ أحمر ويتسجّلوا كأعطال. دلوقتي ليهم بادج محايد <strong>⊘ مرفوض — مفيش أي تعديل</strong> وعدّاد مستقل في بانر النهاية، وزرار "أعد محاولة الفاشلة" بيستثنيهم (إعادة المحاولة من غير ما البراند يتضاف هترجع بنفس النتيجة).</span></li>
@@ -1454,7 +1454,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>currentEmployee</code> — { username, displayName } في الذاكرة فقط، مش localStorage</li>
               <li><code>foundWpProductId</code> — رقم منتج ووكومرس اللي رجعته خطوة 1 (<code>find_product</code>)، في الذاكرة فقط. <code>runSync()</code> بيستخدمه بدل حقل إدخال يدوي — <code>null</code> لحد ما بحث ينجح، و<code>resetFindStep()</code> بيصفّره</li>
               <li><code>productReviewed</code> (v2.9.0) — بيبقى <code>true</code> بس بعد الضغط على زرار "راجع صور + كاتيجوريز المنتج قبل الربط" في خطوة ②. <code>runSync()</code> بيرفض لو مش <code>true</code>، و<code>resetFindStep()</code>/<code>startNewProduct()</code> بيصفّروه</li>
-              <li><code>LS_URL = 'stylebox_link_worker_url'</code> · <code>LS_SECRET = 'stylebox_link_worker_secret'</code> — تغيّرت بريفكس المفاتيح مع إعادة التسمية (كانت <code>wcsync_worker_*</code>)</li>
+              <li><code>LS_SECRET = 'stylebox_link_worker_secret'</code> — <strong>المفتاح الوحيد</strong> في <code>localStorage</code> (v2.17.0). <code>LS_URL</code> و<code>LS_ADMIN_URL</code> اتشالوا: رابط الـ Worker بقى ثابت <code>WORKER_URL</code> في <code>§CONFIG</code>، والأدمن بانل ماكانش مستخدم في الأداة دي أصلاً. الأداة <strong>مش عضو في أي مجموعة سر</strong> فالمفتاح باسمها</li>
               <li><code>LS_PRICE_DIFF = 'stylebox_link_price_difference'</code> — آخر قيمة "فرق السعر" استُخدمت، للراحة بس (تعبئة تلقائية)، مش Settings حقيقي ومش مرسل تلقائيًا من غير ما المستخدم يضغط "تشغيل الربط"</li>
               <li><code>TOOL_NAME = 'stylebox_products_linking'</code> — قيمة <code>tool</code> في جدول <code>logs</code> (كانت <code>shopify_woo_sync</code> قبل الرينيم)</li>
               <li><code>ALLOWED_SIZE_ATTRIBUTE_NAMES = ['Shoe size','Size','size']</code> — مصدر الحقيقة لمطابقة المقاس بين المنصتين (في الـ Worker)</li>
@@ -1666,7 +1666,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.16.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.17.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة (v2.9.0 — أكشن find_product_relink بتاع مسار Bulk) — منفصلة تمامًا عن
 // TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
@@ -1676,20 +1676,27 @@ const TOOL_VERSION = 'v2.16.0'; // نسخة الواجهة (UI) — بتزيد �
 //    في الـ Worker v2.12.0 — فالحد الأدنى لازم يبقى v2.12.0، وإلا الحارس نفسه
 //    بيبقى معطّل ويعدّي Worker مش قادر يخدم الصفحة (Standards #29).
 const MIN_WORKER_VERSION = 'v2.12.0';
-const LS_URL       = 'stylebox_link_worker_url';
-const LS_SECRET    = 'stylebox_link_worker_secret';
-const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
+// رابط الـ Worker **ثابت** مش حقل إعدادات (html-builder v2.2.0 · Standards #28):
+// اسم الـ Worker بيتحدد وقت الإنشاء ومايتغيّرش، والرابط مش سر أصلاً.
+// لو اتعمل rename أو custom domain، السطر ده هو المكان الوحيد اللي يتغيّر.
+const WORKER_URL = 'https://stylebox-products-linking-worker.ecommoda-dev.workers.dev';
+
+// المفتاح **الوحيد** لإعدادات الاتصال — السر بس، لأنه هو الوحيد اللي فعلاً
+// محتاج يتخزّن من جهة المستخدم (الريبو Public). الأداة دي **مش عضو في أي
+// مجموعة سر** (ecommoda-constants §6)، فالمفتاح باسمها زي ما هو.
+// ⚠️ LS_URL و LS_ADMIN_URL اتشالوا. المفتاحين القدام في متصفحات الموظفين
+//    بيتسابوا زي ما هم — مابقاش حد بيقراهم، ومسحهم مالوش فايدة.
+const LS_SECRET = 'stylebox_link_worker_secret';
 
 function getConfig() {
   return {
-    workerUrl:    localStorage.getItem(LS_URL)    || '',
+    workerUrl:    WORKER_URL,
     workerSecret: localStorage.getItem(LS_SECRET) || '',
-    adminUrl:     localStorage.getItem(LS_ADMIN_URL) || '',
   };
 }
+// الرابط ثابت دلوقتي، فالسر هو الحاجة الوحيدة اللي ممكن تكون ناقصة
 function isConfigured() {
-  const c = getConfig();
-  return c.workerUrl.startsWith('http') && c.workerSecret.length > 0;
+  return (localStorage.getItem(LS_SECRET) || '').length > 0;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1712,24 +1719,17 @@ function switchMainTab(tab) {
 // §SHELL-JS — Settings
 // ══════════════════════════════════════════════════════════════
 function openSettings() {
-  const c = getConfig();
-  document.getElementById('cfgUrl').value      = c.workerUrl    || '';
-  document.getElementById('cfgSecret').value   = c.workerSecret || '';
-  document.getElementById('cfgAdminUrl').value = c.adminUrl     || '';
+  document.getElementById('cfgSecret').value = getConfig().workerSecret || '';
   document.getElementById('settingsOverlay').classList.add('open');
 }
 function closeSettings()            { document.getElementById('settingsOverlay').classList.remove('open'); }
 function closeSettingsOnBackdrop(e) { if (e.target === e.currentTarget) closeSettings(); }
 
 function saveSettings() {
-  const url      = document.getElementById('cfgUrl').value.trim();
-  const secret   = document.getElementById('cfgSecret').value.trim();
-  const adminUrl = document.getElementById('cfgAdminUrl').value.trim();
-  if (!url || !secret) { showToast('الرجاء إدخال الـ URL والـ Secret', 'warning'); return; }
+  const secret = document.getElementById('cfgSecret').value.trim();
+  if (!secret) { showToast('الرجاء إدخال الـ Worker Secret', 'warning'); return; }
 
-  localStorage.setItem(LS_URL,       url.replace(/\/$/, ''));
-  localStorage.setItem(LS_SECRET,    secret);
-  localStorage.setItem(LS_ADMIN_URL, adminUrl.replace(/\/$/, ''));
+  localStorage.setItem(LS_SECRET, secret);
 
   updateSettingsBtn();
   updateLoginSettingsBtn();
