@@ -1043,6 +1043,19 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">10-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>ووكومرس كانت بتخنق التشغيلات الجماعية والأداة كانت بتقول "مفيش منتج"</strong> (Worker v2.10.0) — في أول تشغيلة على 15 منتج، المنتج الرابع رجّع <code>429 Too Many Requests</code> ومن بعده كل نداء لووكومرس اترفض، والأداة كانت بتعرض ده كأن المنتجات مش موجودة على ووردبريس. دلوقتي: كل نداءات ووكومرس بقى فيها <strong>إعادة محاولة تلقائية مع انتظار متزايد</strong> (وكانت موجودة لشوبيفاي بس)، والواجهة بتنتظر شوية بين كل منتج والتاني و15 ثانية كاملة بعد أي خنق — عشان القائمة تخلص كلها بدل ما تتقفل بعد تلات منتجات.</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>رسائل الفشل بقت بتقول السبب الحقيقي</strong> — بدل "مفيش منتج على ووردبريس بالرقم ده" في كل الحالات، دلوقتي: خنق ووكومرس بيظهر بنصّه (⏱️ مع كلمة "المنتج ده ماتلمسش")، ومنتج مش مربوط أصلاً بيقول كده ويوجّهك لتاب الربط الفردي.</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>مقاس واحد فاشل مابقاش يوقّع المنتج كله</strong> — لو ووكومرس رفضت مقاس (مثلاً SKU مكرر: <code>Invalid or duplicated SKU</code>)، كان المنتج بيقف في نصّه: باقي المقاسات ما بتتزامنش وتاج <code>stylebox</code> ما بيتضافش. دلوقتي المقاس ده بس بياخد ⚠ تحذير بنص الخطأ وباقي المنتج بيكمّل عادي. (كان موجود في تاب الربط الفردي كمان، مش في Bulk بس.)</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>المسح الاحتياطي بالـ SKU (لحد 30 نداء للمنتج الواحد) <strong>اتقفل في مسار Bulk بس</strong> — هناك رقم ووردبريس معروف أصلاً من الربط نفسه، فالمسح كان بيتنفّذ على الفاضي بعد كل فشل وبيزوّد الخنق. تاب الربط الفردي لسه بيمسح زي ما هو بالظبط.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>منتج كل مقاساته فشلت بقى بيتعلّم <strong>✗ فشل</strong> بدل ⚠ تحذير.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.13.0</span>
+            <span class="cl-ver-date">10-09-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>تاب جديد "🧩 إعادة ربط Bulk"</strong> — مسار <strong>إضافي</strong> بالكامل (تاب "🔗 ربط منتج" الفردي متغيّرش ولا حاجة فيه): بتحط قائمة أرقام منتجات شوبيفاي (رقم في كل سطر — أو رابط المنتج والأداة بتستخرج الرقم)، بتختار نفس الأسئلة التلاتة مرة واحدة للقائمة كلها، والأداة بتعيد ربط المنتجات واحد ورا التاني وبتعرض لكل منتج حالته (✓ تمت / ⚠ تحذير / ✗ فشل) في جدول مباشر مع شريط تقدّم.</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>إعادة ربط منتج مربوط قبل كده مسموحة في المسار الجديد ده بس</strong> (Worker v2.9.0، أكشن جديد <code>find_product_relink</code>): بدل رسالة "هذا المنتج تم ربطه من قبل" اللي بتوقف المسار الفردي، الأداة بتاخد رقم ووردبريس من الربط نفسه (<code>custom.wordpress_id</code>) وبتكمّل. لو الرقم ده بيشاور على منتج ووردبريس مربوط برقم شوبيفاي <strong>تاني</strong>، المنتج ده بيترفض ويتعلّم "تعارض" من غير أي تعديل.</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>في المسار الجماعي بس: <strong>مفيش زرار "راجع صور + كاتيجوريز المنتج قبل الربط" ومفيش نافذة "تأكيد المراجعة"</strong> (بطلب صاحب الأداة). بدلهم: نافذة تأكيد واحدة قبل بدء التشغيل بتعرض عدد المنتجات والخيارات المختارة، وزرار "⏹ إيقاف" بيقف بعد المنتج الحالي، وزرار "🔁 أعد محاولة الفاشلة/المتوقفة" بعد ما القائمة تخلص. الأسئلة التلاتة (الحالة / النجمة / تأكيد فرق السعر) لسه إلزامية زي المسار الفردي بالظبط.</span></li>
@@ -1333,6 +1346,12 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><strong>مفيش زرار "راجع صور + كاتيجوريز المنتج" ومفيش نافذة "تأكيد المراجعة"</strong> —
               الاتنين خاصين بالمسار الفردي بس</li>
             </ul>
+            <p><strong>إيقاع النداءات (v2.14.0):</strong> ووكومرس بترفض النداءات (<code>429</code>) لو جت ورا بعضها
+            من غير نفَس — وده اللي حصل فعلاً في أول تشغيلة (10-09-2026). عشان كده: الـ Worker بيعيد المحاولة
+            تلقائيًا مع انتظار متزايد على أي <code>429</code>/<code>5xx</code>، والواجهة بتستنى شوية بين كل منتج
+            والتاني و<strong>15 ثانية</strong> كاملة بعد أي فشل سببه خنق. لو منتج فشل بسبب الخنق، بيتكتب في صفّه
+            صراحةً إنه <strong>ماتلمسش</strong> — وتقدر تضغط "🔁 أعد محاولة الفاشلة/المتوقفة" بعد ما القائمة تخلص.</p>
+
             <p><strong>اللي متغيّرش:</strong> الربط نفسه بيستخدم نفس أكشن <code>sync_product</code> بنفس
             الـ payload بالظبط — <strong>منتج واحد لكل نداء</strong>، بالترتيب. مفيش <code>sync_all</code>
             ومفيش Cron — الأداة لسه manual-only بالكامل، ولازم موظف مسجّل دخول.</p>
@@ -1612,12 +1631,12 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.13.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.14.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة (v2.9.0 — أكشن find_product_relink بتاع مسار Bulk) — منفصلة تمامًا عن
 // TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
 // أي لمس للـ Worker — راجع checkWorkerVersion() تحت)
-const EXPECTED_WORKER_VERSION = 'v2.9.0';
+const EXPECTED_WORKER_VERSION = 'v2.10.0';
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
@@ -2628,6 +2647,20 @@ function renderSyncResult(data) {
 // manual-only). زيادةً على كده: نافذة تأكيد قبل التشغيل (فعل جماعي غير قابل
 // للتراجع)، قفل الإدخال أثناء التشغيل، وزرار إيقاف بيقف بعد المنتج الحالي.
 // ══════════════════════════════════════════════════════════════
+// ⏱️ إيقاع النداءات (v2.14.0) — بعد عطل 10-09-2026: تشغيلة على 15 منتج خنقت
+// ووكومرس (429 من المنتج الرابع وطول القائمة بعده). الـ Worker بقى فيه retry
+// وباكوف (v2.10.0)، والواجهة بتساعده من هنا: فاصل ثابت بين كل منتج والتاني،
+// وفاصل أطول بكتير بعد أي فشل شكله خنق — الهدف إن القائمة تخلص كلها بدل ما
+// تجري وتتقفل عليها بعد 3 منتجات.
+const BULK_PAUSE_MS          = 700;    // بين كل منتج والتاني في الأحوال العادية
+const BULK_THROTTLE_PAUSE_MS = 15000;  // بعد 429/5xx — ووكومرس محتاجة تاخد نفَس
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// بيتعرّف على فشل الخنق من نص الخطأ (الـ Worker بيمرّر status ووكومرس بنصّه)
+function isThrottleError(msg) {
+  return /\b(429|503|502|504)\b/.test(String(msg || '')) || /too many requests/i.test(String(msg || ''));
+}
+
 let bulkRows          = [];    // [{ id, wpId, name, status, detail }]
 let bulkRunning       = false;
 let bulkStopRequested = false;
@@ -2796,7 +2829,7 @@ function requestBulkStop() {
 async function runBulkList(ids, opts) {
   bulkOpts          = opts;
   bulkStopRequested = false;
-  bulkRows = ids.map(id => ({ id, wpId: null, name: null, status: 'pending', detail: '' }));
+  bulkRows = ids.map(id => ({ id, wpId: null, name: null, status: 'pending', detail: '', throttled: false }));
 
   document.getElementById('stepBulkRunCard').style.display = 'block';
   document.getElementById('bulkAfterActions').style.display = 'none';
@@ -2828,6 +2861,17 @@ async function runBulkList(ids, opts) {
       await runBulkOne(bulkRows[i], opts);
       renderBulkTable();
       updateBulkProgress(i + 1);
+
+      // ── الإيقاع: ووكومرس بتخنق لو النداءات جت ورا بعضها من غير نفَس ──
+      if (i < bulkRows.length - 1 && !bulkStopRequested) {
+        if (bulkRows[i].throttled) {
+          bulkRows[i + 1].detail = `ووكومرس خنقت النداءات — استنى ${Math.round(BULK_THROTTLE_PAUSE_MS / 1000)} ثانية قبل المنتج اللي بعده...`;
+          renderBulkTable();
+          await sleep(BULK_THROTTLE_PAUSE_MS);
+        } else {
+          await sleep(BULK_PAUSE_MS);
+        }
+      }
     }
   } finally {
     setBulkBusy(false);
@@ -2852,8 +2896,13 @@ async function runBulkOne(row, opts) {
     }
     if (!find.found) {
       row.status = 'error';
-      row.detail = 'مفيش منتج على ووردبريس بالرقم ده' +
-                   (find.scannedAll === false ? ' (البحث مافحصش كل المنتجات — جرّب تحط الرقم في خانة GTIN على ووردبريس)' : '');
+      // (v2.14.0) المسح الاحتياطي متقفل عمدًا في المسار الجماعي — فـ"مش لقيته"
+      // هنا معناها إن المنتج مش مربوط أصلاً (مفيش wordpress_id على شوبيفاي)
+      // ومالوش GTIN مطابق، مش إن الأداة اتكسرت. الحل: تاب الربط الفردي.
+      row.detail = find.scanSkipped
+        ? 'المنتج ده مش مربوط قبل كده (مفيش Wordpress ID على شوبيفاي) ومفيش منتج بالرقم ده في خانة GTIN — استخدم تاب "🔗 ربط منتج" الفردي عشان يعمل البحث الكامل.'
+        : 'مفيش منتج على ووردبريس بالرقم ده' +
+          (find.scannedAll === false ? ' (البحث مافحصش كل المنتجات — جرّب تحط الرقم في خانة GTIN على ووردبريس)' : '');
       return;
     }
 
@@ -2893,6 +2942,12 @@ async function runBulkOne(row, opts) {
       row.detail = `البراند "${e.data.vendor || '—'}" مش موجود على ووردبريس — الربط اتوقف بالكامل من غير أي تعديل. ` +
                    (e.data.addBrandUrl ? `<a href="${esc(e.data.addBrandUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800;">➕ إضافة البراند</a>` : '');
       row.detailIsHtml = true;
+    } else if (isThrottleError(e.message)) {
+      // (v2.14.0) الخنق مش "مشكلة في المنتج" — لازم يبان كده بالنص عشان محدش
+      // يدوّر في بيانات منتج سليم. الـ Worker بيعيد المحاولة 3 مرات قبل ما
+      // يوصلنا الخطأ ده أصلاً، فوصوله معناه إن ووكومرس لسه رافضة.
+      row.throttled = true;
+      row.detail = `⏱️ ووكومرس رفضت النداء (خنق مؤقت — Too Many Requests). المنتج ده ماتلمسش. التفاصيل: ${e.message}`;
     } else {
       row.detail = e.message || 'خطأ غير معروف';
     }

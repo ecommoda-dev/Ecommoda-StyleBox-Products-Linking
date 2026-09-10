@@ -5,6 +5,23 @@
 // Account: ecommoda-dev.workers.dev
 // skills: worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 · html-builder v1.0.0 — 27-08-2026
 //
+// ⚠️ v2.10.0 (10-09-2026) — تصليح عطل حقيقي في أول تشغيلة Bulk على 15 منتج:
+//   منتجان اتربطوا، التالت فشل بـ SKU مكرر، والرابع رجّع
+//   `WC update product 20758 failed: 429` — ومن بعده **كل** نداء ووكومرس اترفض،
+//   والواجهة عرضت الفشل ده كـ"مفيش منتج على ووردبريس بالرقم ده". تلات إصلاحات:
+//   1) wcFetch() — كل نداءات ووكومرس بقت من باب واحد فيه retry وباكوف على
+//      429/5xx/فشل الشبكة، واحترام Retry-After. قبل كده الـ retry كان لشوبيفاي
+//      بس (shopifyGQL) وووكومرس من غير أي حماية — أول 429 = فشل نهائي.
+//      الأخطاء بقت WcHttpError شايلة الـ status عشان الكولر يفرّق 404 عن 429.
+//   2) findWcProductForRelink() بقت **ترفع** أي خطأ WC مش 404 بدل ما تبلعه في
+//      fallback صامت — الرسالة بقت بتقول السبب الحقيقي (429/401/5xx) بدل
+//      "مفيش منتج". و findWcProductByShopifyId() أخدت خيار skipScan، ومسار
+//      Bulk بيستخدمه: المسح الاحتياطي (لحد 30 نداء لكل منتج) كان بيتنفّذ على
+//      الفاضي بعد كل فشل وبيغذّي الخنق — دلوقتي متقفل في المسار الجماعي.
+//   3) لوب المقاسات في syncProduct اتعزل في try/catch لكل مقاس — مقاس فاشل
+//      (زي SKU مكرر) كان بيوقّع المنتج كله وبيمنع تاج stylebox وباقي المقاسات.
+//      وكمان: كل المقاسات فشلت = overallStatus 'error' مش 'warning'.
+//
 // ⚠️ v2.9.0 (10-09-2026) — أكشن جديد find_product_relink (قراءة بس، زي
 //   find_product بالظبط: مفيش كتابة ومفيش D1 log)، مخصّص **لمسار إعادة الربط
 //   الجماعي (Bulk)** الجديد في الواجهة، بطلب صاحب الأداة. الفرق الوحيد عن
@@ -172,7 +189,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.9.0';
+const WORKER_VERSION = 'v2.10.0';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -555,13 +572,85 @@ const TAGS_ADD_MUTATION = `
 // ══════════════════════════════════════════════════════════════
 // §WOOCOMMERCE — REST helpers
 // ══════════════════════════════════════════════════════════════
+
+// ─── §WOOCOMMERCE::wcFetch — v2.10.0، الباب الوحيد لكل نداءات ووكومرس ───
+// ⚠️ اتضاف بعد عطل حقيقي (10-09-2026): تشغيلة Bulk على 15 منتج خنقت ووكومرس —
+// المنتج الرابع رجّع `WC update product 20758 failed: 429`، ومن بعده **كل** نداء
+// WC اترفض، والواجهة كانت بتعرض الفشل ده كـ"مفيش منتج على ووردبريس بالرقم ده"
+// (خطأ بنية تحتية اتقرا كـ"مش موجود"). السبب الجذري: نداءات ووكومرس كانت
+// **من غير أي retry ولا باكوف** — أول 429 = فشل نهائي — على عكس shopifyGQL
+// اللي عندها العقد ده من v2.0.0.
+//
+// القواعد هنا (نفس منطق shopifyGQL بالظبط، بس لووكومرس):
+//   • إعادة المحاولة على 429 و5xx وفشل الشبكة — لحد WC_MAX_ATTEMPTS.
+//   • احترام هيدر Retry-After لو ووكومرس بعتته (بالثواني)، وإلا باكوف تربيعي.
+//   • الأخطاء بترجع كـ WcHttpError شايلة الـ status — عشان الكولر يفرّق بين
+//     404 (مش موجود فعلاً) و429/5xx/401 (خنق أو عطل)، والفرق ده هو اللي منع
+//     تكرار العطل فوق. راجع findWcProductForRelink().
+//   • نص رسالة الخطأ **متغيّرش** عن النسخ القديمة عمدًا (الواجهة والسجل بيعرضوه).
+class WcHttpError extends Error {
+  constructor(message, status, body = '') {
+    super(message);
+    this.name    = 'WcHttpError';
+    this.status  = status;
+    this.wcBody  = body;
+  }
+}
+
+const WC_MAX_ATTEMPTS   = 3;
+const WC_RETRY_BASE_MS  = 800;    // 800ms ← 3200ms (تربيعي)
+const WC_RETRY_MAX_MS   = 8000;   // سقف انتظار المحاولة الواحدة
+
+function wcBackoffMs(attempt, retryAfterHeader) {
+  const headerSec = Number(retryAfterHeader);
+  if (Number.isFinite(headerSec) && headerSec > 0) return Math.min(headerSec * 1000, WC_RETRY_MAX_MS);
+  return Math.min(WC_RETRY_BASE_MS * attempt * attempt, WC_RETRY_MAX_MS);
+}
+
+// label = بادئة رسالة الخطأ زي ما كانت بالظبط ("WC get product 123")
+async function wcFetch(env, url, { label, method = 'GET', payload = null, cacheBust = true } = {}) {
+  const headers = { Authorization: wcAuthHeader(env) };
+  if (payload !== null) headers['Content-Type'] = 'application/json';
+
+  let lastError = null;
+  for (let attempt = 1; attempt <= WC_MAX_ATTEMPTS; attempt++) {
+    let resp;
+    try {
+      resp = await fetch(cacheBust ? bust(url) : url, {
+        method,
+        headers,
+        ...(payload !== null ? { body: JSON.stringify(payload) } : {}),
+      });
+    } catch (e) {
+      // فشل شبكة/DNS/timeout — قابل لإعادة المحاولة زي 5xx
+      lastError = new Error(`${label} failed: تعذّر الوصول لووكومرس (${e.message})`);
+      if (attempt < WC_MAX_ATTEMPTS) { await new Promise(r => setTimeout(r, wcBackoffMs(attempt))); continue; }
+      throw lastError;
+    }
+
+    if (resp.ok) return resp.json();
+
+    const errText = await resp.text().catch(() => '');
+    lastError = new WcHttpError(
+      `${label} failed: ${resp.status}${errText ? ` ${errText}` : ''}`,
+      resp.status,
+      errText
+    );
+    const retriable = resp.status === 429 || resp.status >= 500;
+    if (retriable && attempt < WC_MAX_ATTEMPTS) {
+      console.warn(`${label}: ${resp.status} — محاولة ${attempt}/${WC_MAX_ATTEMPTS}، هنستنى ونعيد`);
+      await new Promise(r => setTimeout(r, wcBackoffMs(attempt, resp.headers.get('Retry-After'))));
+      continue;
+    }
+    throw lastError;
+  }
+  throw lastError;
+}
+
 async function wcGetProduct(env, wpProductId) {
-  const resp = await fetch(
-    bust(`${wcBaseUrl(env)}/wp-json/wc/v3/products/${wpProductId}`),
-    { headers: { Authorization: wcAuthHeader(env) } }
-  );
-  if (!resp.ok) throw new Error(`WC get product ${wpProductId} failed: ${resp.status}`);
-  return resp.json();
+  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products/${wpProductId}`, {
+    label: `WC get product ${wpProductId}`,
+  });
 }
 
 // ─── §WOOCOMMERCE::wcSearchProducts — v2.4.0، خطوة 1 (find_product) ───
@@ -571,12 +660,9 @@ async function wcGetProduct(env, wpProductId) {
 // findWcProductByShopifyId() اللي بتستخدمها.
 async function wcSearchProducts(env, params) {
   const qs = new URLSearchParams(params).toString();
-  const resp = await fetch(
-    bust(`${wcBaseUrl(env)}/wp-json/wc/v3/products?${qs}`),
-    { headers: { Authorization: wcAuthHeader(env) } }
-  );
-  if (!resp.ok) throw new Error(`WC search products failed: ${resp.status}`);
-  return resp.json();
+  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products?${qs}`, {
+    label: 'WC search products',
+  });
 }
 
 // ─── §WOOCOMMERCE::wcSearchBrands — v2.6.0 (البراند إلزامي قبل الربط) ───
@@ -589,12 +675,9 @@ async function wcSearchProducts(env, params) {
 // ده شغّال على stylebox.online — راجع "مسائل مفتوحة" في CLAUDE.md.
 async function wcSearchBrands(env, params) {
   const qs = new URLSearchParams(params).toString();
-  const resp = await fetch(
-    bust(`${wcBaseUrl(env)}/wp-json/wc/v3/products/brands?${qs}`),
-    { headers: { Authorization: wcAuthHeader(env) } }
-  );
-  if (!resp.ok) throw new Error(`WC search brands failed: ${resp.status}`);
-  return resp.json();
+  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products/brands?${qs}`, {
+    label: 'WC search brands',
+  });
 }
 
 // مطابقة حرفية (case-insensitive، بعد trim) — مش بحث تقريبي. الاسم لازم يطابق
@@ -638,44 +721,27 @@ function slugify(text) {
 // key — does NOT wipe other existing meta, same behavior relied on in
 // wcUpdateVariation() below.
 async function wcUpdateProduct(env, wpProductId, payload) {
-  const resp = await fetch(
-    `${wcBaseUrl(env)}/wp-json/wc/v3/products/${wpProductId}`,
-    {
-      method:  'PUT',
-      headers: { Authorization: wcAuthHeader(env), 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
-    }
-  );
-  if (!resp.ok) {
-    const errText = await resp.text();
-    throw new Error(`WC update product ${wpProductId} failed: ${resp.status} ${errText}`);
-  }
-  return resp.json();
+  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products/${wpProductId}`, {
+    label:     `WC update product ${wpProductId}`,
+    method:    'PUT',
+    payload,
+    cacheBust: false,
+  });
 }
 
 async function wcGetVariations(env, wpProductId) {
-  const resp = await fetch(
-    bust(`${wcBaseUrl(env)}/wp-json/wc/v3/products/${wpProductId}/variations?per_page=100`),
-    { headers: { Authorization: wcAuthHeader(env) } }
-  );
-  if (!resp.ok) throw new Error(`WC get variations for ${wpProductId} failed: ${resp.status}`);
-  return resp.json();
+  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products/${wpProductId}/variations?per_page=100`, {
+    label: `WC get variations for ${wpProductId}`,
+  });
 }
 
 async function wcUpdateVariation(env, wpProductId, variationId, payload) {
-  const resp = await fetch(
-    `${wcBaseUrl(env)}/wp-json/wc/v3/products/${wpProductId}/variations/${variationId}`,
-    {
-      method:  'PUT',
-      headers: { Authorization: wcAuthHeader(env), 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
-    }
-  );
-  if (!resp.ok) {
-    const errText = await resp.text();
-    throw new Error(`WC update variation ${variationId} failed: ${resp.status} ${errText}`);
-  }
-  return resp.json();
+  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products/${wpProductId}/variations/${variationId}`, {
+    label:     `WC update variation ${variationId}`,
+    method:    'PUT',
+    payload,
+    cacheBust: false,
+  });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -832,7 +898,11 @@ async function wcScanProductsBySkuPrefix(env, idStr) {
   return { match: null, scanned: SKU_SCAN_MAX_PAGES * SKU_SCAN_PER_PAGE, exhausted: false };
 }
 
-async function findWcProductByShopifyId(env, shopifyProductId) {
+// opts.skipScan (v2.10.0) — بيقفل المسح الاحتياطي (المرحلة 3) تمامًا. بيتبعت
+// من مسار Bulk بس: هناك رقم ووردبريس معروف أصلاً من الميتافيلد، فالمسح (لحد 30
+// نداء لكل منتج) بيبقى رمي في الفاضي — وهو اللي خنق ووكومرس فعليًا 10-09-2026
+// (429 من المنتج الرابع وطول القائمة بعده). راجع findWcProductForRelink().
+async function findWcProductByShopifyId(env, shopifyProductId, { skipScan = false } = {}) {
   assertEnv(env, 'shopify', 'woocommerce');
   const idStr = String(shopifyProductId);
 
@@ -881,6 +951,11 @@ async function findWcProductByShopifyId(env, shopifyProductId) {
   let matchedVia = 'search';
 
   // ── (v2.8.0) الملاذ الأخير: مسح بالـ SKU، مستقل تمامًا عن العنوان ──
+  // (v2.10.0) بيتخطّى بالكامل لو skipScan — والنتيجة ساعتها بتقول كده صراحةً
+  // (scanSkipped) عشان الواجهة ماتقولش "مفحصناش كل المنتجات" وكأنه عطل.
+  if (!match && skipScan) {
+    return { found: false, scanned, scannedAll: false, scanSkipped: true };
+  }
   if (!match) {
     try {
       const scan = await wcScanProductsBySkuPrefix(env, idStr);
@@ -942,9 +1017,14 @@ async function findWcProductForRelink(env, shopifyProductId) {
     try {
       wooProduct = await wcGetProduct(env, wpIdFromMeta);
     } catch (e) {
-      // الميتافيلد بيشاور على منتج مش موجود/مش متاح — مش خطأ قاطع، بنكمّل
-      // بالبحث العادي تحت زي أي منتج مش مربوط.
-      console.error(`find_product_relink: wcGetProduct(${wpIdFromMeta}) failed — falling back to normal search:`, e);
+      // ⚠️ v2.10.0 — الفرق بين "مش موجود" و"عطل" لازم يفضل واضح:
+      //   • 404 بس = الميتافيلد بيشاور على منتج اتمسح فعلاً → نكمّل بالبحث العادي.
+      //   • أي حاجة تانية (429 خنق · 401 أسرار · 5xx · فشل شبكة) = **عطل بنية
+      //     تحتية**، بيترفع بنصّه للواجهة. بلعه هنا هو اللي خلّى 429 يظهر
+      //     للموظف كـ"مفيش منتج على ووردبريس بالرقم ده" في عطل 10-09-2026 —
+      //     رسالة بتشاور على البيانات والمشكلة في الاتصال.
+      if (!(e instanceof WcHttpError) || e.status !== 404) throw e;
+      console.error(`find_product_relink: wcGetProduct(${wpIdFromMeta}) رجّع 404 — المنتج اتمسح من ووردبريس، بنكمّل بالبحث العادي`);
     }
 
     if (wooProduct && wooProduct.id) {
@@ -980,8 +1060,10 @@ async function findWcProductForRelink(env, shopifyProductId) {
     }
   }
 
-  // منتج لسه مش مربوط (أو ميتافيلد بايظ) — البحث العادي بالظبط زي المسار الفردي
-  const result = await findWcProductByShopifyId(env, idStr);
+  // منتج لسه مش مربوط (أو ميتافيلد بيشاور على منتج متمسوح) — البحث العادي، لكن
+  // **من غير المسح الاحتياطي** (v2.10.0): المسار الجماعي بيشتغل على منتجات
+  // مربوطة، فالمسح هنا 30 نداء لكل منتج على الفاضي، وهو سبب الخنق المؤكَّد.
+  const result = await findWcProductByShopifyId(env, idStr, { skipScan: true });
   return { ...result, alreadyLinked: linked.linked, productTitle: linked.productTitle };
 }
 
@@ -1296,113 +1378,140 @@ async function syncProduct(env, wpProductId, opts = {}) {
       continue;
     }
 
-    const shopifyVariantNumericId = numericIdFromGid(match.id);
-    const stockBefore = variation.stock_quantity;
-
-    // ── حساب السعر (اختياري — priceDifference != null) — v2.5.0، اندمجت هنا
-    // بدل ما تكون أكشن منفصل، بالظبط زي سؤال الحالة/النجمة فوق: خطوة إضافية
-    // جوه نفس sync_product، مش استدعاء تاني. راجع computeVariantPrices().
-    let priceInfo = null;
-    let priceWarning = null;
-    if (priceDifference !== null) {
-      const shopifyPrice = parseFloat(match.price);
-      if (!Number.isFinite(shopifyPrice)) {
-        priceWarning = `سعر شوبيفاي غير صالح: "${match.price}"`;
-      } else {
-        const compareRaw     = match.compareAtPrice;
-        const shopifyCompare = (compareRaw !== null && compareRaw !== undefined && compareRaw !== '') ? parseFloat(compareRaw) : null;
-        priceInfo = computeVariantPrices(shopifyPrice, shopifyCompare, priceDifference);
-      }
-    }
-
-    // ── 1. Update WooCommerce variation: SKU + Stock + legacy meta field + (السعر لو مطلوب) ──
-    const variationPayload = {
-      sku:               match.sku,
-      stock_quantity:    match.inventoryQuantity,
-      manage_stock:      true,
-      global_unique_id:  shopifyVariantNumericId,
-      meta_data: [
-        { key: '_shopify_variation_id', value: shopifyVariantNumericId },
-      ],
-    };
-    if (priceInfo) {
-      variationPayload.regular_price = priceInfo.regularPrice;
-      variationPayload.sale_price    = priceInfo.salePrice;
-    }
-    const wcVariationUpdated = await wcUpdateVariation(env, wpProductId, variation.id, variationPayload);
-
-    // ⚠️ Step 5A-style تأكيد للسعر — HTTP 200 لوحده مش إثبات، لازم نقرا الرد
-    // الفعلي. فشل التأكيد هنا بيبقى تحذير على مستوى الـ variation، مش استثناء
-    // بيلغي التحديثات التانية (SKU/المخزون فوق أصلًا اتنفذوا في نفس النداء).
-    if (priceInfo) {
-      const regularConfirmed = String(wcVariationUpdated?.regular_price ?? '') === priceInfo.regularPrice;
-      const saleConfirmed    = String(wcVariationUpdated?.sale_price ?? '') === (priceInfo.salePrice || '');
-      if (!regularConfirmed || !saleConfirmed) {
-        priceWarning = `ووكومرس رجّعت regular_price="${wcVariationUpdated?.regular_price}" / sale_price="${wcVariationUpdated?.sale_price}" — مش مطابقة للمتوقع`;
-      }
-    }
-
-    // ── 2. Update Shopify variant metafield: wordpress_variation_id ──
-    // ⚠️ كانت هنا بدون أي فحص نتيجة قبل الرينيم (Step 5A مخالف بالكامل) —
-    // فشل الميوتيشن كان بيعدّي كـ"تم" صامت. اتصلّح 25-08-2026: نتيجتها بقت
-    // تتفحص وتتحوّل لـ status='warning' على مستوى الـ variation دي لو فشلت،
-    // بدل ما تتجاهل تمامًا.
-    let variantWarning = null;
+    // ⚠️ v2.10.0 — كل كتابات المقاس دي بقت معزولة في try/catch لوحدها.
+    // قبل كده أي فشل من ووكومرس هنا (نداء wcUpdateVariation) كان بيطلع بره
+    // syncProduct كله: باقي المقاسات ماكانتش بتتزامن، وتاج stylebox (آخر خطوة)
+    // ماكانش بيتضاف أصلاً — والكتابات اللي حصلت قبل كده (حالة شوبيفاي + النجمة
+    // + الميتافيلد + publish) بتفضل متنفّذة، فالمنتج يقف في نص الطريق.
+    // اتكشف فعليًا 10-09-2026: SKU مكرر على ووكومرس (product_invalid_sku، 400)
+    // في مقاس واحد وقّع المنتج كله. دلوقتي المقاس الفاشل بيتعلّم warning بنص
+    // الخطأ وباقي المنتج بيكمّل عادي — نفس مبدأ عزل الخطوات 2/3/5 فوق.
     try {
-      const varMetaResp   = await shopifyGQL(env, token, SET_VARIATION_ID_MUTATION, {
-        metafields: [{
-          ownerId:   match.id,
-          namespace: 'custom',
-          key:       'wordpress_variation_id',
-          type:      'number_integer',
-          value:     String(variation.id),
-        }],
-      }, 'metafieldsSet(wordpress_variation_id)');
-      const varMetaResult = varMetaResp?.data?.metafieldsSet;
-      const varMetaErrors = varMetaResult?.userErrors || [];
-      if (varMetaErrors.length) throw new Error(varMetaErrors.map(e => e.message).join(' | '));
-      if (!varMetaResult?.metafields?.length) throw new Error('شوبيفاي ما رجّعتش الميتافيلد المكتوب');
-    } catch (e) {
-      variantWarning = `wordpress_variation_id metafield failed: ${e.message}`;
-      console.error(`Variant metafield write failed for variation ${variation.id}:`, e);
-    }
+      const shopifyVariantNumericId = numericIdFromGid(match.id);
+      const stockBefore = variation.stock_quantity;
 
-    const combinedWarning = [variantWarning, priceWarning].filter(Boolean).join(' | ') || null;
-    const priceNote = priceInfo
-      ? `، السعر: regular=${priceInfo.regularPrice}${priceInfo.salePrice ? `/sale=${priceInfo.salePrice}` : ''}`
-      : (priceWarning ? `، تحديث السعر فشل: ${priceWarning}` : '');
+      // ── حساب السعر (اختياري — priceDifference != null) — v2.5.0، اندمجت هنا
+      // بدل ما تكون أكشن منفصل، بالظبط زي سؤال الحالة/النجمة فوق: خطوة إضافية
+      // جوه نفس sync_product، مش استدعاء تاني. راجع computeVariantPrices().
+      let priceInfo = null;
+      let priceWarning = null;
+      if (priceDifference !== null) {
+        const shopifyPrice = parseFloat(match.price);
+        if (!Number.isFinite(shopifyPrice)) {
+          priceWarning = `سعر شوبيفاي غير صالح: "${match.price}"`;
+        } else {
+          const compareRaw     = match.compareAtPrice;
+          const shopifyCompare = (compareRaw !== null && compareRaw !== undefined && compareRaw !== '') ? parseFloat(compareRaw) : null;
+          priceInfo = computeVariantPrices(shopifyPrice, shopifyCompare, priceDifference);
+        }
+      }
 
-    const okLog = await safeWriteLog(env.DB, {
-      tool:         TOOL_NAME,
-      type:         combinedWarning ? 'error' : 'synced',
-      employee,
-      sku:          match.sku,
-      productTitle: wooProduct.name,
-      delta:        match.inventoryQuantity - (stockBefore ?? 0),
-      valueBefore:  stockBefore,
-      valueAfter:   match.inventoryQuantity,
-      notes:        (variantWarning
-                      ? `Size ${wcSize} — WC اتزامنت، Shopify metafield فشل: ${variantWarning}`
-                      : `Size ${wcSize} synced`) + priceNote,
-      extra: {
-        wpProductId,
+      // ── 1. Update WooCommerce variation: SKU + Stock + legacy meta field + (السعر لو مطلوب) ──
+      const variationPayload = {
+        sku:               match.sku,
+        stock_quantity:    match.inventoryQuantity,
+        manage_stock:      true,
+        global_unique_id:  shopifyVariantNumericId,
+        meta_data: [
+          { key: '_shopify_variation_id', value: shopifyVariantNumericId },
+        ],
+      };
+      if (priceInfo) {
+        variationPayload.regular_price = priceInfo.regularPrice;
+        variationPayload.sale_price    = priceInfo.salePrice;
+      }
+      const wcVariationUpdated = await wcUpdateVariation(env, wpProductId, variation.id, variationPayload);
+
+      // ⚠️ Step 5A-style تأكيد للسعر — HTTP 200 لوحده مش إثبات، لازم نقرا الرد
+      // الفعلي. فشل التأكيد هنا بيبقى تحذير على مستوى الـ variation، مش استثناء
+      // بيلغي التحديثات التانية (SKU/المخزون فوق أصلًا اتنفذوا في نفس النداء).
+      if (priceInfo) {
+        const regularConfirmed = String(wcVariationUpdated?.regular_price ?? '') === priceInfo.regularPrice;
+        const saleConfirmed    = String(wcVariationUpdated?.sale_price ?? '') === (priceInfo.salePrice || '');
+        if (!regularConfirmed || !saleConfirmed) {
+          priceWarning = `ووكومرس رجّعت regular_price="${wcVariationUpdated?.regular_price}" / sale_price="${wcVariationUpdated?.sale_price}" — مش مطابقة للمتوقع`;
+        }
+      }
+
+      // ── 2. Update Shopify variant metafield: wordpress_variation_id ──
+      // ⚠️ كانت هنا بدون أي فحص نتيجة قبل الرينيم (Step 5A مخالف بالكامل) —
+      // فشل الميوتيشن كان بيعدّي كـ"تم" صامت. اتصلّح 25-08-2026: نتيجتها بقت
+      // تتفحص وتتحوّل لـ status='warning' على مستوى الـ variation دي لو فشلت،
+      // بدل ما تتجاهل تمامًا.
+      let variantWarning = null;
+      try {
+        const varMetaResp   = await shopifyGQL(env, token, SET_VARIATION_ID_MUTATION, {
+          metafields: [{
+            ownerId:   match.id,
+            namespace: 'custom',
+            key:       'wordpress_variation_id',
+            type:      'number_integer',
+            value:     String(variation.id),
+          }],
+        }, 'metafieldsSet(wordpress_variation_id)');
+        const varMetaResult = varMetaResp?.data?.metafieldsSet;
+        const varMetaErrors = varMetaResult?.userErrors || [];
+        if (varMetaErrors.length) throw new Error(varMetaErrors.map(e => e.message).join(' | '));
+        if (!varMetaResult?.metafields?.length) throw new Error('شوبيفاي ما رجّعتش الميتافيلد المكتوب');
+      } catch (e) {
+        variantWarning = `wordpress_variation_id metafield failed: ${e.message}`;
+        console.error(`Variant metafield write failed for variation ${variation.id}:`, e);
+      }
+
+      const combinedWarning = [variantWarning, priceWarning].filter(Boolean).join(' | ') || null;
+      const priceNote = priceInfo
+        ? `، السعر: regular=${priceInfo.regularPrice}${priceInfo.salePrice ? `/sale=${priceInfo.salePrice}` : ''}`
+        : (priceWarning ? `، تحديث السعر فشل: ${priceWarning}` : '');
+
+      const okLog = await safeWriteLog(env.DB, {
+        tool:         TOOL_NAME,
+        type:         combinedWarning ? 'error' : 'synced',
+        employee,
+        sku:          match.sku,
+        productTitle: wooProduct.name,
+        delta:        match.inventoryQuantity - (stockBefore ?? 0),
+        valueBefore:  stockBefore,
+        valueAfter:   match.inventoryQuantity,
+        notes:        (variantWarning
+                        ? `Size ${wcSize} — WC اتزامنت، Shopify metafield فشل: ${variantWarning}`
+                        : `Size ${wcSize} synced`) + priceNote,
+        extra: {
+          wpProductId,
+          variationId: variation.id,
+          shopifyVariantId: shopifyVariantNumericId,
+          ...(priceInfo ? { priceApplied: true, priceDifference, regularPrice: priceInfo.regularPrice, salePrice: priceInfo.salePrice } : {}),
+        },
+      });
+      if (!okLog) loggedOk = false;
+
+      results.push({
         variationId: variation.id,
+        size: wcSize,
+        status: combinedWarning ? 'warning' : 'synced',
+        warning: combinedWarning,
         shopifyVariantId: shopifyVariantNumericId,
-        ...(priceInfo ? { priceApplied: true, priceDifference, regularPrice: priceInfo.regularPrice, salePrice: priceInfo.salePrice } : {}),
-      },
-    });
-    if (!okLog) loggedOk = false;
-
-    results.push({
-      variationId: variation.id,
-      size: wcSize,
-      status: combinedWarning ? 'warning' : 'synced',
-      warning: combinedWarning,
-      shopifyVariantId: shopifyVariantNumericId,
-      sku: match.sku,
-      stock: match.inventoryQuantity,
-      ...(priceInfo ? { regularPrice: priceInfo.regularPrice, salePrice: priceInfo.salePrice } : {}),
-    });
+        sku: match.sku,
+        stock: match.inventoryQuantity,
+        ...(priceInfo ? { regularPrice: priceInfo.regularPrice, salePrice: priceInfo.salePrice } : {}),
+      });
+    } catch (e) {
+      console.error(`Variation ${variation.id} (size ${wcSize}) sync failed:`, e);
+      const okLog = await safeWriteLog(env.DB, {
+        tool: TOOL_NAME, type: 'error', employee,
+        sku: match.sku,
+        productTitle: wooProduct.name,
+        notes: `Size ${wcSize} فشل: ${e.message}`,
+        extra: { wpProductId, variationId: variation.id, shopifyVariantId: numericIdFromGid(match.id) },
+      });
+      if (!okLog) loggedOk = false;
+      results.push({
+        variationId: variation.id,
+        size:    wcSize,
+        status:  'warning',
+        warning: e.message,
+        sku:     match.sku,
+      });
+    }
   }
 
   // ── آخر خطوة على الإطلاق: Tag "stylebox" فورًا (بدون انتظار — اتلغى v2.4.0) ──
@@ -1434,9 +1543,15 @@ async function syncProduct(env, wpProductId, opts = {}) {
   const slugUnconfirmed = !!(slugFixed && !slugFixed.confirmed);
   const anyVariantWarning = results.some(r => r.status === 'warning');
   const anyVariantSynced  = results.some(r => r.status === 'synced');
+  // (v2.10.0) كل المقاسات اللي اتحاولت فشلت = فشل حقيقي، مش "تم جزئيًا" — قبل
+  // عزل المقاسات في try/catch فوق كانت الحالة دي بترمي بره syncProduct أصلاً،
+  // ومن غير الشرط ده كانت هتبقى warning حتى لو مفيش ولا مقاس واحد اتزامن.
+  const allAttemptedFailed = anyVariantWarning && !anyVariantSynced;
   const overallStatus = productLevelError
     ? (anyVariantSynced ? 'warning' : 'error')
-    : (anyVariantWarning || wcProductMetaError || tagError || slugUnconfirmed ? 'warning' : 'success');
+    : allAttemptedFailed
+      ? 'error'
+      : (anyVariantWarning || wcProductMetaError || tagError || slugUnconfirmed ? 'warning' : 'success');
 
   return {
     status: overallStatus,
