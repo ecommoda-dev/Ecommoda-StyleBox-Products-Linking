@@ -1053,6 +1053,16 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">10-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>المنتج المربوط قبل كده بقى ينفع يتربط تاني — بشرط إنه نفس المنتج</strong> (Worker v2.13.0). قبل كده أي منتج عليه <code>Wordpress ID</code> على شوبيفاي كان البحث بيقف عنده بالرسالة الحمرا "تم ربطه من قبل" ومفيش أي طريق قدّامه. دلوقتي الأداة بتتأكد إن رقم ووردبريس المسجّل بيخص <strong>نفس المنتج</strong> فعلاً (نفس رقم شوبيفاي في خانة GTIN أو في بداية الـ SKU — مش الرقم المسجّل لوحده)، وساعتها بتسمح بإعادة الربط <strong>بعد تأكيد إجباري</strong> في نافذة بتعرض تفاصيل الربط الحالي. <em>زرار المراجعة ونافذته وباقي الأسئلة كلها زي ما هي — التأكيد ده طبقة زيادة فوقهم مش بديل عنهم.</em></span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>ولو الربط المسجّل بيشاور على منتج مختلف، بتظهر شاشة تحذير بكل التفاصيل</strong> — نافذة فيها السبب بالاسم (رقم مش صالح · المنتج المربوط اتمسح من ووردبريس · بيحمل رقم شوبيفاي تاني · مالوش أي رقم يثبت هويته · الرقم متكرر على منتجين)، وجدول بيقارن <strong>الربط المسجّل</strong> بـ<strong>اللي البحث المستقل لقاه</strong> (الرقم/الاسم/الـ SKU/الـ GTIN)، وروابط تفتح كل منتج على ووردبريس. <strong>إعادة الربط ممنوعة تمامًا في الحالة دي</strong> — الكتابة على منتج غلط أسوأ بكتير من "مش لقيته". ومفيش أي تعديل بيحصل: البحث قراءة بس.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.17.0</span>
+            <span class="cl-ver-date">10-09-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>شاشة الإعدادات بقى فيها خانة واحدة بس — الـ Secret</strong>. خانتَي <strong>WORKER URL</strong> و<strong>ADMIN WORKER URL</strong> اتشالوا نهائيًا: الاتنين مش سر (الحماية في الـ Secret نفسه وفي قائمة النطاقات المسموحة، مش في إخفاء الرابط)، ورابط الـ Worker ثابت من يوم ما اتعمل. الموظف مبقاش محتاج يلزق حاجة غير السر، وخانة الأدمن بانل ماكانتش مستخدمة في الأداة دي من الأساس. <em>(لو حد كان حافظ الرابط في المتصفح، مش محتاج يعمل حاجة — الأداة بقت تعرفه لوحدها.)</em></span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>كل الأوقات في الأداة بقت بتتحسب بتوقيت القاهرة الحقيقي</strong> — كانت مكتوبة بإزاحة ثابتة (+3 ساعات)، والتوقيت الصيفي بيخلص <strong>29-10-2026</strong>. من اليوم ده كان كل وقت معروض في السجل وكل صف في التصدير هيغلط بساعة <strong>من غير أي رسالة</strong>. ومعاه: فلتر التاريخ كان بيقص على التوقيت العالمي بينما العمود المعروض بتوقيت القاهرة — فأي عملية بين 12 و3 الفجر كانت بتتحسب على اليوم اللي قبله. واسم ملف التصدير كمان بقى بتوقيت القاهرة (كان تصدير الساعة 1 صباحًا بياخد تاريخ إمبارح).</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>تاب السجل بقى بيقول لو المعروض مش كامل</strong> — الأداة بتحمّل السجل كله في نداء واحد بسقف 2000 صف، وكان بيتقص <strong>في السكوت</strong>: عدّاد "النتائج" والتصدير الاتنين بيعدّوا المحمّل بس، والموظف شايف رقم ناقص وهو فاكره الإجمالي. دلوقتي الـ Worker بيرجّع العدد الحقيقي في القاعدة، وبيظهر <strong>بانر ثابت فوق الجدول</strong> بالرقمين، ورسالة "تم تصدير N ✓" الخضرا مابقتش تظهر على ملف ناقص.</span></li>
@@ -1319,7 +1329,14 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               مباشر لمنتجات ووردبريس بالـ SKU (v2.8.0، مستقل تمامًا عن العنوان). التأكيد النهائي في كل
               الحالات قاطع بالـ SKU/GTIN، أبدًا مش بالعنوان</li>
               <li><strong>الخطوة ② — نتيجة البحث</strong> (خطوة مستقلة لوحدها): لو المنتج <strong>اتربط قبل
-              كده</strong>، بتعرض رسالة "هذا المنتج تم ربطه من قبل" ووقف — خطوة ③ ما بتظهرش خالص. لو لقى
+              كده</strong> (v2.18.0)، الأداة بتتأكد إن الربط المسجّل بيخص <strong>نفس المنتج</strong> فعلاً
+              (رقم شوبيفاي في خانة GTIN أو في بداية الـ SKU بتاع منتج ووردبريس ده — رقم الميتافيلد لوحده
+              <strong>مش إثبات</strong>): لو أيوه، بتعرض تنبيه أصفر + زرار بيفتح <strong>نافذة تفاصيل الربط
+              الحالي</strong> وفيها تأكيد إجباري لإعادة الربط، وبعد التأكيد بس بيظهر زرار المراجعة الإلزامي
+              وتكمل الخطوات زي أي منتج. ولو الربط بيشاور على منتج <strong>مختلف</strong> (رقم مش صالح ·
+              المنتج اتمسح · بيحمل رقم شوبيفاي تاني · مالوش أي رقم · الرقم متكرر على منتجين)، بتفتح نفس
+              النافذة بالسبب وجدول مقارنة بين الربط المسجّل واللي البحث المستقل لقاه وروابط الطرفين على
+              ووردبريس — <strong>ومفيش أي طريق للربط خالص</strong>. لو لقى
               تطابق جديد، بتعرض بيانات المنتج + زرار كبير كامل عرض الصفحة <strong>"🔗 راجع صور + كاتيجوريز
               المنتج قبل الربط"</strong> — الضغط عليه بيفتح صفحة المنتج على ووردبريس في تاب جديد <strong>+
               نافذة تأكيد إلزامية</strong> (v2.10.0) فيها بندان لازم تأكيدهم بـ checkbox: "تم مراجعة جميع صور
@@ -1413,7 +1430,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <tr><td><code>verify_employee</code></td><td>POST — تسجيل الدخول</td></tr>
               <tr><td><code>log_logout</code></td><td>GET — تسجيل خروج</td></tr>
               <tr><td><code>get_employees</code></td><td>GET — قائمة الموظفين النشطين</td></tr>
-              <tr><td><code>find_product</code></td><td>GET — أكشن قراءة بس (خطوة 1): بياخد <code>shopify_product_id</code>. <strong>(v2.7.0)</strong> أول حاجة بيتحقق من <code>custom.wordpress_id</code> على شوبيفاي — لو مش فاضية بيرجع <code>{alreadyLinked:true, wordpressId, productTitle}</code> ويوقف. لو فاضية، يدوّر على منتج ووكومرس المطابق (GTIN، أو بحث بالعنوان لتضييق النطاق + تأكيد قاطع بالـ SKU)، ويرجّع <code>{alreadyLinked:false, wp_product_id, wpEditUrl, ...}</code></td></tr>
+              <tr><td><code>find_product</code></td><td>GET — أكشن قراءة بس (خطوة 1): بياخد <code>shopify_product_id</code>. <strong>(v2.7.0)</strong> أول حاجة بيتحقق من <code>custom.wordpress_id</code> على شوبيفاي. <strong>(v2.13.0)</strong> لو مش فاضية، مابيوقفش: <code>verifyExistingLink()</code> بيتأكد إن منتج ووكومرس ده بيحمل نفس رقم شوبيفاي (GTIN/بداية SKU) ويرجّع <code>{alreadyLinked:true, relinkAllowed, relinkStatus, linkedProduct, searchProduct}</code> — <code>relinkAllowed:true</code> معاها نفس حقول نتيجة البحث العادية، و<code>false</code> معاها سبب مسمّى (<code>meta_invalid</code>/<code>meta_missing</code>/<code>cross_linked</code>/<code>unverified</code>/<code>duplicate</code>) وتفاصيل الطرفين. لو فاضية، يدوّر على منتج ووكومرس المطابق (GTIN، أو بحث بالعنوان لتضييق النطاق + تأكيد قاطع بالـ SKU)، ويرجّع <code>{alreadyLinked:false, wp_product_id, wpEditUrl, ...}</code></td></tr>
               <tr><td><code>find_product_relink</code></td><td>GET — <strong>(v2.9.0)</strong> نسخة "إعادة الربط" من <code>find_product</code>، بيستخدمها تاب Bulk بس: المنتج المربوط قبل كده مش سبب رفض هنا — رقم ووردبريس بيتاخد من <code>custom.wordpress_id</code> مباشرةً. منتج لسه مش مربوط بيرجع للبحث العادي، ولو الميتافيلد بيشاور على منتج بيخص رقم شوبيفاي تاني بيرجّع <code>{found:false, conflict:true}</code> من غير أي كتابة. قراءة بس، مفيش D1 log</td></tr>
               <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code>، <code>add_star</code>: <code>true</code>/<code>false</code>، و<code>price_difference</code>: رقم اختياري لتحديث السعر في نفس التشغيلة — الثلاثة اختياريون، الافتراضي <code>DRAFT</code> + <code>true</code> + بدون تحديث سعر). <strong>(v2.6.0)</strong> ممكن يرجع HTTP 409 بـ <code>{code:'brand_missing', vendor, addBrandUrl}</code> لو مفيش براند مطابق على ووردبريس — الربط بيتوقف كامل من غير أي كتابة</td></tr>
               <tr><td><code>diag</code></td><td>GET — فحص ذاتي كامل (env، صلاحيات شوبيفاي، اتصال WooCommerce، D1) بدون كتابة</td></tr>
@@ -1439,6 +1456,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (اتربط قبل كده / لقيته / مش لقيته) في خطوتها المستقلة + زرار "راجع صور + كاتيجوريز المنتج قبل الربط" كامل العرض (<code>.btn-block</code>)، إلزامي — بيفتح صفحة ووردبريس في تاب جديد ونادي <code>openReviewConfirmModal()</code></li>
               <li><code>openReviewConfirmModal()</code>/<code>closeReviewConfirmModal()</code>/<code>toggleReviewCheck()</code>/<code>confirmProductReviewed()</code> (v2.10.0) — نافذة تأكيد إلزامية (<code>#reviewConfirmOverlay</code>) ببندين checkbox، زرار "تأكيد المراجعة" معطّل لحد ما الاتنين يتأكدوا؛ التأكيد بينادي <code>markProductReviewed()</code></li>
               <li><code>markProductReviewed()</code> (v2.9.0، بيتنادى من <code>confirmProductReviewed()</code> بدل onclick مباشر من v2.10.0) — هو اللي بيفتح خطوة ③ لأول مرة (بدل ما تفتح تلقائيًا مع نجاح البحث زي قبل كده)</li>
+              <li><code>§TOOL-JS::relink</code> (v2.18.0) — <code>relinkStatusInfo()</code>/<code>relinkCompareTable()</code>/<code>openRelinkModal()</code>/<code>confirmRelink()</code>: نافذة المنتج المربوط قبل كده (<code>#relinkOverlay</code>). إعادة الربط المسموحة محتاجة <code>confirmRelink()</code> الأول، وبعده بس بيظهر زرار المراجعة الإلزامي (<code>reviewActionsHTML()</code>). حالة الرفض بتفتح نفس النافذة بالسبب وجدول المقارنة ومن غير أي زرار ربط</li>
               <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر، كل واحد في صندوق <code>.opt-block</code> مستقل، من غير أي اختيار افتراضي جاهز من v2.11.0)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي، و<code>runSync()</code> بيرفض لو <code>productReviewed !== true</code> أو لو أي سؤال من التلاتة من غير إجابة/تأكيد (<code>readSyncOptions()</code>/<code>priceDiffConfirmed</code>)</li>
               <li><code>renderSyncResult()</code> — خطوة ④: تفاصيل بيانات المنتج + جدول "📦 المقاسات" (+ صفوف Brand/Slug من v2.6.0، عنوان الجدول اتغيّر v2.10.0) + جدول فرق السعر تحت الجدول لو <code>priceApplied</code> (اتنقل تحت v2.10.0، كان صف فوق الجدول)، وبعدهم بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + زرار "إبدأ ربط منتج جديد" كامل العرض في آخر الخطوة (<code>.btn-primary.btn-block</code> من v2.10.1 — كان <code>.btn-new-product</code> بتصميم منفصل أبيض/أزرق عند hover)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
               <li><code>openBrandMissingModal()</code>/<code>closeBrandMissingModal()</code> (v2.6.0) — نافذة خطأ مخصصة (<code>#brandMissingOverlay</code>) لما <code>runSync()</code> يلقى <code>e.data.code === 'brand_missing'</code>؛ <code>apiRequest()</code> بقى يحط رد الـ Worker كامل على <code>err.data</code> مش بس <code>err.message</code> عشان الكود ده يتقرا</li>
@@ -1454,11 +1472,12 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>currentEmployee</code> — { username, displayName } في الذاكرة فقط، مش localStorage</li>
               <li><code>foundWpProductId</code> — رقم منتج ووكومرس اللي رجعته خطوة 1 (<code>find_product</code>)، في الذاكرة فقط. <code>runSync()</code> بيستخدمه بدل حقل إدخال يدوي — <code>null</code> لحد ما بحث ينجح، و<code>resetFindStep()</code> بيصفّره</li>
               <li><code>productReviewed</code> (v2.9.0) — بيبقى <code>true</code> بس بعد الضغط على زرار "راجع صور + كاتيجوريز المنتج قبل الربط" في خطوة ②. <code>runSync()</code> بيرفض لو مش <code>true</code>، و<code>resetFindStep()</code>/<code>startNewProduct()</code> بيصفّروه</li>
+              <li><code>relinkMode</code>/<code>relinkConfirmed</code>/<code>relinkData</code> (v2.18.0) — <code>relinkMode</code> بيبقى <code>true</code> لما نتيجة البحث تكون "مربوط قبل كده وإعادة الربط مسموحة"، و<code>relinkConfirmed</code> بيبقى <code>true</code> بس بعد التأكيد من النافذة. <code>markProductReviewed()</code> و<code>runSync()</code> الاتنين بيرفضوا لو <code>relinkMode &amp;&amp; !relinkConfirmed</code>، و<code>resetFindStep()</code> بيصفّر التلاتة</li>
               <li><code>LS_SECRET = 'stylebox_link_worker_secret'</code> — <strong>المفتاح الوحيد</strong> في <code>localStorage</code> (v2.17.0). <code>LS_URL</code> و<code>LS_ADMIN_URL</code> اتشالوا: رابط الـ Worker بقى ثابت <code>WORKER_URL</code> في <code>§CONFIG</code>، والأدمن بانل ماكانش مستخدم في الأداة دي أصلاً. الأداة <strong>مش عضو في أي مجموعة سر</strong> فالمفتاح باسمها</li>
               <li><code>LS_PRICE_DIFF = 'stylebox_link_price_difference'</code> — آخر قيمة "فرق السعر" استُخدمت، للراحة بس (تعبئة تلقائية)، مش Settings حقيقي ومش مرسل تلقائيًا من غير ما المستخدم يضغط "تشغيل الربط"</li>
               <li><code>TOOL_NAME = 'stylebox_products_linking'</code> — قيمة <code>tool</code> في جدول <code>logs</code> (كانت <code>shopify_woo_sync</code> قبل الرينيم)</li>
               <li><code>ALLOWED_SIZE_ATTRIBUTE_NAMES = ['Shoe size','Size','size']</code> — مصدر الحقيقة لمطابقة المقاس بين المنصتين (في الـ Worker)</li>
-              <li><code>MIN_WORKER_VERSION</code> (v2.16.0) — <strong>أقل</strong> نسخة Worker الواجهة دي بتشتغل معاها، والمقارنة رقمية بـ<code>cmpVersion()</code>. التحذير يولّع <strong>بس</strong> لو الـ Worker <strong>أقدم</strong> منها (rollback أو Promote ناقص) — Worker أحدث وضع طبيعي مش تحذير. منفصلة تمامًا عن <code>TOOL_VERSION</code> (نسخة الواجهة). تترفع مع أي حقل جديد الواجهة تبقى بتقراه من الـ Worker — دلوقتي <code>v2.12.0</code> بسبب <code>cap</code>/<code>total</code>/<code>truncated</code> في <code>get_logs_export</code></li>
+              <li><code>MIN_WORKER_VERSION</code> (v2.16.0) — <strong>أقل</strong> نسخة Worker الواجهة دي بتشتغل معاها، والمقارنة رقمية بـ<code>cmpVersion()</code>. التحذير يولّع <strong>بس</strong> لو الـ Worker <strong>أقدم</strong> منها (rollback أو Promote ناقص) — Worker أحدث وضع طبيعي مش تحذير. منفصلة تمامًا عن <code>TOOL_VERSION</code> (نسخة الواجهة). تترفع مع أي حقل جديد الواجهة تبقى بتقراه من الـ Worker — دلوقتي <code>v2.13.0</code> بسبب <code>relinkAllowed</code>/<code>relinkStatus</code>/<code>linkedProduct</code>/<code>searchProduct</code> في <code>find_product</code> (وقبلها <code>cap</code>/<code>total</code>/<code>truncated</code> في <code>get_logs_export</code>)</li>
             </ul>
 
             <h4>NOTES</h4>
@@ -1601,6 +1620,21 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
     </div>
   </div>
 
+  <!-- ══ نافذة الربط السابق (v2.18.0) — بتفتح من نتيجة البحث لما المنتج يكون
+       مربوط قبل كده. حالتان: (أ) نفس المنتج → تأكيد إعادة الربط من هنا وبس
+       (relinkConfirmed)، وبعده بيظهر زرار المراجعة الإلزامي زي أي منتج.
+       (ب) تعارض → عرض السبب والاختلاف وتفاصيل الطرفين، من غير أي طريق للربط.
+       راجع openRelinkModal()/confirmRelink() في §TOOL-JS::relink ═══ -->
+  <div class="eco-overlay" id="relinkOverlay" onclick="if(event.target===this)closeRelinkModal()">
+    <div class="eco-modal" style="max-width:680px;">
+      <div class="eco-modal-hdr">
+        <span id="relinkModalTitle">🔁 المنتج ده مربوط قبل كده</span>
+        <button class="modal-close-x" onclick="closeRelinkModal()">✕</button>
+      </div>
+      <div class="eco-modal-body" id="relinkModalBody"></div>
+    </div>
+  </div>
+
   <!-- ══ Login Overlay ═══════════════════════════════════════ -->
   <div class="login-overlay" id="loginOverlay">
     <div class="login-card">
@@ -1666,7 +1700,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.17.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.18.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة (v2.9.0 — أكشن find_product_relink بتاع مسار Bulk) — منفصلة تمامًا عن
 // TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
@@ -1675,7 +1709,7 @@ const TOOL_VERSION = 'v2.17.0'; // نسخة الواجهة (UI) — بتزيد �
 // ⚠️ الواجهة دي بتقرا `cap`/`total`/`truncated` من get_logs_export، وهم اتضافوا
 //    في الـ Worker v2.12.0 — فالحد الأدنى لازم يبقى v2.12.0، وإلا الحارس نفسه
 //    بيبقى معطّل ويعدّي Worker مش قادر يخدم الصفحة (Standards #29).
-const MIN_WORKER_VERSION = 'v2.12.0';
+const MIN_WORKER_VERSION = 'v2.13.0';
 // رابط الـ Worker **ثابت** مش حقل إعدادات (html-builder v2.2.0 · Standards #28):
 // اسم الـ Worker بيتحدد وقت الإنشاء ومايتغيّرش، والرابط مش سر أصلاً.
 // لو اتعمل rename أو custom domain، السطر ده هو المكان الوحيد اللي يتغيّر.
@@ -2270,6 +2304,9 @@ async function runFindProduct() {
   if (!productId) { showToast('تعذّر استخراج رقم منتج شوبيفاي من القيمة دي — تأكد من الرقم أو الرابط', 'warning'); return; }
 
   // بحث جديد = نصفّر أي نتيجة سابقة (بحث أو ربط) كانت ظاهرة (رجوع لمنتج تاني من غير Refresh)
+  relinkMode      = false;   // v2.18.0
+  relinkConfirmed = false;
+  relinkData      = null;
   document.getElementById('stepFoundCard').style.display = 'none';
   document.getElementById('stepSyncCard').style.display = 'none';
   document.getElementById('resultSection').style.display = 'none';
@@ -2281,18 +2318,45 @@ async function runFindProduct() {
     const data = await apiGet('find_product', { shopify_product_id: productId });
     document.getElementById('stepFoundCard').style.display = 'block';
     renderFindResult(data);
-    if (data.alreadyLinked) {
-      // v2.7.0 — المنتج ده اتربط قبل كده (custom.wordpress_id مش فاضي على شوبيفاي)
-      // — بنوقف هنا تمامًا، مفيش خطوة ربط تتفتح خالص.
-      foundWpProductId = null;
+    if (data.alreadyLinked && data.relinkAllowed) {
+      // v2.18.0 — مربوط قبل كده بـ**نفس** المنتج (الـ Worker أثبت الهوية بالـ
+      // GTIN/SKU). إعادة الربط مسموحة، بس بعد التأكيد في نافذة التفاصيل —
+      // وبعدها بيكمّل بنفس حرّاس المسار الفردي (زرار المراجعة + نافذته).
+      foundWpProductId = data.wp_product_id;
+      relinkMode       = true;
+      relinkConfirmed  = false;
       productReviewed  = false;
-      document.getElementById('stepFoundBadge').className = 'step-badge err';
-      document.getElementById('stepFoundBadge').textContent = '✗';
-      document.getElementById('stepFoundSubtitle').textContent = 'هذا المنتج تم ربطه من قبل';
+      const label = `#${data.wp_product_id}${data.productName ? ' — ' + data.productName : ''}`;
+      document.getElementById('foundProductLabel').textContent = label;
+      document.getElementById('stepSyncSubtitle').textContent = `المنتج: ${label} (إعادة ربط)`;
+      document.getElementById('stepFoundBadge').className = 'step-badge warn';
+      document.getElementById('stepFoundBadge').textContent = '⚠';
+      document.getElementById('stepFoundSubtitle').textContent = `مربوط قبل كده بنفس المنتج — ${label}`;
+      document.getElementById('stepFindCard').classList.add('done');
+      document.getElementById('stepFindBadge').textContent = '✓';
+      document.getElementById('stepFindSubtitle').textContent = `⚠️ مربوط قبل كده — ${label}`;
+      setStepCollapsed('Find', true);
       setStepCollapsed('Found', false);
       document.getElementById('stepSyncCard').style.display = 'none';
       document.getElementById('stepFoundCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      showToast('هذا المنتج تم ربطه من قبل', 'neutral');
+      showToast('المنتج ده مربوط قبل كده بنفس المنتج — راجع التفاصيل وأكّد إعادة الربط', 'warning');
+      openRelinkModal();
+    } else if (data.alreadyLinked) {
+      // v2.18.0 — مربوط قبل كده بس **الهوية ما اتأكدتش**: الربط المسجّل بيشاور
+      // على منتج تاني/متمسوح/بلا إثبات. مفيش أي طريق للربط هنا — النافذة
+      // بتعرض السبب والاختلاف وتفاصيل الطرفين وبس.
+      foundWpProductId = null;
+      relinkMode       = false;
+      relinkConfirmed  = false;
+      productReviewed  = false;
+      document.getElementById('stepFoundBadge').className = 'step-badge err';
+      document.getElementById('stepFoundBadge').textContent = '✗';
+      document.getElementById('stepFoundSubtitle').textContent = 'مربوط قبل كده بمنتج مختلف — مينفعش إعادة الربط';
+      setStepCollapsed('Found', false);
+      document.getElementById('stepSyncCard').style.display = 'none';
+      document.getElementById('stepFoundCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      showToast('تعارض في الربط الحالي — راجع التفاصيل', 'error');
+      openRelinkModal();
     } else if (data.found) {
       foundWpProductId = data.wp_product_id;
       productReviewed   = false; // خطوة ② (v2.9.0) — لازم يراجع المنتج الأول قبل ما خطوة ③ تظهر
@@ -2323,6 +2387,8 @@ async function runFindProduct() {
     }
   } catch (e) {
     foundWpProductId = null;
+    relinkMode       = false;
+    relinkConfirmed  = false;
     document.getElementById('stepFoundCard').style.display = 'none';
     document.getElementById('stepSyncCard').style.display = 'none';
     showToast('خطأ: ' + e.message, 'error');
@@ -2338,8 +2404,28 @@ let productReviewed = false;
 
 function renderFindResult(data) {
   const wrap = document.getElementById('findResultWrap');
+  // v2.18.0 — المنتج المربوط قبل كده مابقاش نهاية المشوار: الـ Worker
+  // (verifyExistingLink) بيقول إذا كان الربط المسجّل بيخص **نفس** المنتج ولا لأ.
   if (data.alreadyLinked) {
-    wrap.innerHTML = `<div class="result-note err">⚠️ هذا المنتج تم ربطه من قبل${data.wordpressId ? ` — رقمه على ووردبريس: <span class="mono">${data.wordpressId}</span>` : ''}${data.productTitle ? ` (${data.productTitle})` : ''}. لا يمكن استكمال عملية الربط لمنتج مربوط بالفعل.</div>`;
+    relinkData = data;
+    if (data.relinkAllowed) {
+      wrap.innerHTML = `
+        <div class="result-note warn">⚠️ المنتج ده <strong>مربوط قبل كده</strong> بنفس المنتج على ووردبريس — والتحقق تمّ: نفس رقم شوبيفاي متسجّل على المنتج ده فعلاً. تقدر تعيد الربط بعد التأكيد.</div>
+        <div class="result-row"><span>رقم المنتج على ووردبريس</span><span class="mono">${esc(data.wp_product_id)}</span></div>
+        ${data.productName ? `<div class="result-row"><span>اسم المنتج</span><span>${esc(data.productName)}</span></div>` : ''}
+        <div style="margin-top:18px;">
+          <button class="btn-primary btn-block" id="relinkOpenBtn" onclick="openRelinkModal()">🔁 تفاصيل الربط الحالي وتأكيد إعادة الربط</button>
+          <div class="result-note warn" id="relinkRequiredNote" style="margin-top:10px;">⚠️ إعادة الربط هتعيد كتابة الحالة/النجمة/الميتافيلد على شوبيفاي والـ SKU/المخزون/السعر على ووكومرس لنفس المنتج — لازم تأكيدها من النافذة الأول.</div>
+          <div id="relinkReviewWrap"></div>
+        </div>`;
+    } else {
+      const info = relinkStatusInfo(data);
+      wrap.innerHTML = `
+        <div class="result-note err">⛔ <strong>${esc(info.headline)}</strong><br>${info.reason}</div>
+        <div style="margin-top:14px;">
+          <button class="btn-primary btn-block" onclick="openRelinkModal()">🔎 عرض السبب والاختلاف بالتفصيل</button>
+        </div>`;
+    }
     return;
   }
   if (!data.found) {
@@ -2351,12 +2437,198 @@ function renderFindResult(data) {
     return;
   }
   wrap.innerHTML = `
-    <div class="result-row"><span>رقم المنتج على ووردبريس</span><span class="mono">${data.wp_product_id}</span></div>
-    ${data.productName ? `<div class="result-row"><span>اسم المنتج</span><span>${data.productName}</span></div>` : ''}
-    <div style="margin-top:18px;">
-      <a class="btn-primary btn-block" id="reviewProductBtn" href="${data.wpEditUrl}" target="_blank" rel="noopener" onclick="openReviewConfirmModal()">🔗 راجع صور + كاتيجوريز المنتج قبل الربط</a>
-      <div class="result-note warn" id="reviewRequiredNote" style="margin-top:10px;">⚠️ الزرار ده إلزامي — لازم تضغطه وتراجع المنتج على ووردبريس قبل ما تقدر تكمل لخطوة الربط.</div>
-    </div>`;
+    <div class="result-row"><span>رقم المنتج على ووردبريس</span><span class="mono">${esc(data.wp_product_id)}</span></div>
+    ${data.productName ? `<div class="result-row"><span>اسم المنتج</span><span>${esc(data.productName)}</span></div>` : ''}
+    <div style="margin-top:18px;">${reviewActionsHTML(data)}</div>`;
+}
+
+// زرار المراجعة الإلزامي + تنبيهه — مشترك بين المنتج الجديد وإعادة الربط
+// (v2.18.0): إعادة الربط بتضيف تأكيدًا **قبله**، ومابتلغيش ولا حارس منهم.
+function reviewActionsHTML(data) {
+  return `
+      <a class="btn-primary btn-block" id="reviewProductBtn" href="${esc(data.wpEditUrl)}" target="_blank" rel="noopener" onclick="openReviewConfirmModal()">🔗 راجع صور + كاتيجوريز المنتج قبل الربط</a>
+      <div class="result-note warn" id="reviewRequiredNote" style="margin-top:10px;">⚠️ الزرار ده إلزامي — لازم تضغطه وتراجع المنتج على ووردبريس قبل ما تقدر تكمل لخطوة الربط.</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// §TOOL-JS::relink — v2.18.0 (إعادة ربط منتج مربوط قبل كده)
+// حارس "اتربط قبل كده" (v2.7.0) كان بيوقف المسار الفردي تمامًا. بطلب صاحب
+// الأداة بقى مسموح تعيد الربط — **بشرط إن الربط المسجّل يخص نفس المنتج**،
+// والشرط ده بيتحقق منه الـ Worker (verifyExistingLink) مش الواجهة.
+//   • relinkAllowed:true  → تأكيد إجباري من النافذة دي (relinkConfirmed)، وبعده
+//     بيظهر زرار المراجعة الإلزامي وتكمل باقي الحرّاس زي أي منتج جديد بالظبط.
+//   • relinkAllowed:false → النافذة بتعرض السبب والاختلاف وتفاصيل الطرفين،
+//     ومفيش أي طريق للربط — لا زرار مراجعة ولا خطوة ③.
+// ⚠️ التأكيد هنا **مايلغيش** زرار المراجعة ولا نافذته — طبقة زيادة فوقهم.
+// ══════════════════════════════════════════════════════════════
+let relinkMode      = false; // نتيجة البحث كانت "مربوط قبل كده" وإعادة الربط مسموحة
+let relinkConfirmed = false; // الموظف أكّد إعادة الربط من النافذة
+let relinkData      = null;  // آخر رد alreadyLinked من الـ Worker (مصدر النافذة)
+
+// كل حالة من الـ Worker ليها عنوان وسبب مكتوب بلغة الموظف + سطر الاختلاف.
+// ⚠️ كل قيمة جاية من D1/ووكومرس/شوبيفاي بتعدي على esc() — أسماء المنتجات
+// والـ SKU بتتكتب بإيد بشر وممكن تحمل < أو &.
+function relinkStatusInfo(data) {
+  const shopifyId = esc(data.shopifyProductId || '');
+  const metaId    = esc(data.wordpressId ?? '—');
+  const lp        = data.linkedProduct || null;
+  const sp        = data.searchProduct || null;
+  const lpMark    = lp ? (lp.gtin ? `<span class="mono">${esc(lp.gtin)}</span> (خانة GTIN)`
+                                  : (lp.skuPrefix ? `<span class="mono">${esc(lp.skuPrefix)}</span> (بداية الـ SKU)` : '—'))
+                       : '—';
+
+  switch (data.relinkStatus) {
+    case 'match':
+      return {
+        tone: 'warn',
+        title: '🔁 المنتج ده مربوط قبل كده',
+        headline: 'مربوط قبل كده — بنفس المنتج',
+        reason: `الـ Wordpress ID المسجّل على شوبيفاي (<span class="mono">#${metaId}</span>) بيشاور على منتج ووردبريس اللي بيحمل رقم شوبيفاي <span class="mono">${shopifyId}</span> فعلاً — الإثبات: ${lpMark}. يعني ده <strong>نفس المنتج</strong>، مش منتج تاني.`,
+        diff: null,
+      };
+    case 'meta_invalid':
+      return {
+        tone: 'err',
+        title: '⛔ الربط المسجّل مش صالح',
+        headline: 'قيمة Wordpress ID على شوبيفاي مش رقم منتج',
+        reason: `المنتج متسجّل عليه ربط على شوبيفاي (<code>custom.wordpress_id</code>) بقيمة «<span class="mono">${metaId}</span>» — وهي مش رقم منتج ووردبريس صالح، فمينفعش نعتمد عليها ونعيد الربط بيها.`,
+        diff: `المتوقع رقم منتج ووردبريس، والموجود «<span class="mono">${metaId}</span>».`,
+      };
+    case 'meta_missing':
+      return {
+        tone: 'err',
+        title: '⛔ الربط المسجّل بيشاور على منتج مش موجود',
+        headline: 'منتج ووردبريس المربوط اتمسح',
+        reason: `الربط المسجّل على شوبيفاي بيشاور على منتج ووردبريس رقم <span class="mono">#${metaId}</span>، والمنتج ده <strong>مش موجود على ووردبريس</strong> (الرد 404 — اتمسح أو الرقم غلط).`,
+        diff: sp
+          ? `المنتج اللي بيحمل رقم شوبيفاي <span class="mono">${shopifyId}</span> فعلاً هو <span class="mono">#${esc(sp.id)}</span> — مش <span class="mono">#${metaId}</span> المسجّل.`
+          : `ومفيش منتج تاني على ووردبريس بيحمل رقم شوبيفاي <span class="mono">${shopifyId}</span> كمان.`,
+      };
+    case 'cross_linked':
+      return {
+        tone: 'err',
+        title: '⛔ تعارض — الربط بيشاور على منتج تاني',
+        headline: 'منتج ووردبريس المربوط بيخص رقم شوبيفاي مختلف',
+        reason: `منتج ووردبريس <span class="mono">#${metaId}</span> اللي الربط بيشاور عليه بيحمل رقم شوبيفاي <strong>تاني</strong>: ${lpMark} — مش الرقم اللي بتدوّر بيه (<span class="mono">${shopifyId}</span>). إعادة الربط هنا معناها كتابة مخزون وأسعار المنتج ده على منتج تاني خالص، فالأداة وقفت من غير أي تعديل.`,
+        diff: `الرقم المطلوب: <span class="mono">${shopifyId}</span> · الرقم اللي على المنتج المربوط: ${lpMark}` +
+              (sp ? `<br>والمنتج اللي بيحمل الرقم المطلوب فعلاً هو <span class="mono">#${esc(sp.id)}</span>.` : ''),
+      };
+    case 'unverified':
+      return {
+        tone: 'err',
+        title: '⛔ مفيش إثبات إنه نفس المنتج',
+        headline: 'منتج ووردبريس المربوط مالوش أي رقم شوبيفاي عليه',
+        reason: `منتج ووردبريس <span class="mono">#${metaId}</span> اللي الربط بيشاور عليه <strong>خانة GTIN فاضية</strong> والـ SKU مش مبدوء برقم شوبيفاي — فمفيش أي إثبات إنه نفس المنتج، ورقم الميتافيلد لوحده مش كفاية.`,
+        diff: (sp
+          ? `والمنتج اللي بيحمل رقم شوبيفاي <span class="mono">${shopifyId}</span> فعلاً هو <span class="mono">#${esc(sp.id)}</span>.`
+          : `ومفيش منتج على ووردبريس بيحمل رقم شوبيفاي <span class="mono">${shopifyId}</span> في خانة GTIN ولا في بداية الـ SKU.`) +
+          `<br><strong>الحل اليدوي:</strong> افتح المنتج على ووردبريس وحط الرقم <span class="mono">${shopifyId}</span> في خانة GTIN لو ده فعلاً نفس المنتج، وبعدين أعد البحث.`,
+      };
+    case 'duplicate':
+      return {
+        tone: 'err',
+        title: '⛔ رقم شوبيفاي متكرر على منتجين',
+        headline: 'فيه منتجين على ووردبريس بنفس رقم شوبيفاي',
+        reason: `الربط المسجّل بيشاور على <span class="mono">#${metaId}</span> وهو فعلاً بيحمل الرقم المطلوب، <strong>لكن البحث المستقل لقى منتج تاني</strong> <span class="mono">#${esc(sp ? sp.id : '—')}</span> كمان بيحمل نفس رقم شوبيفاي <span class="mono">${shopifyId}</span>. مين فيهم الصح مش قرار الأداة — لازم التكرار ده يتحل على ووردبريس الأول.`,
+        diff: `منتجان بنفس الرقم: <span class="mono">#${metaId}</span> و<span class="mono">#${esc(sp ? sp.id : '—')}</span>.`,
+      };
+    default:
+      return {
+        tone: 'err',
+        title: '⛔ الربط الحالي محتاج مراجعة',
+        headline: 'حالة ربط غير معروفة',
+        reason: `الـ Worker رجّع حالة مش متعرّفة في الواجهة (<span class="mono">${esc(data.relinkStatus || '—')}</span>) — يمكن الـ Worker أحدث من الواجهة. راجع نسخة الأداة.`,
+        diff: null,
+      };
+  }
+}
+
+// جدول المقارنة — الطرفان جنب بعض: اللي الميتافيلد بيشاور عليه، واللي البحث
+// المستقل (GTIN/SKU) لقاه. ده كل قيمة النافذة في حالة التعارض.
+function relinkCompareTable(data) {
+  const lp = data.linkedProduct || null;
+  const sp = data.searchProduct || null;
+  const cell = v => (v === null || v === undefined || v === '') ? '—' : esc(v);
+  const rows = [
+    ['رقم المنتج على ووردبريس', lp ? '#' + lp.id : (data.wordpressId ? '#' + data.wordpressId : '—'), sp ? '#' + sp.id : '—', true],
+    ['اسم المنتج',              lp ? lp.name : '—',  sp ? sp.name : '—',  false],
+    ['SKU',                     lp ? lp.sku  : '—',  sp ? sp.sku  : '—',  true],
+    ['GTIN (رقم شوبيفاي عليه)', lp ? (lp.gtin || (lp.skuPrefix ? lp.skuPrefix + ' (من الـ SKU)' : '')) : '—', sp ? (sp.matchedBy === 'gtin' ? data.shopifyProductId : (sp.matchedBy === 'sku' ? data.shopifyProductId + ' (من الـ SKU)' : '')) : '—', true],
+    ['حالته على ووردبريس',      lp ? lp.status : '—', '—', false],
+  ];
+  return `
+    <div style="overflow-x:auto;margin-top:12px;">
+    <table class="variant-table">
+      <thead><tr>
+        <th>البيان</th>
+        <th>الربط المسجّل على شوبيفاي</th>
+        <th>اللي البحث المستقل لقاه</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(([label, a, b, mono]) => `<tr>
+          <td class="right">${esc(label)}</td>
+          <td${mono ? ' class="mono"' : ''}>${cell(a)}</td>
+          <td${mono ? ' class="mono"' : ''}>${cell(b)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+    ${(lp && lp.wpEditUrl) || (sp && sp.wpEditUrl) ? `<div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+      ${lp && lp.wpEditUrl ? `<a class="btn-outline" href="${esc(lp.wpEditUrl)}" target="_blank" rel="noopener">🔗 افتح #${esc(lp.id)} على ووردبريس</a>` : ''}
+      ${sp && sp.wpEditUrl && (!lp || String(sp.id) !== String(lp.id)) ? `<a class="btn-outline" href="${esc(sp.wpEditUrl)}" target="_blank" rel="noopener">🔗 افتح #${esc(sp.id)} على ووردبريس</a>` : ''}
+    </div>` : ''}`;
+}
+
+function openRelinkModal() {
+  const data = relinkData;
+  if (!data) return;
+  const info = relinkStatusInfo(data);
+  document.getElementById('relinkModalTitle').textContent = info.title;
+  document.getElementById('relinkModalBody').innerHTML = `
+    <div class="result-note ${info.tone}"><strong>${esc(info.headline)}</strong><br>${info.reason}</div>
+    ${info.diff ? `<div class="result-note err" style="margin-top:10px;"><strong>الاختلاف:</strong> ${info.diff}</div>` : ''}
+    <div class="result-row" style="margin-top:14px;"><span>رقم المنتج على شوبيفاي</span><span class="mono">${esc(data.shopifyProductId || '—')}</span></div>
+    ${data.productTitle ? `<div class="result-row"><span>عنوان المنتج على شوبيفاي</span><span>${esc(data.productTitle)}</span></div>` : ''}
+    <div class="result-row"><span>Wordpress ID المسجّل على شوبيفاي</span><span class="mono">${esc(data.wordpressId ?? '—')}</span></div>
+    ${relinkCompareTable(data)}
+    ${data.relinkAllowed && data.searchConfirmed === false ? `<div class="result-note warn" style="margin-top:10px;">ملحوظة: البحث المستقل في ووكومرس مالقاش المنتج بالرقم ده (فلتر GTIN رجّع صفر) — لكن الإثبات موجود على المنتج المربوط نفسه، فإعادة الربط مسموحة.</div>` : ''}
+    ${data.relinkAllowed ? `
+      <div class="result-note warn" style="margin-top:12px;">⚠️ <strong>إعادة الربط هتعيد الكتابة على نفس المنتج:</strong> الحالة والنجمة والميتافيلد على شوبيفاي، والـ SKU والمخزون والسعر وحالة النشر على ووكومرس، وتاج <code>stylebox</code> آخر خطوة. فعل كتابة غير قابل للتراجع.</div>
+      <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-primary success" style="flex:1;margin-top:0;" onclick="confirmRelink()">✅ أكّد إعادة الربط</button>
+        <button class="btn-outline" onclick="closeRelinkModal()">إلغاء</button>
+      </div>`
+    : `
+      <div class="result-note err" style="margin-top:12px;">⛔ مفيش أي تعديل حصل على أي منصة — البحث ده قراءة بس. صلّح البيانات على ووردبريس/شوبيفاي وبعدين أعد البحث.</div>
+      <div style="margin-top:18px;">
+        <button class="btn-outline" onclick="closeRelinkModal()">إغلاق</button>
+      </div>`}`;
+  document.getElementById('relinkOverlay').classList.add('open');
+}
+
+function closeRelinkModal() {
+  document.getElementById('relinkOverlay').classList.remove('open');
+}
+
+// التأكيد بيفتح **زرار المراجعة** مش خطوة ③ — كل حرّاس المسار الفردي زي ما هي.
+function confirmRelink() {
+  if (!relinkData || !relinkData.relinkAllowed || !foundWpProductId) return;
+  closeRelinkModal();
+  relinkConfirmed = true;
+  const note = document.getElementById('relinkRequiredNote');
+  if (note) note.innerHTML = '✅ إعادة الربط اتأكدت — كمّل بمراجعة المنتج تحت.';
+  // الزرار بيتحوّل لثانوي بعد التأكيد عشان زرار المراجعة (الخطوة اللي بعدها
+  // فعلاً) يفضل هو الأبرز في الشاشة — زرارين أزرق كبار جنب بعض بيلغوا بعض.
+  const btn = document.getElementById('relinkOpenBtn');
+  if (btn) {
+    btn.className = 'btn-outline';
+    btn.style.width = '100%';
+    btn.style.justifyContent = 'center';
+    btn.textContent = '🔁 مراجعة تفاصيل الربط الحالي مرة تانية';
+  }
+  const wrap = document.getElementById('relinkReviewWrap');
+  if (wrap) wrap.innerHTML = `<div style="margin-top:12px;">${reviewActionsHTML(relinkData)}</div>`;
+  showToast('تم تأكيد إعادة الربط — لسه لازم تراجع المنتج قبل خطوة الربط', 'warning');
 }
 
 // v2.9.0 — بيتنادى بعد تأكيد نافذة المراجعة (confirmProductReviewed()، v2.10.0):
@@ -2364,6 +2636,9 @@ function renderFindResult(data) {
 // لو اتنادت تاني بعد ما فتحت الخطوة، مفيش أي أثر إضافي.
 function markProductReviewed() {
   if (!foundWpProductId) return;
+  // v2.18.0 — منتج مربوط قبل كده: زرار المراجعة نفسه مابيظهرش قبل تأكيد إعادة
+  // الربط، والحارس ده دفاع تاني (زي كل حارس في الأداة).
+  if (relinkMode && !relinkConfirmed) return;
   productReviewed = true;
   const note = document.getElementById('reviewRequiredNote');
   if (note) note.style.display = 'none';
@@ -2405,6 +2680,10 @@ function confirmProductReviewed() {
 function resetFindStep() {
   foundWpProductId = null;
   productReviewed  = false;
+  relinkMode       = false; // v2.18.0
+  relinkConfirmed  = false;
+  relinkData       = null;
+  closeRelinkModal();
   document.getElementById('shopifyProductIdInput').value = '';
   document.getElementById('stepFoundCard').style.display = 'none';
   document.getElementById('findResultWrap').innerHTML = '';
@@ -2504,6 +2783,7 @@ function confirmPriceDiff() {
 async function runSync() {
   if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'warning'); return; }
   if (!foundWpProductId) { showToast('ابحث عن المنتج الأول (الخطوة 1)', 'warning'); return; }
+  if (relinkMode && !relinkConfirmed) { showToast('المنتج ده مربوط قبل كده — أكّد إعادة الربط من نافذة التفاصيل الأول', 'warning'); return; }
   if (!productReviewed) { showToast('راجع صور وكاتيجوريز المنتج الأول (زرار المراجعة في نتيجة البحث)', 'warning'); return; }
   const { shopifyStatus, addStar } = readSyncOptions();
   if (shopifyStatus === null || addStar === null || !priceDiffConfirmed) {
