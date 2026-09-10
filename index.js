@@ -3,7 +3,37 @@
 // Worker: stylebox-products-linking-worker — EcomModa
 // Tool:   Ecommoda StyleBox Products Linking
 // Account: ecommoda-dev.workers.dev
-// skills: worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 · html-builder v1.0.0 — 27-08-2026
+// skills: worker-builder v3.0.0 · html-builder v7.0.0 · woocommerce-sync-helper v1.0.0
+//         · ecommoda-constants v2.0.0 · shopify-graphql-helper v2.1.0 — 10-09-2026
+//
+// ⚠️ v2.12.0 (10-09-2026) — جولة مطابقة للمهارات بعد مراجعة شاملة (skills-sweep).
+//   البصمة كانت متجمّدة عند worker-builder v1.0.0 وhtml-builder v1.0.0 بينما
+//   المهارتين بقوا v3.0.0 و v7.0.0 — الأداة اتبنت صح على قواعد قديمة، وورثت
+//   بندين كانوا **كود غلط جوّه المهارة نفسها**. اللي اتصلّح هنا في الـ Worker:
+//   1) §HELPERS::time — توقيت القاهرة بقى بيتحسب بـ Intl بدل إزاحة ثابتة +3
+//      (constants §13). الثابت كان هيبقى غلط بساعة من 29-10-2026 **في صمت**.
+//      نفس الدوال بالحرف في index.html.
+//   2) §SHARED — كتلة السجل اتحدّثت للنسخة الحالية من shared-functions.md:
+//      buildLogFilterSQL() واحدة للتلات دوال (كان SQL مكرر، و`type` بيتفلتر في
+//      getLogs بس فالتصدير بينزّل غير المعروض) · LOG_SORT_COLUMNS قايمة بيضاء
+//      مقفولة + orderByClause() بكاسر تعادل إلزامي · LOG_EXPORT_MAX ثابت مسمّى
+//      · logParamsFrom() مصدر واحد لفلاتر التلات endpoints.
+//   3) 🔴 عقد get_logs_export — بقى يرجّع {cap, total, truncated} جنب الصفوف.
+//      قبل كده كان بيقص عند 2000 صف **في السكوت**، والواجهة بتقول "تم تصدير
+//      N ✓" على شاشة وملف ناقصين. والعدّ بيتنادى بنفس الفلاتر بالظبط.
+//   4) parseInt على limit/offset بقى محروس — parseInt('abc') → NaN بيوصل لـ D1
+//      كـ bind ويرجّع خطأ غامض.
+//   5) حارس WORKER_SECRET الغايب **قبل** مقارنة الـ auth — من غيره القالب
+//      بينتج "Bearer undefined" وأي طلب معاه الهيدر ده بيعدّي على Worker كتابة.
+//   6) extra.result بمفردات constants §12 على كل صف لوج. الفرق اللي البند
+//      اتكتب عشانه: حارس البراند والتعارض ومقاس مالوش variant على شوبيفاي
+//      **اتوقفوا قبل أي كتابة** → `rejected` مش `error`. ومقاس اتكتب على
+//      ووكومرس وفشل ميتافيلد شوبيفاي بعده → `warning` مش `error` (كان بيعمل
+//      حفرة مقفولة: الصف بيقول فشل والمقاس متزامن).
+//      ⚠️ عمود `type` لسه بالقيم المسجّلة في constants §7 — تقسيم type بالأثر
+//      الخارجي محتاج تسجيل `rejected` هناك الأول (راجع 🔴 معلّقة في CLAUDE.md).
+//   7) نداء ووكومرس في diag بقى يعدّي من wcFetch (بـ maxAttempts:1) — كان
+//      النداء الوحيد المتبقي بـ fetch مباشر.
 //
 // ⚠️ v2.10.0 (10-09-2026) — تصليح عطل حقيقي في أول تشغيلة Bulk على 15 منتج:
 //   منتجان اتربطوا، التالت فشل بـ SKU مكرر، والرابع رجّع
@@ -189,7 +219,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.11.0';
+const WORKER_VERSION = 'v2.12.0';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -262,6 +292,43 @@ function wcBaseUrl(env) {
 // confirmed necessary in production, see notes from the Make.com build attempt
 function bust(url) {
   return url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
+}
+
+// ─── §HELPERS::time — توقيت القاهرة يتحسب، مايتكتبش ثابت ───
+// 🔴 ecommoda-constants §13 · worker-builder v3.0.0 Step 7.
+// الإزاحة الثابتة (+3) بقت غلط: التوقيت الصيفي بيخلص 29-10-2026، والثابت
+// **مابيشتكيش** لما يبقى غلط — كل وقت معروض بيزحف ساعة في صمت.
+// ⚠️ **نفس الدوال بالحرف في الـ Worker وفي الواجهة** (index.html §SHELL-JS) —
+//    نسختين مختلفتين = الشاشة والسجل بيقولوا وقتين مختلفين لنفس الصف.
+const CAIRO_TZ = 'Africa/Cairo';
+const _cairoFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: CAIRO_TZ, hourCycle: 'h23',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
+function cairoParts(d) {
+  const o = {};
+  for (const p of _cairoFmt.formatToParts(d)) if (p.type !== 'literal') o[p.type] = p.value;
+  if (o.hour === '24') o.hour = '00';        // حارس: بعض المحركات بترجّع 24
+  return o;
+}
+function cairoOffsetMinutes(d) {             // ١٨٠ صيفًا · ١٢٠ شتاءً
+  const p = cairoParts(d);
+  return Math.round((Date.UTC(+p.year, +p.month - 1, +p.day,
+                              +p.hour, +p.minute, +p.second) - d.getTime()) / 60000);
+}
+function cairoDateStr(iso) {                 // 'YYYY-MM-DD' بتوقيت القاهرة
+  const p = cairoParts(iso ? new Date(iso) : new Date());
+  return `${p.year}-${p.month}-${p.day}`;
+}
+// حدود يوم تقويمي بالقاهرة → UTC — الإزاحة تتقاس عند **ظهر** اليوم
+// (أي تحويل توقيت بيحصل فجرًا، فالظهر بيدّي إزاحة اليوم الصحيحة)
+function cairoDayBoundsUTC(dateStr) {
+  const offMin = cairoOffsetMinutes(new Date(`${dateStr}T12:00:00.000Z`));
+  return {
+    start: new Date(Date.parse(`${dateStr}T00:00:00.000Z`) - offMin * 60000).toISOString(),
+    end:   new Date(Date.parse(`${dateStr}T23:59:59.999Z`) - offMin * 60000).toISOString(),
+  };
 }
 
 // ─── §HELPERS::assertEnv ───
@@ -363,48 +430,155 @@ async function writeLog(db, entry) {
   ).run();
 }
 
-async function getLogs(db, {
-  tool = null, employee = null, type = null, search = null, limit = 100, offset = 0,
+const LOG_EXPORT_MAX = 2000;   // سقف التصدير — بيرجع للواجهة كـ `cap`
+
+/**
+ * بنّاء شرط الفلترة الموحّد للسجل — التلات دوال تحته بتستخدمه، فمفيش SQL
+ * مكرر يتعتّق في واحدة منهم ويسيب التانية.
+ *
+ * كل الباراميترات **اختيارية**، والسلوك من غيرها **مطابق للنسخة القديمة
+ * بالحرف** — الإضافة متوافقة رجوعيًا ١٠٠٪:
+ *   employees[] / types[]  → قوايم. multi-select إلزامي في أي شاشة فيها جدول
+ *                            (`ecommoda-html-builder` → data-table-standard.md
+ *                            بند ٢١)، والسجل بقى جدول (بند ٢٦).
+ *   employee / type        → قيمة واحدة — متسابة للتوافق مع واجهات قديمة.
+ *   dateFrom / dateTo      → بيتقارنوا بـ substr(timestamp,1,10) — يعني **UTC**،
+ *                            والعرض بتوقيت القاهرة. فرق الساعتين/التلاتة ممكن
+ *                            يحط عملية بعد ٩ مساءً في يوم UTC اللي بعده. مقبول
+ *                            لفلتر بالأيام — **بس مكتوب**، عشان مايتكتشفش
+ *                            كباج بعدين.
+ * login/logout مستثنيين في SQL دايمًا — مش client-side.
+ */
+function buildLogFilterSQL(select, {
+  tool      = null,
+  employee  = null, employees = null,
+  type      = null, types     = null,
+  search    = null,
+  dateFrom  = null, dateTo    = null,
 } = {}) {
-  let sql = "SELECT * FROM logs WHERE type NOT IN ('login','logout')";
+  let sql = `${select} FROM logs WHERE type NOT IN ('login','logout')`;
   const b = [];
-  if (tool)     { sql += ' AND tool = ?';     b.push(tool); }
-  if (employee) { sql += ' AND employee = ?'; b.push(employee); }
-  if (type)     { sql += ' AND type = ?';     b.push(type); }
+
+  const emps = Array.isArray(employees) && employees.length ? employees : (employee ? [employee] : []);
+  const typs = Array.isArray(types)     && types.length     ? types     : (type     ? [type]     : []);
+
+  if (tool) { sql += ' AND tool = ?'; b.push(tool); }
+  if (emps.length) {
+    sql += ` AND employee IN (${emps.map(() => '?').join(',')})`; b.push(...emps);
+  }
+  if (typs.length) {
+    sql += ` AND type IN (${typs.map(() => '?').join(',')})`; b.push(...typs);
+  }
   if (search) {
     sql += ' AND (order_name LIKE ? OR notes LIKE ?)';
     b.push(`%${search}%`, `%${search}%`);
   }
-  sql += ' ORDER BY timestamp DESC LIMIT ? OFFSET ?';
-  b.push(Math.min(limit, 100), offset);
-  return (await db.prepare(sql).bind(...b).all()).results;
+  if (dateFrom) { sql += ' AND substr(timestamp, 1, 10) >= ?'; b.push(dateFrom); }
+  if (dateTo)   { sql += ' AND substr(timestamp, 1, 10) <= ?'; b.push(dateTo); }
+
+  return { sql, b };
 }
 
-async function getLogsCount(db, { tool = null, employee = null, search = null } = {}) {
-  let sql = "SELECT COUNT(*) as total FROM logs WHERE type NOT IN ('login','logout')";
-  const b = [];
-  if (tool)     { sql += ' AND tool = ?';     b.push(tool); }
-  if (employee) { sql += ' AND employee = ?'; b.push(employee); }
-  if (search) {
-    sql += ' AND (order_name LIKE ? OR notes LIKE ?)';
-    b.push(`%${search}%`, `%${search}%`);
-  }
+/**
+ * Fetch logs from D1 with server-side filtering + pagination.
+ * Max limit per page: 100 (enforced server-side).
+ *
+ * ⚠️ Do NOT use this for XLSX export — use getLogsExport() instead.
+ */
+async function getLogs(db, { limit = 100, offset = 0, sortBy, sortDir, ...filters } = {}) {
+  const { sql, b } = buildLogFilterSQL('SELECT *', filters);
+  const q = sql + orderByClause(sortBy, sortDir) + ' LIMIT ? OFFSET ?';
+  return (await db.prepare(q)
+    .bind(...b, Math.min(limit, 100), Math.max(offset, 0)).all()).results;
+}
+
+// ⚠️ قائمة **مقفولة** — القيمة جاية من العميل وبتتلزق في نص SQL مباشرةً
+//    (ORDER BY مابيقبلش bind). أي قيمة بره القايمة بترجع للافتراضي بدون خطأ.
+// ⚠️ المفاتيح لازم تطابق `data-sort-key` في الواجهة **حرفيًا** — مفتاح مش في
+//    القايمة بيرجع للافتراضي في صمت، فالعمود يبان إنه اترتّب وهو مااترتّبش.
+const LOG_SORT_COLUMNS = {
+  date: 'timestamp', time: 'timestamp', employee: 'employee', type: 'type',
+  sku: 'sku', product: 'product_title', result: `json_extract(extra, '$.result')`,
+};
+
+function orderByClause(sortBy, sortDir) {
+  const col = LOG_SORT_COLUMNS[String(sortBy || '')] || 'timestamp';
+  const dir = String(sortDir || '').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+  // 🔴 كاسر تعادل إلزامي: من غيره صفوف نفس القيمة بترتيب عشوائي بين الصفحات،
+  //    والصف الواحد ممكن يظهر في صفحتين **أو مايظهرش خالص**.
+  return col === 'timestamp' ? ` ORDER BY timestamp ${dir}`
+                             : ` ORDER BY ${col} ${dir}, timestamp DESC`;
+}
+
+/**
+ * Count total matching log rows.
+ * بيتنادى بالتوازي مع getLogsExport() عشان الواجهة تعرف إن التصدير اتقص.
+ */
+async function getLogsCount(db, filters = {}) {
+  const { sql, b } = buildLogFilterSQL('SELECT COUNT(*) as total', filters);
   const row = await db.prepare(sql).bind(...b).first();
   return row?.total ?? 0;
 }
 
-async function getLogsExport(db, { tool = null, employee = null, search = null } = {}) {
-  let sql = "SELECT * FROM logs WHERE type NOT IN ('login','logout')";
-  const b = [];
-  if (tool)     { sql += ' AND tool = ?';     b.push(tool); }
-  if (employee) { sql += ' AND employee = ?'; b.push(employee); }
-  if (search) {
-    sql += ' AND (order_name LIKE ? OR notes LIKE ?)';
-    b.push(`%${search}%`, `%${search}%`);
-  }
-  sql += ' ORDER BY timestamp DESC LIMIT 2000';
-  return (await db.prepare(sql).bind(...b).all()).results;
+/**
+ * Fetch all matching logs for XLSX export — up to LOG_EXPORT_MAX rows.
+ *
+ * ⚠️ الدالة دي **بتقص في السكوت** بطبيعتها. المسؤولية اللي جنبها إلزامية:
+ * الـ endpoint لازم يرجّع `cap` و`total` و`truncated` كمان.
+ */
+async function getLogsExport(db, filters = {}) {
+  const { sql, b } = buildLogFilterSQL('SELECT *', filters);
+  // ⚠️ التصدير والعدّ **بيتجاهلوا الترتيب عن قصد** — العدّ مالوش ترتيب،
+  //    والتصدير بياخد ترتيب السيرفر الافتراضي. تمرير sortBy/sortDir ليهم بيفتح
+  //    باب اختلاف مصدر الباراميترات بين النداءات = تصدير مش مطابق للشاشة.
+  const q = sql + ' ORDER BY timestamp DESC LIMIT ?';
+  return (await db.prepare(q).bind(...b, LOG_EXPORT_MAX).all()).results;
 }
+
+/**
+ * بيقرا فلاتر السجل من الـ query string — CSV للقوايم
+ * (employees=ahmed,sara · types=synced,error).
+ * الاسم المفرد لسه مقبول للتوافق الرجعي.
+ */
+function logParamsFrom(url, tool) {
+  const csv = (k) => (url.searchParams.get(k) || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const employees = csv('employees'), types = csv('types');
+  return {
+    tool,
+    employees: employees.length ? employees : null,
+    employee:  url.searchParams.get('employee') || null,
+    types:     types.length ? types : null,
+    type:      url.searchParams.get('type')     || null,
+    search:    url.searchParams.get('search')   || null,
+    dateFrom:  url.searchParams.get('dateFrom') || null,
+    dateTo:    url.searchParams.get('dateTo')   || null,
+  };
+}
+
+// ─── §SHARED::RESULT — مفردات extra.result الرسمية (ecommoda-constants §12) ───
+// خمس قيم مقفولة، والواجهة بتلوّن منها. الفرق اللي البند اتكتب عشانه:
+//   error    = **حاولنا** — النداء وصل للنظام الخارجي واترفض        → أحمر
+//   rejected = اتوقف **قبل** أي محاولة (حارس/تعارض/مدخل مجهول)      → محايد
+//   already  = الحالة المستهدفة موجودة أصلاً، مفيش حاجة كانت مطلوبة → محايد
+// 🔴 rejected و already **ممنوع** يتعدّوا فشل — وإلا كل تقرير عن نسبة فشل
+//    الأداة بيعدّ حالات ما اتلمسش فيها ولا منصة كأنها أعطال حقيقية.
+const RESULT = {
+  SUCCESS:  'success',
+  WARNING:  'warning',
+  ERROR:    'error',
+  REJECTED: 'rejected',
+  ALREADY:  'already',
+};
+
+// ⚠️ عمود `type` لسه بالقيم المسجّلة للأداة دي في `ecommoda-constants` §7
+//    (`product_meta_synced` · `synced` · `error` · `login` · `logout`).
+//    تقسيم `type` بالأثر الخارجي (worker-builder Step 5A ⑭) بيحتاج قيمة
+//    `rejected` **تتسجّل في §7 الأول** (Rule 7) — جدول `logs` مشترك بين كل
+//    أدوات الستاك، وقيمة غير مسجّلة بتنتج صفوف يتيمة. لحد ما دي تحصل،
+//    التمييز بيتم بـ `extra.result` وهو اللي أي استعلام خط أساس بيفلتر عليه:
+//      … AND type = 'synced' AND json_extract(extra,'$.result') = 'success'
+//    راجع سطر `🔴 معلّقة` في CLAUDE.md.
 
 // ─── §SHARED::safeWriteLog — Step 5A ⑦ ───
 // فشل D1 لازم يبان كـ logged:false، مش يسقط الرد كله على 500 لعملية شوبيفاي/WC
@@ -608,12 +782,12 @@ function wcBackoffMs(attempt, retryAfterHeader) {
 }
 
 // label = بادئة رسالة الخطأ زي ما كانت بالظبط ("WC get product 123")
-async function wcFetch(env, url, { label, method = 'GET', payload = null, cacheBust = true } = {}) {
+async function wcFetch(env, url, { label, method = 'GET', payload = null, cacheBust = true, maxAttempts = WC_MAX_ATTEMPTS } = {}) {
   const headers = { Authorization: wcAuthHeader(env) };
   if (payload !== null) headers['Content-Type'] = 'application/json';
 
   let lastError = null;
-  for (let attempt = 1; attempt <= WC_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     let resp;
     try {
       resp = await fetch(cacheBust ? bust(url) : url, {
@@ -624,7 +798,7 @@ async function wcFetch(env, url, { label, method = 'GET', payload = null, cacheB
     } catch (e) {
       // فشل شبكة/DNS/timeout — قابل لإعادة المحاولة زي 5xx
       lastError = new Error(`${label} failed: تعذّر الوصول لووكومرس (${e.message})`);
-      if (attempt < WC_MAX_ATTEMPTS) { await new Promise(r => setTimeout(r, wcBackoffMs(attempt))); continue; }
+      if (attempt < maxAttempts) { await new Promise(r => setTimeout(r, wcBackoffMs(attempt))); continue; }
       throw lastError;
     }
 
@@ -644,8 +818,8 @@ async function wcFetch(env, url, { label, method = 'GET', payload = null, cacheB
     );
     lastError.retryAfter = retryAfter || null;
     const retriable = resp.status === 429 || resp.status >= 500;
-    if (retriable && attempt < WC_MAX_ATTEMPTS) {
-      console.warn(`${label}: ${resp.status} — محاولة ${attempt}/${WC_MAX_ATTEMPTS}، هنستنى ونعيد`);
+    if (retriable && attempt < maxAttempts) {
+      console.warn(`${label}: ${resp.status} — محاولة ${attempt}/${maxAttempts}، هنستنى ونعيد`);
       await new Promise(r => setTimeout(r, wcBackoffMs(attempt, resp.headers.get('Retry-After'))));
       continue;
     }
@@ -1275,7 +1449,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
           tool: TOOL_NAME, type: 'product_meta_synced', employee,
           productTitle: wooProduct.name,
           notes: `global_unique_id (GTIN) كان فاضي — الرقم ${extracted.gtin} اتستخرج من بداية SKU وكُتب في GTIN، والـ SKU بقى "${extracted.sku}"`,
-          extra: { wpProductId, ...gtinRecoveredFromSku },
+          extra: { result: RESULT.SUCCESS, wpProductId, ...gtinRecoveredFromSku },
         });
         if (!okLog) loggedOk = false;
       } catch (e) {
@@ -1316,7 +1490,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
         tool: TOOL_NAME, type: 'error', employee,
         productTitle: wooProduct.name,
         notes: `الربط أُوقف — لا يوجد براند "${shopifyVendor}" (Vendor على شوبيفاي) على ووردبريس`,
-        extra: { wpProductId, shopifyProductId, vendor: shopifyVendor },
+        extra: { result: RESULT.REJECTED, stage: 'lookup', wpProductId, shopifyProductId, vendor: shopifyVendor },
       });
       throw new BrandNotFoundError(
         shopifyVendor,
@@ -1343,7 +1517,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
       notes:        `wordpress_id=${wpProductId} set` +
                     (shopifyStatus === 'KEEP' ? '، حالة شوبيفاي اتسابت زي ما هي' : `، status→${shopifyStatus}`) +
                     (addStar ? (productLevelResult.titleApplied ? '، ⭐ اتضافت للعنوان' : '، العنوان كان متعلّم من قبل') : '، إضافة ⭐ اتخطّت'),
-      extra: { wpProductId, shopifyProductId, ...productLevelResult },
+      extra: { result: RESULT.SUCCESS, wpProductId, shopifyProductId, ...productLevelResult },
     });
     if (!okLog) loggedOk = false;
   } catch (e) {
@@ -1352,7 +1526,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
     const okLog = await safeWriteLog(env.DB, {
       tool: TOOL_NAME, type: 'error', employee,
       notes: `Product-level sync (metafield/status/title) failed: ${e.message}`,
-      extra: { wpProductId, shopifyProductId },
+      extra: { result: RESULT.ERROR, stage: 'write', wpProductId, shopifyProductId },
     });
     if (!okLog) loggedOk = false;
   }
@@ -1393,7 +1567,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
       notes: `WC status→publish، meta _shopify_product_id refreshed = ${shopifyProductId}` +
              (slugFixed ? `، slug اتصلّح من "${slugFixed.before}" لـ "${slugFixed.after}"` : '') +
              (wcBrandId ? `، Brand "${shopifyVendor}" اتربط بالمنتج` : ''),
-      extra: { wpProductId, shopifyProductId, wcStatus: 'publish', slugFixed, brandLinked: wcBrandId ? { id: wcBrandId, name: shopifyVendor } : null },
+      extra: { result: RESULT.SUCCESS, wpProductId, shopifyProductId, wcStatus: 'publish', slugFixed, brandLinked: wcBrandId ? { id: wcBrandId, name: shopifyVendor } : null },
     });
     if (!okLog) loggedOk = false;
   } catch (e) {
@@ -1402,7 +1576,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
     const okLog = await safeWriteLog(env.DB, {
       tool: TOOL_NAME, type: 'error', employee,
       notes: `WC product-level update (status=publish + _shopify_product_id) failed: ${e.message}`,
-      extra: { wpProductId, shopifyProductId },
+      extra: { result: RESULT.ERROR, stage: 'write', wpProductId, shopifyProductId },
     });
     if (!okLog) loggedOk = false;
   }
@@ -1440,7 +1614,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
         tool: TOOL_NAME, type: 'error', employee,
         sku: variation.sku,
         notes: `No Shopify variant found for size ${wcSize}`,
-        extra: { wpProductId, variationId: variation.id },
+        extra: { result: RESULT.REJECTED, stage: 'lookup', wpProductId, variationId: variation.id },
       });
       if (!okLog) loggedOk = false;
       continue;
@@ -1528,7 +1702,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
         sku: match.sku,
         productTitle: wooProduct.name,
         notes: `Size ${wcSize} فشل: ${rowError}`,
-        extra: { wpProductId, variationId: variation.id, shopifyVariantId: shopifyVariantNumericId },
+        extra: { result: RESULT.ERROR, stage: 'write', wpProductId, variationId: variation.id, shopifyVariantId: shopifyVariantNumericId },
       });
       if (!okLog) loggedOk = false;
       results.push({
@@ -1582,7 +1756,11 @@ async function syncProduct(env, wpProductId, opts = {}) {
 
     const okLog = await safeWriteLog(env.DB, {
       tool:         TOOL_NAME,
-      type:         combinedWarning ? 'error' : 'synced',
+      // ⚠️ Step 5A ⑩②: الفشل **بعد** الفعل الأساسي = warning مش error.
+      //    المقاس ده **اتكتب فعلاً على ووكومرس** (SKU/مخزون/سعر) واللي فشل هو
+      //    ميتافيلد شوبيفاي بعده. تسجيله `error` بيعمل **حفرة مقفولة**: الصف
+      //    بيقول فشل والمقاس متزامن، وأي تقرير بيعدّه عطل حقيقي.
+      type:         'synced',
       employee,
       sku:          match.sku,
       productTitle: wooProduct.name,
@@ -1595,6 +1773,8 @@ async function syncProduct(env, wpProductId, opts = {}) {
       extra: {
         wpProductId,
         variationId: variation.id,
+        result: combinedWarning ? RESULT.WARNING : RESULT.SUCCESS,
+        ...(combinedWarning ? { stage: 'write' } : {}),
         shopifyVariantId: shopifyVariantNumericId,
         ...(priceInfo ? { priceApplied: true, priceDifference, regularPrice: priceInfo.regularPrice, salePrice: priceInfo.salePrice } : {}),
       },
@@ -1624,7 +1804,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
       tool: TOOL_NAME, type: 'product_meta_synced', employee,
       productTitle: productLevelResult?.newTitle || shopifyTitle,
       notes: `Tag "${STYLEBOX_TAG}" اتضاف (آخر خطوة)`,
-      extra: { wpProductId, shopifyProductId, tag: STYLEBOX_TAG },
+      extra: { result: RESULT.SUCCESS, wpProductId, shopifyProductId, tag: STYLEBOX_TAG },
     });
     if (!okLog) loggedOk = false;
   } catch (e) {
@@ -1633,7 +1813,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
     const okLog = await safeWriteLog(env.DB, {
       tool: TOOL_NAME, type: 'error', employee,
       notes: `Tag "${STYLEBOX_TAG}" failed: ${e.message}`,
-      extra: { wpProductId, shopifyProductId },
+      extra: { result: RESULT.ERROR, stage: 'write', wpProductId, shopifyProductId },
     });
     if (!okLog) loggedOk = false;
   }
@@ -1680,6 +1860,15 @@ export default {
       return new Response(null, { status: 204, headers: getCORS(request) });
 
     // 2. WORKER_SECRET check — ALWAYS second
+    // 🔴 حارس السر الغايب **قبل** المقارنة (worker-builder v3.0.0 Step 8):
+    //    لو WORKER_SECRET غايب، القالب بينتج السلسلة الحرفية "Bearer undefined"
+    //    — يعني أي طلب معاه الهيدر ده **بيعدّي**، والحالة اللي المفروض تكون
+    //    "كل حاجة 401" بتتحوّل لـ"الحماية اتشالت" على Worker بيغيّر حالة منتجات
+    //    ومخزون. الحالة مش نظرية: سر اتمسح · إضافة من غير Promote · Worker شبح.
+    if (!env.WORKER_SECRET)
+      return json({ error: 'Worker misconfigured: WORKER_SECRET غير مضبوط — ' +
+        'ضِفه من Dashboard → Settings → Variables ثم Promote النسخة.' }, 500, request);
+
     const auth = request.headers.get('Authorization');
     if (!auth || auth !== `Bearer ${env.WORKER_SECRET}`)
       return json({ error: 'Unauthorized' }, 401, request);
@@ -1839,17 +2028,21 @@ export default {
             `{ currentAppInstallation { accessScopes { handle } } }`,
             {}, 'diag:accessScopes'
           );
+          // ⚠️ دي **معلومة** ℹ️ مش **نجاح** ✅ — قايمة الصلاحيات الممنوحة، مش
+          //    دليل إن الصلاحية المطلوبة موجودة. الواجهة بتعرضها كقايمة بنص
+          //    "الصلاحيات الممنوحة" عشان ماتدّيش طمأنينة كاذبة.
           shopifyScopes = (scopeResp?.data?.currentAppInstallation?.accessScopes || []).map(s => s.handle);
         } catch (e) { shopifyError = e.message; }
 
+        // ⚠️ كل نداء ووكومرس بيعدّي من wcFetch() (قاعدة v2.10.0) — بما فيهم
+        //    ده. الفرق الوحيد `maxAttempts: 1`: التشخيص المفروض يعرض الحالة
+        //    **الخام** دلوقتي، وإعادة المحاولة هنا بتخفي خنق قايم فعلاً وتخلي
+        //    diag يقول "تمام" على متجر بيحجب.
         let wcOk = false, wcError = null;
         try {
-          const resp = await fetch(
-            bust(`${wcBaseUrl(env)}/wp-json/wc/v3/products?per_page=1`),
-            { headers: { Authorization: wcAuthHeader(env) } }
-          );
-          wcOk = resp.ok;
-          if (!resp.ok) wcError = `HTTP ${resp.status}`;
+          await wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products?per_page=1`,
+            { label: 'diag WC probe', maxAttempts: 1 });
+          wcOk = true;
         } catch (e) { wcError = e.message; }
 
         let d1Ok = false, d1Error = null;
@@ -1875,27 +2068,41 @@ export default {
       // ──────────────────────────────────────────────────────────────
 
       // ─── §LOG-ENDPOINTS — v2: get_logs / get_logs_count / get_logs_export ──
+      // get_logs — server-side filtering + pagination + sorting
       if (action === 'get_logs') {
-        const employee = url.searchParams.get('employee') || null;
-        const search   = url.searchParams.get('search')   || null;
-        const limit    = Math.min(parseInt(url.searchParams.get('limit')  || '100'), 100);
-        const offset   = Math.max(parseInt(url.searchParams.get('offset') || '0'),    0);
-        const entries  = await getLogs(env.DB, { tool: TOOL_NAME, employee, search, limit, offset });
+        const p = logParamsFrom(url, TOOL_NAME);
+        // 🔴 parseInt('abc') → NaN · Math.min(NaN,100) → NaN → بيوصل لـ D1 كـ
+        //    bind ويرجّع خطأ غامض. الحراسة إلزامية، مش تجميل.
+        const limitRaw  = parseInt(url.searchParams.get('limit')  || '100', 10);
+        const offsetRaw = parseInt(url.searchParams.get('offset') || '0',   10);
+        const limit  = Number.isFinite(limitRaw)  ? Math.min(Math.max(limitRaw, 1), 100) : 100;
+        const offset = Number.isFinite(offsetRaw) ? Math.max(offsetRaw, 0) : 0;
+
+        const sortBy  = url.searchParams.get('sortBy');
+        const sortDir = url.searchParams.get('sortDir');
+        const entries = await getLogs(env.DB, { ...p, limit, offset, sortBy, sortDir });
         return json({ ok: true, entries }, 200, request);
       }
 
+      // get_logs_count — total for pagination
       if (action === 'get_logs_count') {
-        const employee = url.searchParams.get('employee') || null;
-        const search   = url.searchParams.get('search')   || null;
-        const total    = await getLogsCount(env.DB, { tool: TOOL_NAME, employee, search });
+        const total = await getLogsCount(env.DB, logParamsFrom(url, TOOL_NAME));
         return json({ ok: true, total }, 200, request);
       }
 
+      // get_logs_export — الصفوف **والحقيقة** مع بعض.
+      // ⛔ ممنوع يرجّع entries لوحدها: getLogsExport بتقص عند LOG_EXPORT_MAX من
+      //    غير أي إشارة، فالواجهة بتقول "تم تصدير N ✓" على ملف/شاشة ناقصة.
+      // ⚠️ getLogsCount بيتنادى بـ**نفس الفلاتر بالظبط** — نداء بفلاتر مختلفة
+      //    بيطلّع نسبة كذّابة، وهي أسوأ من مفيش رقم.
       if (action === 'get_logs_export') {
-        const employee = url.searchParams.get('employee') || null;
-        const search   = url.searchParams.get('search')   || null;
-        const entries  = await getLogsExport(env.DB, { tool: TOOL_NAME, employee, search });
-        return json({ ok: true, entries }, 200, request);
+        const p = logParamsFrom(url, TOOL_NAME);
+        const [entries, total] = await Promise.all([
+          getLogsExport(env.DB, p),
+          getLogsCount(env.DB, p),
+        ]);
+        return json({ ok: true, entries, cap: LOG_EXPORT_MAX, total,
+                      truncated: total > LOG_EXPORT_MAX }, 200, request);
       }
       // ──────────────────────────────────────────────────────────────
 
