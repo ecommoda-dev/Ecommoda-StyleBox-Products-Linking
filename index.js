@@ -6,6 +6,25 @@
 // skills: worker-builder v3.0.0 · html-builder v7.0.0 · woocommerce-sync-helper v1.0.0
 //         · ecommoda-constants v2.0.0 · shopify-graphql-helper v2.1.0 — 10-09-2026
 //
+// ⚠️ v2.13.0 (10-09-2026) — إعادة ربط منتج مربوط قبل كده، بشرط إثبات الهوية.
+//   بطلب صريح من صاحب الأداة: حارس "اتربط قبل كده" (v2.7.0) كان بيوقف
+//   find_product تمامًا — alreadyLinked:true ومفيش أي طريق للربط تاني من تاب
+//   الربط الفردي خالص. دلوقتي الحارس بيسلّم لـ verifyExistingLink() (§FIND):
+//   1) رقم ووردبريس من custom.wordpress_id **مش إثبات لوحده** — بنجيب منتج
+//      ووكومرس ده ونتأكد إنه بيحمل نفس رقم شوبيفاي (GTIN حرفي أو بداية SKU،
+//      نفس wcProductMatchesShopifyId اللي بيأكد أي بحث في الأداة). نفس منطق
+//      حارس التعارض في find_product_relink بالظبط.
+//   2) الإثبات موجود → relinkAllowed:true + نفس حقول نتيجة البحث العادية
+//      (wp_product_id/productName/wpEditUrl) — الواجهة بتكمّل بحرّاسها المعتادة
+//      (تأكيد إعادة الربط ← زرار المراجعة ← نافذة المراجعة ← خطوة ③).
+//   3) الإثبات ناقص أو متعارض → relinkAllowed:false + relinkStatus بسبب مسمّى
+//      (meta_invalid · meta_missing · cross_linked · unverified · duplicate)
+//      + linkedProduct/searchProduct بتفاصيل الطرفين للعرض في نافذة الواجهة.
+//      **مفيش أي كتابة في كل الحالات دي** — find_product لسه قراءة بس.
+//   ⚠️ تكلفة النداءات في الحالة الغالبة: wcGetProduct واحد + فلتر GTIN واحد،
+//   والمسح الاحتياطي متقفل (skipScan) لأن الإثبات في إيدنا — درس خنق ووكومرس
+//   10-09-2026. البحث الكامل بالمسح بيحصل في حالات الرفض بس.
+
 // ⚠️ v2.12.0 (10-09-2026) — جولة مطابقة للمهارات بعد مراجعة شاملة (skills-sweep).
 //   البصمة كانت متجمّدة عند worker-builder v1.0.0 وhtml-builder v1.0.0 بينما
 //   المهارتين بقوا v3.0.0 و v7.0.0 — الأداة اتبنت صح على قواعد قديمة، وورثت
@@ -219,7 +238,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.12.0';
+const WORKER_VERSION = 'v2.13.0';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -1214,6 +1233,156 @@ async function findWcProductByShopifyId(env, shopifyProductId, { skipScan = fals
 }
 
 // ══════════════════════════════════════════════════════════════
+// §FIND::verifyExistingLink — v2.13.0 (إعادة الربط لمنتج مربوط قبل كده)
+// بطلب صريح من صاحب الأداة (10-09-2026): حارس "اتربط قبل كده" (v2.7.0) كان
+// بيوقف find_product تمامًا عند alreadyLinked:true. دلوقتي بيكمّل — لكن
+// **بشرط واحد قاطع**: إن المنتج اللي الميتافيلد بيشاور عليه هو **نفسه**
+// المنتج اللي يخص رقم شوبيفاي ده فعلاً. الشرط ده بيتحقق منه هنا، والنتيجة
+// إما إعادة ربط مسموحة أو رفض بسبب مسمّى وتفاصيل الطرفين للعرض في الواجهة.
+//
+// ⚠️ الإثبات هو نفس قاعدة القبول في كل الأداة — GTIN حرفي أو بداية SKU
+// (wcProductMatchesShopifyId)، **مش العنوان ولا رقم الميتافيلد لوحده**:
+// ميتافيلد قديم/غلط يقدر يخلّي الأداة تكتب مخزون وأسعار منتج على منتج تاني
+// خالص (نفس منطق حارس التعارض في find_product_relink، §BULK).
+//
+// الحالات (relinkStatus):
+//   • match        → إثبات موجود، وإعادة الربط مسموحة (relinkAllowed:true)
+//   • meta_invalid → قيمة custom.wordpress_id مش رقم منتج صالح
+//   • meta_missing → المنتج اللي بتشاور عليه مش موجود على ووردبريس (404)
+//   • cross_linked → منتج ووكومرس ده بيحمل رقم شوبيفاي **تاني** (أخطر حالة)
+//   • unverified   → مفيش GTIN ولا بادئة SKU على منتج ووكومرس = مفيش إثبات هوية
+//   • duplicate    → الإثبات موجود، لكن البحث المستقل لقى منتج ووكومرس **تاني**
+//                    بنفس الرقم (GTIN مكرر) — مين فيهم الصح مش قرار الأداة
+//
+// تكلفة النداءات: في الحالة الغالبة (match) نداء wcGetProduct واحد + فلتر
+// GTIN واحد — والمسح الاحتياطي **متقفل** (skipScan) لأن الإثبات موجود أصلاً،
+// فمفيش 30 نداء على الفاضي (نفس درس الخنق 10-09-2026). في حالات الرفض بس
+// بيتعمل بحث كامل — عشان الواجهة تقدر تقول للموظف المنتج الصح رقمه كام.
+// ══════════════════════════════════════════════════════════════
+function wcProductLinkMarks(product) {
+  const gtin      = String(product?.global_unique_id || '').trim();
+  const skuPrefix = (String(product?.sku || '').match(/^(\d{6,})-/) || [])[1] || '';
+  return { gtin, skuPrefix };
+}
+
+function wcProductSummary(env, product) {
+  if (!product || !product.id) return null;
+  const { gtin, skuPrefix } = wcProductLinkMarks(product);
+  return {
+    id:        product.id,
+    name:      product.name || null,
+    sku:       product.sku || null,
+    gtin:      gtin || null,
+    skuPrefix: skuPrefix || null,
+    status:    product.status || null,
+    wpEditUrl: `${wcBaseUrl(env)}/wp-admin/post.php?post=${product.id}&action=edit`,
+  };
+}
+
+// نتيجة findWcProductByShopifyId في نفس شكل wcProductSummary عشان الواجهة
+// تعرض الطرفين جنب بعض في نافذة التفاصيل من غير أي شرط إضافي.
+function foundProductSummary(result) {
+  if (!result || !result.found) return null;
+  return {
+    id:         result.wp_product_id,
+    name:       result.productName || null,
+    sku:        result.sku || null,
+    matchedBy:  result.matchedBy || null,
+    matchedVia: result.matchedVia || null,
+    wpEditUrl:  result.wpEditUrl || null,
+  };
+}
+
+async function verifyExistingLink(env, shopifyProductId, linked) {
+  assertEnv(env, 'shopify', 'woocommerce');
+  const idStr     = String(shopifyProductId);
+  const metaIdRaw = String(linked.wordpressId || '').trim();
+  const base = {
+    alreadyLinked:    true,
+    wordpressId:      linked.wordpressId || null,
+    productTitle:     linked.productTitle || null,
+    shopifyProductId: idStr,
+  };
+
+  // كل حالات الرفض بتعمل بحث كامل (بالمسح) عشان الواجهة تعرض "المنتج الصح
+  // رقمه كام" جنب المنتج المربوط غلط — الفرق ده هو كل قيمة نافذة التفاصيل.
+  const rejectWithSearch = async (relinkStatus, linkedProduct) => {
+    const search = await findWcProductByShopifyId(env, idStr);
+    return {
+      ...base,
+      found:         false,
+      relinkAllowed: false,
+      relinkStatus,
+      linkedProduct,
+      searchProduct: foundProductSummary(search),
+      scanned:       search.scanned ?? 0,
+      scannedAll:    search.scannedAll !== false,
+    };
+  };
+
+  // ① قيمة الميتافيلد نفسها لازم تكون رقم منتج صالح
+  if (!/^\d+$/.test(metaIdRaw)) return rejectWithSearch('meta_invalid', null);
+
+  // ② المنتج اللي الميتافيلد بيشاور عليه لازم يكون موجود فعلاً على ووردبريس.
+  // ⚠️ نفس قاعدة v2.10.0: 404 بس معناه "اتمسح"؛ أي خطأ تاني (429 خنق · 401
+  // أسرار · 5xx · شبكة) بيترفع بنصّه بدل ما يتحوّل لرسالة بتشاور على البيانات.
+  let metaProduct = null;
+  try {
+    metaProduct = await wcGetProduct(env, metaIdRaw);
+  } catch (e) {
+    if (!(e instanceof WcHttpError) || e.status !== 404) throw e;
+    console.error(`find_product: wcGetProduct(${metaIdRaw}) رجّع 404 — الميتافيلد بيشاور على منتج اتمسح`);
+  }
+  if (!metaProduct || !metaProduct.id) return rejectWithSearch('meta_missing', null);
+
+  const marks         = wcProductLinkMarks(metaProduct);
+  const linkedProduct = wcProductSummary(env, metaProduct);
+
+  // ③/④ الإثبات: نفس قاعدة القبول في الأداة كلها — GTIN حرفي أو بداية SKU
+  if (!wcProductMatchesShopifyId(metaProduct, idStr)) {
+    return rejectWithSearch(
+      (marks.gtin || marks.skuPrefix) ? 'cross_linked' : 'unverified',
+      linkedProduct
+    );
+  }
+
+  // ⑤ الإثبات موجود — بحث مستقل للتأكيد. skipScan لأن الإثبات في إيدنا أصلاً:
+  // المسح هنا هيبقى لحد 30 نداء من غير أي معلومة جديدة (خنق 10-09-2026).
+  const search = await findWcProductByShopifyId(env, idStr, { skipScan: true });
+  if (search.found && String(search.wp_product_id) !== String(metaProduct.id)) {
+    return {
+      ...base,
+      found:         false,
+      relinkAllowed: false,
+      relinkStatus:  'duplicate',
+      linkedProduct,
+      searchProduct: foundProductSummary(search),
+      scanned:       search.scanned ?? 0,
+      scannedAll:    true,
+    };
+  }
+
+  return {
+    ...base,
+    found:           true,
+    relinkAllowed:   true,
+    relinkStatus:    'match',
+    wp_product_id:   metaProduct.id,
+    productName:     metaProduct.name,
+    sku:             metaProduct.sku,
+    matchedBy:       marks.gtin === idStr ? 'gtin' : 'sku',
+    matchedVia:      'metafield',
+    wpEditUrl:       linkedProduct.wpEditUrl,
+    linkedProduct,
+    searchProduct:   foundProductSummary(search),
+    // البحث المستقل تأكيد إضافي مش شرط: الإثبات الحرفي على المنتج نفسه هو
+    // الأساس. false هنا معناها "مالقيناهوش بالبحث" (فلتر GTIN اتعطّل مثلاً)،
+    // والواجهة بتقولها للموظف في نافذة التفاصيل من غير ما توقف إعادة الربط.
+    searchConfirmed: !!search.found,
+  };
+}
+
+// ══════════════════════════════════════════════════════════════
 // §BULK::findWcProductForRelink — v2.9.0 (أكشن find_product_relink)
 // نسخة "إعادة الربط" من البحث، مخصّصة للمسار الجماعي (Bulk) في الواجهة.
 //
@@ -1937,16 +2106,15 @@ export default {
           return json({ error: 'shopify_product_id لازم يكون رقم فقط' }, 400, request);
         }
         // v2.7.0 — قبل أي بحث في ووكومرس: المنتج ده اتربط قبل كده؟ (custom.wordpress_id
-        // مش فاضي على شوبيفاي). لو اتربط، بنوقف هنا ومنكملش بحث WC — راجع
-        // checkShopifyAlreadyLinked().
+        // مش فاضي على شوبيفاي). راجع checkShopifyAlreadyLinked().
+        // ⚠️ v2.13.0 — الحارس ده **مابقاش بيوقف العملية**: بقى بيسلّم لـ
+        // verifyExistingLink() اللي بيتأكد إن المنتج المربوط هو نفسه المنتج
+        // اللي يخص رقم شوبيفاي ده. إعادة الربط مسموحة **بس** لو الإثبات موجود
+        // (relinkAllowed:true)؛ غير كده رفض بسبب مسمّى + تفاصيل الطرفين.
         const alreadyLinked = await checkShopifyAlreadyLinked(env, shopifyProductId);
         if (alreadyLinked.linked) {
-          return json({
-            ok: true,
-            alreadyLinked: true,
-            wordpressId:   alreadyLinked.wordpressId,
-            productTitle:  alreadyLinked.productTitle,
-          }, 200, request);
+          const verdict = await verifyExistingLink(env, shopifyProductId, alreadyLinked);
+          return json({ ok: true, ...verdict }, 200, request);
         }
         const result = await findWcProductByShopifyId(env, shopifyProductId);
         return json({ ok: true, alreadyLinked: false, ...result }, 200, request);
