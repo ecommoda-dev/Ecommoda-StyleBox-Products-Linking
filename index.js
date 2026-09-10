@@ -5,6 +5,23 @@
 // Account: ecommoda-dev.workers.dev
 // skills: worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 · html-builder v1.0.0 — 27-08-2026
 //
+// ⚠️ v2.9.0 (10-09-2026) — أكشن جديد find_product_relink (قراءة بس، زي
+//   find_product بالظبط: مفيش كتابة ومفيش D1 log)، مخصّص **لمسار إعادة الربط
+//   الجماعي (Bulk)** الجديد في الواجهة، بطلب صاحب الأداة. الفرق الوحيد عن
+//   find_product إن المنتج **المربوط قبل كده مش حالة رفض هنا — ده الوضع
+//   المتوقع**: بدل ما نقف عند حارس "اتربط قبل كده"، بناخد رقم ووردبريس من
+//   metafield custom.wordpress_id نفسه ونرجّعه جاهز لإعادة الربط (مفيش بحث في
+//   ووكومرس أصلاً — نداء واحد بدل ما يوصل لعشرات في المسح الاحتياطي).
+//   ⚠️ find_product **متغيّرش خالص** — المسار الفردي في الواجهة لسه بيستخدمه
+//   بحارس "اتربط قبل كده" زي ما هو. أي منتج لسه مش مربوط بيتبعت للبحث العادي
+//   (findWcProductByShopifyId) كـ fallback. وفيه حارس تعارض: لو منتج ووردبريس
+//   اللي الميتافيلد بيشاور عليه GTIN/SKU بتاعه بيقول رقم شوبيفاي **تاني**،
+//   بيرجّع {found:false, conflict:true} من غير أي كتابة — ربط متقاطع غلط أسوأ
+//   بكتير من "مش لقيته". راجع findWcProductForRelink() في §BULK.
+//   الربط نفسه في المسار الجماعي بيستخدم sync_product الموجود زي ما هو، منتج
+//   واحد لكل نداء (الواجهة بتلفّ عليهم بالترتيب) — مفيش sync_all ومفيش Cron،
+//   الأداة لسه manual-only بالكامل.
+//
 // ⚠️ v2.7.0 (27-08-2026) — حارس جديد إلزامي على أكشن find_product (خطوة 1 في
 //   الواجهة)، بطلب صاحب الأداة: قبل أي بحث في ووكومرس، الـ Worker بيتحقق أول
 //   حاجة من metafield custom.wordpress_id على منتج شوبيفاي المطلوب — لو فيها
@@ -155,7 +172,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.8.0';
+const WORKER_VERSION = 'v2.9.0';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -894,6 +911,80 @@ async function findWcProductByShopifyId(env, shopifyProductId) {
   };
 }
 
+// ══════════════════════════════════════════════════════════════
+// §BULK::findWcProductForRelink — v2.9.0 (أكشن find_product_relink)
+// نسخة "إعادة الربط" من البحث، مخصّصة للمسار الجماعي (Bulk) في الواجهة.
+//
+// الفرق الوحيد عن findWcProductByShopifyId()/find_product:
+//   • المنتج المربوط قبل كده **مش حالة رفض هنا — ده الوضع المتوقع**. حارس
+//     "اتربط قبل كده" (checkShopifyAlreadyLinked) لسه بيتنفّذ، لكن نتيجته
+//     بتُستخدم كـ**مصدر لرقم ووردبريس** بدل ما توقف العملية: قيمة
+//     custom.wordpress_id هي الربط نفسه، فمفيش أي داعي ندوّر في ووكومرس تاني
+//     (نداء wcGetProduct واحد بدل ما نوصل لعشرات في المسح الاحتياطي).
+//   • منتج لسه مش مربوط (أو ميتافيلد بيشاور على منتج مش موجود على ووردبريس) →
+//     بنرجع للبحث العادي findWcProductByShopifyId() بالظبط زي المسار الفردي.
+//
+// ⚠️ حارس التعارض: رقم ووردبريس من الميتافيلد **مش كفاية لوحده** — بنتأكد إن
+// منتج ووكومرس ده فعلاً بيخص رقم شوبيفاي المطلوب (GTIN حرفي أو بداية SKU، نفس
+// wcProductMatchesShopifyId بالظبط). لو الـ GTIN/SKU بيقول رقم شوبيفاي **تاني**،
+// بنرجّع {found:false, conflict:true} من غير أي كتابة — ربط متقاطع غلط بين
+// منتجين أسوأ بكتير من "مش لقيته". (GTIN فاضي وSKU من غير بادئة رقمية =
+// مش تعارض — syncProduct نفسه بيتعامل مع الحالة دي بالـ fallback المعتاد.)
+// ══════════════════════════════════════════════════════════════
+async function findWcProductForRelink(env, shopifyProductId) {
+  assertEnv(env, 'shopify', 'woocommerce');
+  const idStr  = String(shopifyProductId);
+  const linked = await checkShopifyAlreadyLinked(env, idStr);
+  const wpIdFromMeta = String(linked.wordpressId || '').trim();
+
+  if (linked.linked && /^\d+$/.test(wpIdFromMeta)) {
+    let wooProduct = null;
+    try {
+      wooProduct = await wcGetProduct(env, wpIdFromMeta);
+    } catch (e) {
+      // الميتافيلد بيشاور على منتج مش موجود/مش متاح — مش خطأ قاطع، بنكمّل
+      // بالبحث العادي تحت زي أي منتج مش مربوط.
+      console.error(`find_product_relink: wcGetProduct(${wpIdFromMeta}) failed — falling back to normal search:`, e);
+    }
+
+    if (wooProduct && wooProduct.id) {
+      const gtin      = String(wooProduct.global_unique_id || '').trim();
+      const skuPrefix = (String(wooProduct.sku || '').match(/^(\d{6,})-/) || [])[1] || '';
+      // تعارض = فيه رقم شوبيفاي صريح على منتج ووكومرس وهو **مش** الرقم المطلوب
+      const conflicting = gtin ? (gtin !== idStr) : (!!skuPrefix && skuPrefix !== idStr);
+      if (conflicting) {
+        return {
+          found:         false,
+          conflict:      true,
+          alreadyLinked: true,
+          wordpressId:   wooProduct.id,
+          productName:   wooProduct.name,
+          wcGtin:        gtin || null,
+          wcSkuPrefix:   skuPrefix || null,
+          productTitle:  linked.productTitle,
+        };
+      }
+      return {
+        found:         true,
+        alreadyLinked: true,
+        wp_product_id: wooProduct.id,
+        productName:   wooProduct.name,
+        sku:           wooProduct.sku,
+        matchedBy:     gtin === idStr ? 'gtin' : (skuPrefix === idStr ? 'sku' : 'wordpress_id'),
+        matchedVia:    'metafield',
+        scanned:       0,
+        scannedAll:    true,
+        wpEditUrl:     `${wcBaseUrl(env)}/wp-admin/post.php?post=${wooProduct.id}&action=edit`,
+        productTitle:  linked.productTitle,
+      };
+    }
+  }
+
+  // منتج لسه مش مربوط (أو ميتافيلد بايظ) — البحث العادي بالظبط زي المسار الفردي
+  const result = await findWcProductByShopifyId(env, idStr);
+  return { ...result, alreadyLinked: linked.linked, productTitle: linked.productTitle };
+}
+
 // ─── §SYNC::BrandNotFoundError — v2.6.0 ───
 // حارس إلزامي جديد قبل أي كتابة في syncProduct: لازم يكون فيه براند على
 // ووردبريس (تاكسونومي product_brand) بنفس اسم الـ Vendor على شوبيفاي. لو
@@ -1456,6 +1547,21 @@ export default {
         }
         const result = await findWcProductByShopifyId(env, shopifyProductId);
         return json({ ok: true, alreadyLinked: false, ...result }, 200, request);
+      }
+      // ──────────────────────────────────────────────────────────────
+
+      // ─── §BULK — find_product_relink (v2.9.0): خطوة البحث في المسار الجماعي ──
+      // قراءة بس زي find_product بالظبط (مفيش كتابة، مفيش D1 log). الفرق:
+      // المنتج المربوط قبل كده هنا **هو الوضع المتوقع** مش سبب رفض — رقم
+      // ووردبريس بيتاخد من custom.wordpress_id نفسه. راجع findWcProductForRelink().
+      if (action === 'find_product_relink') {
+        const shopifyProductId = url.searchParams.get('shopify_product_id');
+        if (!shopifyProductId) return json({ error: 'shopify_product_id required' }, 400, request);
+        if (!/^\d+$/.test(shopifyProductId)) {
+          return json({ error: 'shopify_product_id لازم يكون رقم فقط' }, 400, request);
+        }
+        const result = await findWcProductForRelink(env, shopifyProductId);
+        return json({ ok: true, ...result }, 200, request);
       }
       // ──────────────────────────────────────────────────────────────
 
