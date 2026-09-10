@@ -315,6 +315,41 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .price-diff-table td { font-weight: 800; color: var(--text-primary); padding: 13px 10px; }
 
 /* ══════════════════════════════════════════════════════════════
+   §BULK-CSS — تاب "ربط Bulk" (v2.13.0) — مسار إضافي مستقل تمامًا عن تاب
+   "ربط منتج" الفردي: قائمة أرقام تحت بعض + شريط تقدّم + جدول نتائج لكل رقم.
+   ══════════════════════════════════════════════════════════════ */
+.bulk-textarea { width: 100%; min-height: 190px; border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 14px 16px; font-family: var(--font-mono); font-size: 15px; line-height: 2; color: var(--text-primary); background: var(--surface); outline: none; direction: ltr; text-align: left; resize: vertical; transition: border-color .15s, box-shadow .15s; }
+.bulk-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.bulk-textarea:disabled { background: var(--surface-2); color: var(--text-muted); cursor: not-allowed; }
+.bulk-count-line { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.bulk-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 800; background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border); white-space: nowrap; }
+.bulk-chip.ok { background: var(--green-light); color: var(--green); border-color: var(--green-border); }
+.bulk-chip.warn { background: var(--amber-light); color: #92400e; border-color: #fde68a; }
+.bulk-chip.err { background: var(--red-light); color: var(--red); border-color: var(--red-border); }
+.bulk-chip.accent { background: var(--accent-light); color: var(--accent-dark); border-color: #bfdbfe; }
+
+/* شريط التقدّم — قفل الإدخال أثناء التشغيل إلزامي (ecommoda-html-builder) */
+.bulk-progress-wrap { margin-bottom: 18px; }
+.bulk-progress-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; font-weight: 800; margin-bottom: 9px; flex-wrap: wrap; }
+.bulk-progress-track { width: 100%; height: 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+.bulk-progress-fill { height: 100%; width: 0; background: var(--accent); border-radius: 20px; transition: width .25s ease; }
+.bulk-progress-fill.done { background: var(--green); }
+.bulk-progress-fill.stopped { background: var(--amber); }
+
+.bulk-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.bulk-table th { text-align: center; padding: 11px 10px; background: var(--surface-2); border-bottom: 2px solid var(--border-strong); font-size: 12.5px; color: var(--text-secondary); white-space: nowrap; }
+.bulk-table td { padding: 11px 10px; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; }
+.bulk-table th, .bulk-table td { border-inline-start: 1px solid var(--border); }
+.bulk-table th:first-child, .bulk-table td:first-child { border-inline-start: none; }
+.bulk-table td.mono { font-family: var(--font-mono); direction: ltr; font-size: 13px; }
+.bulk-table td.right { text-align: right; font-size: 12.5px; line-height: 1.7; }
+.bulk-table tr.running { background: var(--accent-light); }
+.bulk-table tr.row-err { background: var(--red-light); }
+.bulk-table tr.row-warn { background: var(--amber-light); }
+.bulk-row-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.bulk-row-actions .btn-primary { flex: 1 1 220px; margin-top: 0; }
+
+/* ══════════════════════════════════════════════════════════════
    §DATA-TABLE-CSS — القسم الموحّد (فلاتر + جدول) — تاب سجل العمليات
    data-table-standard.md + multi-select-filter.md — نسخة حرفية
    ══════════════════════════════════════════════════════════════ */
@@ -473,6 +508,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
   <!-- ══ Main Tabs ═══════════════════════════════════════════ -->
   <div class="main-tabs-bar">
     <button class="main-tab-btn active" id="mainTabSync" onclick="switchMainTab('sync')">🔗 ربط منتج</button>
+    <button class="main-tab-btn" id="mainTabBulk" onclick="switchMainTab('bulk')">🧩 إعادة ربط Bulk</button>
     <button class="main-tab-btn" id="mainTabLog" onclick="switchMainTab('log')">📜 سجل العمليات</button>
   </div>
 
@@ -620,6 +656,151 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         <div id="syncResultWrap"></div>
         <div id="syncStatusBannerWrap"></div>
         <button class="btn-primary btn-block" style="margin-top:18px;" onclick="startNewProduct()">إبدأ ربط منتج جديد</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ Bulk Tab (v2.13.0) — مسار إضافي مستقل: إعادة ربط قائمة أرقام دفعة واحدة ══
+       ⚠️ الفروق المقصودة عن المسار الفردي (بطلب صاحب الأداة):
+         • الإدخال قائمة أرقام (سطر لكل رقم) بدل رقم واحد.
+         • المنتجات هنا **مربوطة قبل كده** — الأداة بتسمح بإعادة الربط بدل ما
+           توقف عند "هذا المنتج تم ربطه من قبل" (أكشن find_product_relink).
+         • مفيش زرار "راجع صور + كاتيجوريز" ومفيش نافذة "تأكيد المراجعة".
+       الأسئلة التلاتة (الحالة / النجمة / تأكيد فرق السعر) لسه إلزامية زي المسار
+       الفردي بالظبط، + نافذة تأكيد قبل بدء التشغيل الجماعي. ══ -->
+  <div class="tab-panel" id="panelBulk">
+
+    <div class="result-note warn" style="margin-bottom:18px;">
+      ⚠️ المسار ده مخصّص لإعادة ربط منتجات <strong>مربوطة قبل كده</strong> — بيعيد نفس عملية الربط
+      بالكامل (شوبيفاي + ووكومرس + المخزون + الأسعار) لكل رقم في القائمة بالترتيب.
+      خطوة "راجع صور + كاتيجوريز المنتج" مش موجودة هنا، فراجع منتجاتك قبل ما تبدأ.
+    </div>
+
+    <!-- ─── خطوة ① — قائمة أرقام شوبيفاي ─── -->
+    <div class="step-card" id="stepBulkIdsCard">
+      <div class="step-card-hdr" onclick="toggleStep('BulkIds')">
+        <div class="step-badge" id="stepBulkIdsBadge">1</div>
+        <div class="step-hdr-text">
+          <div class="step-title">📋 قائمة المنتجات</div>
+          <div class="step-subtitle" id="stepBulkIdsSubtitle">حط أرقام (أو روابط) منتجات شوبيفاي — رقم في كل سطر</div>
+        </div>
+        <span class="step-chevron open" id="stepBulkIdsChevron">▲</span>
+      </div>
+
+      <div class="step-card-body" id="stepBulkIdsBody">
+        <textarea class="bulk-textarea" id="bulkIdsInput" oninput="onBulkIdsInput()" spellcheck="false"
+                  placeholder="9714090869058&#10;9714092409154&#10;9721924616514&#10;9721925992770"></textarea>
+        <div class="bulk-count-line" id="bulkCountLine"></div>
+
+        <div class="info-toggle" onclick="toggleHint('bulkIdsHint', this)"><span>ⓘ إزاي أكتب القائمة؟</span><span class="info-arrow">▾</span></div>
+        <div class="opt-hint" id="bulkIdsHint">
+          الصق رقم منتج شوبيفاي في كل سطر لوحده — أو الصق رابط صفحة المنتج بالكامل من أدمن شوبيفاي
+          والأداة هتستخرج الرقم منه تلقائيًا (نفس منطق البحث الفردي). الأرقام المكرّرة بتتشال تلقائيًا،
+          والسطور اللي مفيهاش رقم صالح بتتعرض كتنبيه قبل التشغيل.
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── خطوة ② — خيارات إعادة الربط (نفس أسئلة المسار الفردي الإلزامية) ─── -->
+    <div class="step-card" id="stepBulkOptsCard">
+      <div class="step-card-hdr" onclick="toggleStep('BulkOpts')">
+        <div class="step-badge" id="stepBulkOptsBadge">2</div>
+        <div class="step-hdr-text">
+          <div class="step-title">🔗 خيارات إعادة الربط</div>
+          <div class="step-subtitle" id="stepBulkOptsSubtitle">نفس الخيارات بتتطبّق على كل منتجات القائمة</div>
+        </div>
+        <span class="step-chevron open" id="stepBulkOptsChevron">▲</span>
+      </div>
+
+      <div class="step-card-body" id="stepBulkOptsBody">
+        <div class="opt-block">
+          <div class="opt-block-row">
+            <div class="opt-q">حالة المنتجات على شوبيفاي بعد إعادة الربط؟</div>
+            <div class="opt-choices">
+              <label class="opt-choice"><input type="radio" name="bulkShopifyStatus" value="ACTIVE" /><span>Active</span></label>
+              <label class="opt-choice"><input type="radio" name="bulkShopifyStatus" value="DRAFT" /><span>Draft</span></label>
+              <label class="opt-choice"><input type="radio" name="bulkShopifyStatus" value="KEEP" /><span>تبقى كما هي (بدون تعديل)</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="opt-block">
+          <div class="opt-block-row">
+            <div class="opt-q">هل تريد إضافة نجمة ⭐ للعنوان؟</div>
+            <div class="opt-choices">
+              <label class="opt-choice"><input type="radio" name="bulkAddStar" value="yes" /><span>نعم</span></label>
+              <label class="opt-choice"><input type="radio" name="bulkAddStar" value="no" /><span>لا</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="opt-block">
+          <div class="opt-block-row">
+            <div class="opt-q">💰 تحديث السعر على ووكومرس؟</div>
+            <div class="opt-choices">
+              <input type="number" class="field-input price-inline-input" id="bulkPriceDifference" step="0.01" value="100" oninput="onBulkPriceDiffInput()">
+              <button type="button" class="btn-primary price-confirm-btn" id="bulkPriceConfirmBtn" onclick="confirmBulkPriceDiff()">تأكيد فرق السعر</button>
+            </div>
+          </div>
+          <div class="opt-block-note">سيبه فاضي لتخطّي تحديث السعر، ثم اضغط الزرار للتأكيد في كل الحالتين. القيمة دي بتتطبّق على كل منتجات القائمة.</div>
+        </div>
+
+        <div class="opt-block">
+          <div class="opt-block-row">
+            <div class="opt-q">🔒 تعديلات أخرى تحدث تلقائي مع كل منتج:</div>
+          </div>
+          <div class="opt-readonly-title">على Stylebox.online:</div>
+          <ul class="opt-readonly-list">
+            <li>تغيير حالة المنتج على <code>stylebox.online</code> إلى: <strong>Published</strong></li>
+            <li>إضافة البراند مثل الـ Vendor على شوبيفاي</li>
+            <li>مزامنة كمية المخزون لكل مقاس / SKU</li>
+            <li>التأكد من ضبط رابط المنتج (URL/Slug) ليطابق عنوانه</li>
+          </ul>
+          <div class="opt-readonly-title">وعلى Ecommoda.com:</div>
+          <ul class="opt-readonly-list">
+            <li>إضافة Wordpress Ids على المنتج وعلى كل مقاس داخل المنتج على شوبيفاي</li>
+            <li>إضافة تاج على شوبيفاي (<code>stylebox</code>)</li>
+          </ul>
+        </div>
+
+        <div style="margin-top:22px;">
+          <button class="btn-primary success btn-block" id="bulkRunBtn" onclick="openBulkConfirmModal()">▶ ابدأ إعادة ربط كل منتجات القائمة</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── خطوة ③ — التشغيل والنتيجة ─── -->
+    <div class="step-card" id="stepBulkRunCard" style="display:none;">
+      <div class="step-card-hdr" onclick="toggleStep('BulkRun')">
+        <div class="step-badge" id="stepBulkRunBadge">3</div>
+        <div class="step-hdr-text">
+          <div class="step-title">📊 التشغيل والنتيجة</div>
+          <div class="step-subtitle" id="stepBulkRunSubtitle">—</div>
+        </div>
+        <span class="step-chevron open" id="stepBulkRunChevron">▲</span>
+      </div>
+
+      <div class="step-card-body" id="stepBulkRunBody">
+        <div class="bulk-progress-wrap">
+          <div class="bulk-progress-top">
+            <span id="bulkProgressLabel">—</span>
+            <button class="btn-outline" id="bulkStopBtn" style="display:none;" onclick="requestBulkStop()">⏹ إيقاف بعد المنتج الحالي</button>
+          </div>
+          <div class="bulk-progress-track"><div class="bulk-progress-fill" id="bulkProgressFill"></div></div>
+          <div class="bulk-count-line" id="bulkStatsLine"></div>
+        </div>
+
+        <div id="bulkBannerWrap"></div>
+
+        <div style="overflow-x:auto;">
+          <table class="bulk-table" id="bulkTable"></table>
+        </div>
+
+        <div class="bulk-row-actions" id="bulkAfterActions" style="display:none;">
+          <button class="btn-primary" id="bulkRetryFailedBtn" style="display:none;" onclick="retryFailedBulk()">🔁 أعد محاولة المنتجات الفاشلة فقط</button>
+          <button class="btn-primary" onclick="startNewBulkList()">🆕 قائمة جديدة</button>
+        </div>
       </div>
     </div>
 
@@ -859,6 +1040,17 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         <div class="cl-version-block">
           <div class="cl-version-row">
             <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+            <span class="cl-ver-date">10-09-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>تاب جديد "🧩 إعادة ربط Bulk"</strong> — مسار <strong>إضافي</strong> بالكامل (تاب "🔗 ربط منتج" الفردي متغيّرش ولا حاجة فيه): بتحط قائمة أرقام منتجات شوبيفاي (رقم في كل سطر — أو رابط المنتج والأداة بتستخرج الرقم)، بتختار نفس الأسئلة التلاتة مرة واحدة للقائمة كلها، والأداة بتعيد ربط المنتجات واحد ورا التاني وبتعرض لكل منتج حالته (✓ تمت / ⚠ تحذير / ✗ فشل) في جدول مباشر مع شريط تقدّم.</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>إعادة ربط منتج مربوط قبل كده مسموحة في المسار الجديد ده بس</strong> (Worker v2.9.0، أكشن جديد <code>find_product_relink</code>): بدل رسالة "هذا المنتج تم ربطه من قبل" اللي بتوقف المسار الفردي، الأداة بتاخد رقم ووردبريس من الربط نفسه (<code>custom.wordpress_id</code>) وبتكمّل. لو الرقم ده بيشاور على منتج ووردبريس مربوط برقم شوبيفاي <strong>تاني</strong>، المنتج ده بيترفض ويتعلّم "تعارض" من غير أي تعديل.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>في المسار الجماعي بس: <strong>مفيش زرار "راجع صور + كاتيجوريز المنتج قبل الربط" ومفيش نافذة "تأكيد المراجعة"</strong> (بطلب صاحب الأداة). بدلهم: نافذة تأكيد واحدة قبل بدء التشغيل بتعرض عدد المنتجات والخيارات المختارة، وزرار "⏹ إيقاف" بيقف بعد المنتج الحالي، وزرار "🔁 أعد محاولة الفاشلة/المتوقفة" بعد ما القائمة تخلص. الأسئلة التلاتة (الحالة / النجمة / تأكيد فرق السعر) لسه إلزامية زي المسار الفردي بالظبط.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.12.0</span>
             <span class="cl-ver-date">27-08-2026</span>
           </div>
           <ul class="cl-items">
@@ -1115,6 +1307,36 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               تاني لو حبيت تراجعها من غير ما تصفّر النتيجة الحالية</li>
             </ol>
 
+            <h4>🧩 المسار الإضافي — تاب "إعادة ربط Bulk" (v2.13.0)</h4>
+            <p>مسار <strong>إضافي بالكامل</strong> — تاب "🔗 ربط منتج" الفردي اللي فوق شغّال زي ما هو
+            بالظبط من غير أي تغيير. الهدف: إعادة ربط مجموعة منتجات <strong>مربوطة قبل كده</strong> دفعة
+            واحدة بدل ما يتعملوا واحد واحد.</p>
+            <ol>
+              <li><strong>الخطوة ① — قائمة المنتجات:</strong> رقم منتج شوبيفاي في كل سطر (أو رابط صفحة
+              المنتج والأداة بتستخرج الرقم — نفس <code>extractShopifyProductId()</code>). الأرقام المكرّرة
+              بتتشال تلقائيًا، والسطور غير الصالحة بتتعرض كتنبيه قبل التشغيل</li>
+              <li><strong>الخطوة ② — خيارات إعادة الربط:</strong> نفس الأسئلة التلاتة (الحالة / النجمة /
+              تأكيد فرق السعر) بنفس القواعد الإلزامية بالظبط — بتتحدد <strong>مرة واحدة</strong> وبتتطبّق
+              على كل منتجات القائمة</li>
+              <li><strong>الخطوة ③ — التشغيل والنتيجة:</strong> نافذة تأكيد بتعرض عدد المنتجات والخيارات
+              قبل أول نداء (فعل جماعي غير قابل للتراجع)، وبعدين شريط تقدّم + جدول بصف لكل منتج بحالته
+              (✓ تمت / ⚠ تحذير / ✗ فشل / ⏹ اتوقف) وتفاصيله. الإدخال بيتقفل أثناء التشغيل، وفيه زرار
+              "⏹ إيقاف" بيقف بعد المنتج الحالي، وزرار "🔁 أعد محاولة الفاشلة/المتوقفة" بعد ما القائمة تخلص</li>
+            </ol>
+            <p><strong>الفروق المقصودة عن المسار الفردي (بطلب صاحب الأداة):</strong></p>
+            <ul>
+              <li><strong>إعادة ربط منتج مربوط قبل كده مسموحة هنا</strong> — البحث بيستخدم أكشن الـ Worker
+              الجديد <code>find_product_relink</code> (v2.9.0) اللي بياخد رقم ووردبريس من
+              <code>custom.wordpress_id</code> نفسه بدل ما يوقف عند "هذا المنتج تم ربطه من قبل". لو الرقم
+              ده بيشاور على منتج ووردبريس الـ GTIN/SKU بتاعه بيقول رقم شوبيفاي <strong>تاني</strong>،
+              المنتج بيترفض ويتعلّم "تعارض" من غير أي كتابة</li>
+              <li><strong>مفيش زرار "راجع صور + كاتيجوريز المنتج" ومفيش نافذة "تأكيد المراجعة"</strong> —
+              الاتنين خاصين بالمسار الفردي بس</li>
+            </ul>
+            <p><strong>اللي متغيّرش:</strong> الربط نفسه بيستخدم نفس أكشن <code>sync_product</code> بنفس
+            الـ payload بالظبط — <strong>منتج واحد لكل نداء</strong>، بالترتيب. مفيش <code>sync_all</code>
+            ومفيش Cron — الأداة لسه manual-only بالكامل، ولازم موظف مسجّل دخول.</p>
+
             <h4>⚙️ إجراءات كل اختيار</h4>
             <table>
               <tr><th>السؤال / الاختيار</th><th>التأثير</th></tr>
@@ -1138,6 +1360,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <tr><td><code>log_logout</code></td><td>GET — تسجيل خروج</td></tr>
               <tr><td><code>get_employees</code></td><td>GET — قائمة الموظفين النشطين</td></tr>
               <tr><td><code>find_product</code></td><td>GET — أكشن قراءة بس (خطوة 1): بياخد <code>shopify_product_id</code>. <strong>(v2.7.0)</strong> أول حاجة بيتحقق من <code>custom.wordpress_id</code> على شوبيفاي — لو مش فاضية بيرجع <code>{alreadyLinked:true, wordpressId, productTitle}</code> ويوقف. لو فاضية، يدوّر على منتج ووكومرس المطابق (GTIN، أو بحث بالعنوان لتضييق النطاق + تأكيد قاطع بالـ SKU)، ويرجّع <code>{alreadyLinked:false, wp_product_id, wpEditUrl, ...}</code></td></tr>
+              <tr><td><code>find_product_relink</code></td><td>GET — <strong>(v2.9.0)</strong> نسخة "إعادة الربط" من <code>find_product</code>، بيستخدمها تاب Bulk بس: المنتج المربوط قبل كده مش سبب رفض هنا — رقم ووردبريس بيتاخد من <code>custom.wordpress_id</code> مباشرةً. منتج لسه مش مربوط بيرجع للبحث العادي، ولو الميتافيلد بيشاور على منتج بيخص رقم شوبيفاي تاني بيرجّع <code>{found:false, conflict:true}</code> من غير أي كتابة. قراءة بس، مفيش D1 log</td></tr>
               <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code>، <code>add_star</code>: <code>true</code>/<code>false</code>، و<code>price_difference</code>: رقم اختياري لتحديث السعر في نفس التشغيلة — الثلاثة اختياريون، الافتراضي <code>DRAFT</code> + <code>true</code> + بدون تحديث سعر). <strong>(v2.6.0)</strong> ممكن يرجع HTTP 409 بـ <code>{code:'brand_missing', vendor, addBrandUrl}</code> لو مفيش براند مطابق على ووردبريس — الربط بيتوقف كامل من غير أي كتابة</td></tr>
               <tr><td><code>diag</code></td><td>GET — فحص ذاتي كامل (env، صلاحيات شوبيفاي، اتصال WooCommerce، D1) بدون كتابة</td></tr>
               <tr><td><code>get_config</code></td><td>GET — يرجّع نسخة الـ Worker لمقارنتها بنسخة الواجهة</td></tr>
@@ -1165,6 +1388,9 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر، كل واحد في صندوق <code>.opt-block</code> مستقل، من غير أي اختيار افتراضي جاهز من v2.11.0)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي، و<code>runSync()</code> بيرفض لو <code>productReviewed !== true</code> أو لو أي سؤال من التلاتة من غير إجابة/تأكيد (<code>readSyncOptions()</code>/<code>priceDiffConfirmed</code>)</li>
               <li><code>renderSyncResult()</code> — خطوة ④: تفاصيل بيانات المنتج + جدول "📦 المقاسات" (+ صفوف Brand/Slug من v2.6.0، عنوان الجدول اتغيّر v2.10.0) + جدول فرق السعر تحت الجدول لو <code>priceApplied</code> (اتنقل تحت v2.10.0، كان صف فوق الجدول)، وبعدهم بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + زرار "إبدأ ربط منتج جديد" كامل العرض في آخر الخطوة (<code>.btn-primary.btn-block</code> من v2.10.1 — كان <code>.btn-new-product</code> بتصميم منفصل أبيض/أزرق عند hover)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
               <li><code>openBrandMissingModal()</code>/<code>closeBrandMissingModal()</code> (v2.6.0) — نافذة خطأ مخصصة (<code>#brandMissingOverlay</code>) لما <code>runSync()</code> يلقى <code>e.data.code === 'brand_missing'</code>؛ <code>apiRequest()</code> بقى يحط رد الـ Worker كامل على <code>err.data</code> مش بس <code>err.message</code> عشان الكود ده يتقرا</li>
+              <li><code>§BULK-JS</code> (v2.13.0) — تاب "إعادة ربط Bulk" بالكامل: <code>parseBulkIds()</code> (سطر لكل رقم/رابط، شيل المكرّر ورصد غير الصالح) · <code>validateBulkStart()</code> (نفس حارس الأسئلة التلاتة) · <code>openBulkConfirmModal()</code>/<code>startBulkRun()</code> · <code>runBulkList()</code>/<code>runBulkOne()</code> (نداءين لكل منتج: <code>find_product_relink</code> ثم <code>sync_product</code>، وفشل أي منتج معزول عن باقي القائمة) · <code>setBulkBusy()</code> (قفل الإدخال + حارس <code>beforeunload</code>) · <code>requestBulkStop()</code>/<code>retryFailedBulk()</code>/<code>resetBulkTab()</code></li>
+              <li><code>§BULK::findWcProductForRelink</code> (Worker، v2.9.0) — أكشن <code>find_product_relink</code>: بياخد رقم ووردبريس من <code>custom.wordpress_id</code> بدل ما يوقف عند حارس "اتربط قبل كده"، مع حارس تعارض (GTIN/SKU بتاع منتج ووردبريس لازم يخص نفس رقم شوبيفاي) و fallback للبحث العادي لو المنتج لسه مش مربوط</li>
+              <li><code>esc()</code> (v2.13.0) — تهريب أي نص جاي من الـ API قبل <code>innerHTML</code>، مستخدم في كل جداول تاب Bulk</li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
               <li><code>§LOG-ENDPOINTS</code> — get_logs / get_logs_count / get_logs_export (v2، بدون تغيير في العقد)</li>
             </ul>
@@ -1271,6 +1497,30 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
     </div>
   </div>
 
+  <!-- ══ نافذة تأكيد بدء التشغيل الجماعي (v2.13.0) — فعل كتابة جماعي غير قابل
+       للتراجع، فالتأكيد الصريح بعدد المنتجات والخيارات إلزامي قبل أول نداء ══ -->
+  <div class="eco-overlay" id="bulkConfirmOverlay" onclick="if(event.target===this)closeBulkConfirmModal()">
+    <div class="eco-modal" style="max-width:520px;">
+      <div class="eco-modal-hdr">
+        <span>⚠️ تأكيد إعادة الربط الجماعي</span>
+        <button class="modal-close-x" onclick="closeBulkConfirmModal()">✕</button>
+      </div>
+      <div class="eco-modal-body">
+        <p style="margin:0 0 14px;line-height:1.9;">
+          هتبدأ إعادة ربط <strong style="color:var(--accent);" id="bulkConfirmCount">—</strong>،
+          واحد ورا التاني. كل منتج بيتعمله نفس عملية الربط الكاملة على شوبيفاي وووكومرس —
+          <strong>مفيش تراجع بعد ما تبدأ</strong>.
+        </p>
+        <div id="bulkConfirmOpts"></div>
+        <div class="result-note warn" style="margin-top:14px;">⚠️ سيب الصفحة مفتوحة لحد ما التشغيل يخلص — قفلها في النص بيوقف باقي القائمة.</div>
+        <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-primary success" style="flex:1;margin-top:0;" onclick="startBulkRun()">▶ ابدأ التشغيل الآن</button>
+          <button class="btn-outline" onclick="closeBulkConfirmModal()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ نافذة تأكيد المراجعة الإلزامية (v2.10.0) — بعد الضغط على زرار "راجع صور
        + كاتيجوريز المنتج قبل الربط" — خطوة ③ ما بتفتحش إلا بعد تأكيد الاتنين هنا ═══ -->
   <div class="eco-overlay" id="reviewConfirmOverlay" onclick="if(event.target===this)closeReviewConfirmModal()">
@@ -1362,11 +1612,12 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.12.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
-// نسخة الـ Worker المتوقعة (v2.7.0) — منفصلة تمامًا عن TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
+const TOOL_VERSION = 'v2.13.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+// نسخة الـ Worker المتوقعة (v2.9.0 — أكشن find_product_relink بتاع مسار Bulk) — منفصلة تمامًا عن
+// TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
 // أي لمس للـ Worker — راجع checkWorkerVersion() تحت)
-const EXPECTED_WORKER_VERSION = 'v2.8.0';
+const EXPECTED_WORKER_VERSION = 'v2.9.0';
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
@@ -1386,13 +1637,17 @@ function isConfigured() {
 // ══════════════════════════════════════════════════════════════
 // §SHELL-JS — Main Tabs
 // ══════════════════════════════════════════════════════════════
+// v2.13.0 — بقت تلات تابات (ربط فردي / إعادة ربط Bulk / السجل) بدل اتنين
 function switchMainTab(tab) {
-  const isSync = tab === 'sync';
-  document.getElementById('mainTabSync').classList.toggle('active', isSync);
-  document.getElementById('mainTabLog').classList.toggle('active', !isSync);
-  document.getElementById('panelSync').classList.toggle('active', isSync);
-  document.getElementById('panelLog').classList.toggle('active', !isSync);
-  if (!isSync && !logLoaded) loadLog();
+  const tabs = { sync: 'panelSync', bulk: 'panelBulk', log: 'panelLog' };
+  if (!tabs[tab]) tab = 'sync';
+  document.getElementById('mainTabSync').classList.toggle('active', tab === 'sync');
+  document.getElementById('mainTabBulk').classList.toggle('active', tab === 'bulk');
+  document.getElementById('mainTabLog').classList.toggle('active',  tab === 'log');
+  document.getElementById('panelSync').classList.toggle('active', tab === 'sync');
+  document.getElementById('panelBulk').classList.toggle('active', tab === 'bulk');
+  document.getElementById('panelLog').classList.toggle('active',  tab === 'log');
+  if (tab === 'log' && !logLoaded) loadLog();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1473,6 +1728,12 @@ function showToast(msg, type = 'neutral', duration = 3000) {
   t.textContent = msg;
   document.getElementById('toastContainer').appendChild(t);
   setTimeout(() => t.remove(), duration);
+}
+
+// تأمين أي نص جاي من الـ API قبل ما يتحط في innerHTML (اسم منتج/رسالة خطأ) —
+// ecommoda-html-builder: ممنوع حقن نص خارجي في innerHTML من غير تهريب.
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1808,6 +2069,8 @@ async function finishLogin(username, displayName) {
 
 async function doLogout() {
   if (!currentEmployee) return; // لسه مسجّلش دخول أصلاً
+  // v2.13.0 — تشغيلة Bulk شغّالة = كتابة على المنصتين لسه بتحصل، الخروج بيوقفها في النص
+  if (bulkRunning) { showToast('فيه تشغيلة Bulk شغّالة — استنى لحد ما تخلص قبل تسجيل الخروج', 'error'); return; }
   if (!confirm('تسجيل الخروج؟')) return;
 
   apiGet('log_logout', { username: currentEmployee.username }).catch(() => {});
@@ -1829,6 +2092,7 @@ async function doLogout() {
   // ← تخصيص: تصفير خطوة البحث والربط/تحديث السعر وإرجاع تاب "ربط منتج"
   resetFindStep();
   resetSyncOptions();
+  resetBulkTab(); // v2.13.0 — تاب Bulk بيتصفّر برضه مع الخروج
   document.getElementById('activeUserBtn').textContent = '👤 —';
   switchMainTab('sync');
 
@@ -2348,6 +2612,429 @@ function renderSyncResult(data) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// §BULK-JS — تاب "إعادة ربط Bulk" (v2.13.0) — مسار إضافي مستقل تمامًا
+// عن المسار الفردي فوق (اللي متغيّرش ولا سطر فيه).
+//
+// الفروق المقصودة عن المسار الفردي (بطلب صاحب الأداة):
+//   • الإدخال قائمة أرقام/روابط شوبيفاي (سطر لكل واحد) بدل رقم واحد.
+//   • المنتجات هنا **مربوطة قبل كده** — البحث بيستخدم أكشن الـ Worker الجديد
+//     find_product_relink (v2.9.0) اللي بياخد رقم ووردبريس من metafield
+//     custom.wordpress_id نفسه بدل ما يوقف عند "هذا المنتج تم ربطه من قبل".
+//   • مفيش زرار "راجع صور + كاتيجوريز المنتج" ومفيش نافذة "تأكيد المراجعة".
+//
+// اللي **متغيّرش**: الأسئلة التلاتة (الحالة / النجمة / تأكيد فرق السعر) لسه
+// إلزامية بالظبط زي المسار الفردي، والربط نفسه بيستخدم نفس أكشن sync_product
+// بنفس الـ payload — منتج واحد لكل نداء، بالترتيب (مفيش sync_all، الأداة لسه
+// manual-only). زيادةً على كده: نافذة تأكيد قبل التشغيل (فعل جماعي غير قابل
+// للتراجع)، قفل الإدخال أثناء التشغيل، وزرار إيقاف بيقف بعد المنتج الحالي.
+// ══════════════════════════════════════════════════════════════
+let bulkRows          = [];    // [{ id, wpId, name, status, detail }]
+let bulkRunning       = false;
+let bulkStopRequested = false;
+let bulkOpts          = null;  // الخيارات المستخدمة في آخر تشغيلة
+
+// ── قراءة القائمة: سطر لكل رقم/رابط، مع شيل المكرّر ورصد السطور غير الصالحة ──
+function parseBulkIds(raw) {
+  const ids = [], invalid = [], seen = new Set();
+  let duplicates = 0;
+  String(raw || '').split(/\r?\n/).forEach(line => {
+    const t = line.trim();
+    if (!t) return;
+    const id = extractShopifyProductId(t); // نفس منطق المسار الفردي (رقم أو رابط)
+    if (!id) { invalid.push(t); return; }
+    if (seen.has(id)) { duplicates++; return; }
+    seen.add(id);
+    ids.push(id);
+  });
+  return { ids, invalid, duplicates };
+}
+
+function onBulkIdsInput() {
+  const { ids, invalid, duplicates } = parseBulkIds(document.getElementById('bulkIdsInput').value);
+  const chips = [`<span class="bulk-chip ${ids.length ? 'ok' : ''}">📦 ${ids.length.toLocaleString('en-US')} منتج جاهز</span>`];
+  if (duplicates)      chips.push(`<span class="bulk-chip warn">🔁 ${duplicates.toLocaleString('en-US')} رقم مكرّر اتشال</span>`);
+  if (invalid.length)  chips.push(`<span class="bulk-chip err">⚠️ ${invalid.length.toLocaleString('en-US')} سطر مش رقم/رابط صالح</span>`);
+  document.getElementById('bulkCountLine').innerHTML = chips.join('');
+  document.getElementById('stepBulkIdsSubtitle').textContent = ids.length
+    ? `${ids.length.toLocaleString('en-US')} منتج في القائمة`
+    : 'حط أرقام (أو روابط) منتجات شوبيفاي — رقم في كل سطر';
+}
+
+// ── نفس قواعد أسئلة المسار الفردي بالظبط: مفيش اختيار افتراضي، والتأكيد إلزامي ──
+let bulkPriceDiffConfirmed = false;
+
+function resetBulkSyncOptions() {
+  document.querySelectorAll('input[name="bulkShopifyStatus"]').forEach(r => { r.checked = false; });
+  document.querySelectorAll('input[name="bulkAddStar"]').forEach(r => { r.checked = false; });
+  bulkPriceDiffConfirmed = false;
+  document.getElementById('bulkPriceConfirmBtn')?.classList.remove('confirmed');
+  updateBulkPriceConfirmLabel();
+}
+
+function readBulkSyncOptions() {
+  const st   = document.querySelector('input[name="bulkShopifyStatus"]:checked');
+  const star = document.querySelector('input[name="bulkAddStar"]:checked');
+  return {
+    shopifyStatus: st ? st.value : null,
+    addStar:       star ? star.value === 'yes' : null,
+  };
+}
+
+function loadBulkPriceDiffPref() {
+  const saved = localStorage.getItem(LS_PRICE_DIFF); // نفس مفتاح "آخر قيمة استُخدمت" بتاع المسار الفردي
+  document.getElementById('bulkPriceDifference').value = saved !== null ? saved : '100';
+  updateBulkPriceConfirmLabel();
+}
+
+function updateBulkPriceConfirmLabel() {
+  const btn = document.getElementById('bulkPriceConfirmBtn');
+  if (!btn) return;
+  const raw = document.getElementById('bulkPriceDifference').value.trim();
+  if (raw === '' || !Number.isFinite(Number(raw))) {
+    btn.textContent = 'تأكيد تخطي تحديث السعر';
+  } else {
+    const n = Number(raw);
+    btn.textContent = `تأكيد فرق السعر (${n >= 0 ? '+' : ''}${n}) جنيه`;
+  }
+}
+
+function onBulkPriceDiffInput() {
+  bulkPriceDiffConfirmed = false;
+  document.getElementById('bulkPriceConfirmBtn')?.classList.remove('confirmed');
+  updateBulkPriceConfirmLabel();
+}
+
+function confirmBulkPriceDiff() {
+  const raw = document.getElementById('bulkPriceDifference').value.trim();
+  if (raw !== '' && !Number.isFinite(Number(raw))) { showToast('فرق السعر لازم يكون رقم', 'error'); return; }
+  bulkPriceDiffConfirmed = true;
+  document.getElementById('bulkPriceConfirmBtn')?.classList.add('confirmed');
+}
+
+// ── الحارس المشترك قبل أي تشغيل (زرار البدء + إعادة محاولة الفاشلة) ──
+function validateBulkStart() {
+  if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'error'); return null; }
+  if (bulkRunning) { showToast('فيه تشغيلة شغّالة دلوقتي — استنى لحد ما تخلص', 'error'); return null; }
+
+  const { ids, invalid } = parseBulkIds(document.getElementById('bulkIdsInput').value);
+  if (!ids.length) { showToast('القائمة فاضية — حط رقم منتج شوبيفاي في كل سطر', 'error'); return null; }
+
+  const { shopifyStatus, addStar } = readBulkSyncOptions();
+  if (shopifyStatus === null || addStar === null || !bulkPriceDiffConfirmed) {
+    showToast('لازم تختار إجابة لكل الأسئلة الثلاثة (الحالة / النجمة / تأكيد فرق السعر) قبل التشغيل', 'error');
+    return null;
+  }
+
+  const rawDiff = document.getElementById('bulkPriceDifference').value.trim();
+  let priceDifference = null;
+  if (rawDiff !== '') {
+    priceDifference = Number(rawDiff);
+    if (!Number.isFinite(priceDifference)) { showToast('فرق السعر لازم يكون رقم', 'error'); return null; }
+  }
+
+  return { ids, invalid, shopifyStatus, addStar, priceDifference };
+}
+
+// ── نافذة التأكيد — فعل كتابة جماعي غير قابل للتراجع ──
+let bulkPendingStart = null;
+
+function openBulkConfirmModal() {
+  const v = validateBulkStart();
+  if (!v) return;
+  bulkPendingStart = v;
+  document.getElementById('bulkConfirmCount').textContent = `${v.ids.length.toLocaleString('en-US')} منتج`;
+  const statusLabel = v.shopifyStatus === 'KEEP' ? 'تبقى كما هي' : v.shopifyStatus;
+  document.getElementById('bulkConfirmOpts').innerHTML = `
+    <div class="result-row"><span>حالة المنتجات على شوبيفاي</span><span>${esc(statusLabel)}</span></div>
+    <div class="result-row"><span>إضافة ⭐ للعنوان</span><span>${v.addStar ? 'نعم' : 'لا'}</span></div>
+    <div class="result-row"><span>فرق السعر على ووكومرس</span><span>${v.priceDifference === null ? 'تخطّي تحديث السعر' : esc(String(v.priceDifference))}</span></div>
+    ${v.invalid.length ? `<div class="result-note err" style="margin-top:10px;">⚠️ فيه ${v.invalid.length.toLocaleString('en-US')} سطر مش رقم/رابط صالح — هيتم تجاهله بالكامل.</div>` : ''}`;
+  document.getElementById('bulkConfirmOverlay').classList.add('open');
+}
+
+function closeBulkConfirmModal() {
+  document.getElementById('bulkConfirmOverlay').classList.remove('open');
+}
+
+function startBulkRun() {
+  if (!bulkPendingStart) return;
+  const v = bulkPendingStart;
+  bulkPendingStart = null;
+  closeBulkConfirmModal();
+  runBulkList(v.ids, { shopifyStatus: v.shopifyStatus, addStar: v.addStar, priceDifference: v.priceDifference });
+}
+
+// ── قفل الإدخال أثناء التشغيل (ecommoda-html-builder — إلزامي لأي تشغيل مقسّم) ──
+function setBulkBusy(active) {
+  bulkRunning = active;
+  const runBtn = document.getElementById('bulkRunBtn');
+  runBtn.disabled  = active;
+  runBtn.innerHTML = active
+    ? '<span class="mini-spinner"></span> جاري إعادة الربط...'
+    : '▶ ابدأ إعادة ربط كل منتجات القائمة';
+  document.getElementById('bulkIdsInput').disabled = active;
+  document.querySelectorAll('input[name="bulkShopifyStatus"], input[name="bulkAddStar"]').forEach(el => { el.disabled = active; });
+  document.getElementById('bulkPriceDifference').disabled = active;
+  document.getElementById('bulkPriceConfirmBtn').disabled = active;
+  document.getElementById('bulkStopBtn').style.display = active ? '' : 'none';
+  const retryBtn = document.getElementById('bulkRetryFailedBtn');
+  if (retryBtn) retryBtn.disabled = active;
+  if (active) window.addEventListener('beforeunload', bulkBeforeUnload);
+  else        window.removeEventListener('beforeunload', bulkBeforeUnload);
+}
+
+function bulkBeforeUnload(e) { e.preventDefault(); e.returnValue = ''; }
+
+function requestBulkStop() {
+  if (!bulkRunning) return;
+  bulkStopRequested = true;
+  document.getElementById('bulkStopBtn').disabled = true;
+  showToast('هيقف بعد ما المنتج الحالي يخلص', 'neutral');
+}
+
+// ══ التشغيل نفسه — منتج ورا التاني، نداءين لكل منتج (بحث ثم ربط) ══
+async function runBulkList(ids, opts) {
+  bulkOpts          = opts;
+  bulkStopRequested = false;
+  bulkRows = ids.map(id => ({ id, wpId: null, name: null, status: 'pending', detail: '' }));
+
+  document.getElementById('stepBulkRunCard').style.display = 'block';
+  document.getElementById('bulkAfterActions').style.display = 'none';
+  document.getElementById('bulkBannerWrap').innerHTML = '';
+  document.getElementById('bulkStopBtn').disabled = false;
+  document.getElementById('stepBulkRunBadge').className = 'step-badge';
+  document.getElementById('stepBulkRunBadge').textContent = '3';
+  setStepCollapsed('BulkIds', true);
+  setStepCollapsed('BulkOpts', true);
+  setStepCollapsed('BulkRun', false);
+  renderBulkTable();
+  updateBulkProgress();
+  document.getElementById('stepBulkRunCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  setBulkBusy(true);
+  try {
+    for (let i = 0; i < bulkRows.length; i++) {
+      if (bulkStopRequested) {
+        for (let j = i; j < bulkRows.length; j++) {
+          bulkRows[j].status = 'stopped';
+          bulkRows[j].detail = 'اتوقف قبل ما يبدأ (طلب إيقاف)';
+        }
+        break;
+      }
+      bulkRows[i].status = 'running';
+      bulkRows[i].detail = 'جاري البحث عن المنتج على ووردبريس...';
+      renderBulkTable();
+      updateBulkProgress(i);
+      await runBulkOne(bulkRows[i], opts);
+      renderBulkTable();
+      updateBulkProgress(i + 1);
+    }
+  } finally {
+    setBulkBusy(false);
+    renderBulkTable();
+    updateBulkProgress();
+    finishBulkRun();
+  }
+}
+
+// منتج واحد: find_product_relink ← sync_product. أي فشل هنا بيتسجّل على صف
+// المنتج ده بس ومابيوقفش باقي القائمة (نفس مبدأ عزل الخطوات في الـ Worker).
+async function runBulkOne(row, opts) {
+  try {
+    const find = await apiGet('find_product_relink', { shopify_product_id: row.id });
+
+    if (find.conflict) {
+      row.status = 'error';
+      row.wpId   = find.wordpressId || null;
+      row.name   = find.productName || null;
+      row.detail = `تعارض: منتج ووردبريس ده مربوط برقم شوبيفاي تاني (${esc(find.wcGtin || find.wcSkuPrefix || '—')}) — مفيش أي تعديل حصل.`;
+      return;
+    }
+    if (!find.found) {
+      row.status = 'error';
+      row.detail = 'مفيش منتج على ووردبريس بالرقم ده' +
+                   (find.scannedAll === false ? ' (البحث مافحصش كل المنتجات — جرّب تحط الرقم في خانة GTIN على ووردبريس)' : '');
+      return;
+    }
+
+    row.wpId   = find.wp_product_id;
+    row.name   = find.productName || find.productTitle || null;
+    row.detail = 'جاري الربط...';
+    renderBulkTable();
+
+    const data = await apiPost('sync_product', {
+      wp_product_id:    find.wp_product_id,
+      shopify_status:   opts.shopifyStatus,
+      add_star:         opts.addStar,
+      price_difference: opts.priceDifference,
+      employee:         currentEmployee.username,
+    });
+
+    const r        = data.results || {};
+    const variants = r.variants || [];
+    const synced   = variants.filter(v => v.status === 'synced').length;
+    const warned   = variants.filter(v => v.status === 'warning').length;
+    const skipped  = variants.filter(v => v.status === 'skipped').length;
+    const sizeLine = `المقاسات: ✓ تمت (${synced}) | ⚠ تحذير (${warned}) | تخطي (${skipped})`;
+    const issues   = [
+      r.productLevelError  ? `بيانات المنتج على شوبيفاي: ${r.productLevelError}` : '',
+      r.wcProductMetaError ? `ووكومرس (publish/meta): ${r.wcProductMetaError}`   : '',
+      r.tagError           ? `الـ Tag: ${r.tagError}`                            : '',
+      (r.slugFixed && !r.slugFixed.confirmed) ? 'تصحيح الـ Slug غير مؤكَّد'      : '',
+      variants.filter(v => v.status === 'warning').map(v => v.warning).filter(Boolean)[0] || '',
+    ].filter(Boolean);
+
+    row.status = r.status === 'success' ? 'success' : (r.status === 'warning' ? 'warning' : 'error');
+    row.detail = sizeLine + (issues.length ? ` — ${issues.join(' | ')}` : '');
+  } catch (e) {
+    row.status = 'error';
+    // brand_missing (v2.6.0) — الربط اتوقف بالكامل من غير أي كتابة على أي منصة
+    if (e.data && e.data.code === 'brand_missing') {
+      row.detail = `البراند "${e.data.vendor || '—'}" مش موجود على ووردبريس — الربط اتوقف بالكامل من غير أي تعديل. ` +
+                   (e.data.addBrandUrl ? `<a href="${esc(e.data.addBrandUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800;">➕ إضافة البراند</a>` : '');
+      row.detailIsHtml = true;
+    } else {
+      row.detail = e.message || 'خطأ غير معروف';
+    }
+  }
+}
+
+// ── التقدّم + العدّادات ──
+function updateBulkProgress(doneOverride) {
+  const total = bulkRows.length;
+  const done  = doneOverride !== undefined
+    ? doneOverride
+    : bulkRows.filter(r => r.status !== 'pending' && r.status !== 'running').length;
+  const pct   = total ? Math.round((done / total) * 100) : 0;
+
+  const fill = document.getElementById('bulkProgressFill');
+  fill.style.width = `${pct}%`;
+  fill.classList.toggle('done', !bulkRunning && pct === 100);
+  fill.classList.toggle('stopped', !bulkRunning && pct < 100);
+
+  const running = bulkRows.find(r => r.status === 'running');
+  document.getElementById('bulkProgressLabel').textContent = bulkRunning
+    ? `المنتج ${Math.min(done + 1, total)} من ${total} — جاري: ${running ? running.id : '—'}`
+    : `${done.toLocaleString('en-US')} من ${total.toLocaleString('en-US')} (${pct}%)`;
+
+  const ok   = bulkRows.filter(r => r.status === 'success').length;
+  const warn = bulkRows.filter(r => r.status === 'warning').length;
+  const err  = bulkRows.filter(r => r.status === 'error').length;
+  const left = bulkRows.filter(r => r.status === 'pending' || r.status === 'running').length;
+  const stop = bulkRows.filter(r => r.status === 'stopped').length;
+  document.getElementById('bulkStatsLine').innerHTML =
+    `<span class="bulk-chip ok">✓ تمت (${ok})</span>` +
+    `<span class="bulk-chip warn">⚠ تحذير (${warn})</span>` +
+    `<span class="bulk-chip err">✗ فشل (${err})</span>` +
+    `<span class="bulk-chip accent">⏳ متبقي (${left})</span>` +
+    (stop ? `<span class="bulk-chip">⏹ متوقف (${stop})</span>` : '');
+}
+
+const BULK_STATUS_CELL = {
+  pending: '<span class="badge-skip">في الانتظار</span>',
+  running: '<span class="badge-warn">⏳ جاري التنفيذ</span>',
+  success: '<span class="badge-ok">✓ تمت</span>',
+  warning: '<span class="badge-warn">⚠ تحذير</span>',
+  error:   '<span class="badge-danger">✗ فشل</span>',
+  stopped: '<span class="badge-skip">⏹ اتوقف</span>',
+};
+
+function renderBulkTable() {
+  const rows = bulkRows.map((r, i) => {
+    const cls = r.status === 'running' ? 'running' : r.status === 'error' ? 'row-err' : r.status === 'warning' ? 'row-warn' : '';
+    const detail = r.detailIsHtml ? r.detail : esc(r.detail || '—');
+    return `<tr class="${cls}">
+      <td class="mono">${i + 1}</td>
+      <td class="mono">${esc(r.id)}</td>
+      <td class="mono">${r.wpId ? esc(r.wpId) : '—'}</td>
+      <td class="right">${r.name ? esc(r.name) : '—'}</td>
+      <td>${BULK_STATUS_CELL[r.status] || '—'}</td>
+      <td class="right">${detail}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('bulkTable').innerHTML =
+    '<tr><th>#</th><th>رقم شوبيفاي</th><th>ووردبريس</th><th>المنتج</th><th>الحالة</th><th>التفاصيل</th></tr>' +
+    (rows || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px;">لا توجد منتجات</td></tr>');
+}
+
+// ── النتيجة النهائية: بانر بـ3 حالات (نجاح / جزئي / فشل) — Step 3C إلزامي ──
+function finishBulkRun() {
+  const total = bulkRows.length;
+  const ok    = bulkRows.filter(r => r.status === 'success').length;
+  const warn  = bulkRows.filter(r => r.status === 'warning').length;
+  const err   = bulkRows.filter(r => r.status === 'error').length;
+  const stop  = bulkRows.filter(r => r.status === 'stopped').length;
+
+  const cfg = err === total
+    ? { cls: 'err',  icon: '❌', title: 'فشلت كل المنتجات — راجع التفاصيل تحت', badge: 'err' }
+    : (err || warn || stop)
+      ? { cls: 'warn', icon: '⚠️', title: 'خلص مع ملاحظات — راجع الصفوف الملوّنة تحت', badge: 'warn' }
+      : { cls: 'ok',   icon: '✅', title: 'تمت إعادة ربط كل منتجات القائمة', badge: 'ok' };
+
+  document.getElementById('bulkBannerWrap').innerHTML = `
+    <div class="status-banner ${cfg.cls}">
+      <div class="status-banner-icon">${cfg.icon}</div>
+      <div>
+        <div class="status-banner-title">${cfg.title}</div>
+        <div class="status-banner-sub">المنتجات: ✓ تمت (${ok}) | ⚠ تحذير (${warn}) | ✗ فشل (${err})${stop ? ` | ⏹ متوقف (${stop})` : ''} — من أصل ${total}</div>
+      </div>
+    </div>`;
+
+  const badge = document.getElementById('stepBulkRunBadge');
+  badge.className   = `step-badge ${cfg.badge === 'ok' ? 'ok' : cfg.badge}`;
+  badge.textContent = cfg.badge === 'ok' ? '✓' : cfg.badge === 'warn' ? '⚠' : '✗';
+  document.getElementById('stepBulkRunSubtitle').textContent = cfg.title;
+
+  document.getElementById('bulkAfterActions').style.display = 'flex';
+  const retryBtn = document.getElementById('bulkRetryFailedBtn');
+  const retryable = bulkRows.filter(r => r.status === 'error' || r.status === 'stopped').length;
+  retryBtn.style.display = retryable ? '' : 'none';
+  retryBtn.textContent   = `🔁 أعد محاولة الفاشلة/المتوقفة (${retryable})`;
+
+  if (bulkOpts && bulkOpts.priceDifference !== null) localStorage.setItem(LS_PRICE_DIFF, String(bulkOpts.priceDifference));
+  showToast(cfg.cls === 'ok' ? 'خلصت القائمة ✓' : cfg.cls === 'warn' ? 'خلصت مع ملاحظات ⚠' : 'فشلت القائمة ✗', cfg.cls === 'err' ? 'error' : 'success');
+}
+
+// إعادة محاولة الفاشلة/المتوقّفة بس — بنفس خيارات آخر تشغيلة (لسه محتاجة نفس
+// الحارس: الأسئلة التلاتة لازم تكون لسه متأكدة، ومنتجات القائمة ماتتغيّرش تحت رجلينا)
+function retryFailedBulk() {
+  const v = validateBulkStart();
+  if (!v) return;
+  const retryIds = bulkRows.filter(r => r.status === 'error' || r.status === 'stopped').map(r => r.id);
+  if (!retryIds.length) { showToast('مفيش منتجات فاشلة لإعادة المحاولة', 'neutral'); return; }
+  runBulkList(retryIds, { shopifyStatus: v.shopifyStatus, addStar: v.addStar, priceDifference: v.priceDifference });
+}
+
+function startNewBulkList() {
+  if (bulkRunning) { showToast('استنى لحد ما التشغيلة الحالية تخلص', 'error'); return; }
+  resetBulkTab();
+  document.getElementById('bulkIdsInput').focus();
+  showToast('جاهز لقائمة جديدة 🆕', 'success');
+}
+
+// تصفير كامل لتاب Bulk — بيتنادى من زرار "قائمة جديدة" ومن تسجيل الخروج
+function resetBulkTab() {
+  if (bulkRunning) return; // تشغيلة شغّالة مابتتصفّرش من تحت رجليها
+  bulkRows = [];
+  bulkPendingStart = null;
+  bulkStopRequested = false;
+  document.getElementById('bulkIdsInput').value = '';
+  document.getElementById('stepBulkRunCard').style.display = 'none';
+  document.getElementById('bulkBannerWrap').innerHTML = '';
+  document.getElementById('bulkTable').innerHTML = '';
+  document.getElementById('stepBulkIdsBadge').className = 'step-badge';
+  document.getElementById('stepBulkIdsBadge').textContent = '1';
+  document.getElementById('stepBulkOptsBadge').className = 'step-badge';
+  document.getElementById('stepBulkOptsBadge').textContent = '2';
+  setStepCollapsed('BulkIds', false);
+  setStepCollapsed('BulkOpts', false);
+  onBulkIdsInput();
+  resetBulkSyncOptions();
+  loadBulkPriceDiffPref();
+}
+
+// ══════════════════════════════════════════════════════════════
 // §LOG-JS — تاب "سجل العمليات" — القسم الموحّد (data-table-standard.md)
 // ══════════════════════════════════════════════════════════════
 let logLoaded  = false;
@@ -2802,6 +3489,8 @@ checkWorkerVersion();
 updateLoginSettingsBtn();
 loadEmployeesList();
 loadPriceDiffPref();
+loadBulkPriceDiffPref();
+onBulkIdsInput();
 Object.keys(msState).forEach(k => msRenderList(k));
 resetDateFilter();
 </script>
