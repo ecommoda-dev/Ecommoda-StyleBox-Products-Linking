@@ -1043,6 +1043,17 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">10-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>عدد النداءات على ووردبريس اتنصّف — من ~10 لكل منتج لـ 5</strong> (Worker v2.11.0). كل مقاسات المنتج بقت بتتحدّث في <strong>نداء واحد</strong> بدل نداء لكل مقاس، والبراند بقى بيتسأل عنه مرة واحدة للقائمة كلها بدل كل منتج. النتيجة: عدد المنتجات اللي بتعدّي قبل ما ووردبريس تخنق <strong>اتضاعف</strong>.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>وقت الانتظار بعد الخنق بقى تصاعدي وبيحترم اللي الاستضافة بتطلبه</strong> — 15 ثانية، وبعدين 30، وبعدين 60، وبعدين 90 مع كل خنق متتالي (وبيرجع لأوله مع أول منتج بينجح). ولو الاستضافة قالت المدة المطلوبة بنفسها، الأداة بتستناها هي بالظبط. الوقفة الثابتة القديمة (15 ثانية) كانت أقصر من مدة الحجب فماكانتش بتفكّه.</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>مقاس بيفشل بـ SKU مكرر بقى بيتعلّم لوحده بنص الخطأ من ووكومرس (بما فيه رقم المنتج التاني الماسك للـ SKU) وباقي المقاسات بتتزامن عادي — حتى وإحنا بنبعتهم كلهم في نداء واحد.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.14.0</span>
+            <span class="cl-ver-date">10-09-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>ووكومرس كانت بتخنق التشغيلات الجماعية والأداة كانت بتقول "مفيش منتج"</strong> (Worker v2.10.0) — في أول تشغيلة على 15 منتج، المنتج الرابع رجّع <code>429 Too Many Requests</code> ومن بعده كل نداء لووكومرس اترفض، والأداة كانت بتعرض ده كأن المنتجات مش موجودة على ووردبريس. دلوقتي: كل نداءات ووكومرس بقى فيها <strong>إعادة محاولة تلقائية مع انتظار متزايد</strong> (وكانت موجودة لشوبيفاي بس)، والواجهة بتنتظر شوية بين كل منتج والتاني و15 ثانية كاملة بعد أي خنق — عشان القائمة تخلص كلها بدل ما تتقفل بعد تلات منتجات.</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>رسائل الفشل بقت بتقول السبب الحقيقي</strong> — بدل "مفيش منتج على ووردبريس بالرقم ده" في كل الحالات، دلوقتي: خنق ووكومرس بيظهر بنصّه (⏱️ مع كلمة "المنتج ده ماتلمسش")، ومنتج مش مربوط أصلاً بيقول كده ويوجّهك لتاب الربط الفردي.</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>مقاس واحد فاشل مابقاش يوقّع المنتج كله</strong> — لو ووكومرس رفضت مقاس (مثلاً SKU مكرر: <code>Invalid or duplicated SKU</code>)، كان المنتج بيقف في نصّه: باقي المقاسات ما بتتزامنش وتاج <code>stylebox</code> ما بيتضافش. دلوقتي المقاس ده بس بياخد ⚠ تحذير بنص الخطأ وباقي المنتج بيكمّل عادي. (كان موجود في تاب الربط الفردي كمان، مش في Bulk بس.)</span></li>
@@ -1346,6 +1357,11 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><strong>مفيش زرار "راجع صور + كاتيجوريز المنتج" ومفيش نافذة "تأكيد المراجعة"</strong> —
               الاتنين خاصين بالمسار الفردي بس</li>
             </ul>
+            <p><strong>عدد النداءات (v2.15.0):</strong> كل منتج بياخد <strong>5-6 نداءات</strong> على ووردبريس
+            (قراءة المنتج، قراءة المقاسات، البراند — مرة واحدة للقائمة كلها، تحديث المنتج، وتحديث
+            <strong>كل المقاسات في نداء واحد</strong>). كان ~10-11 قبل v2.15.0 (نداء منفصل لكل مقاس).
+            التقليل ده هو الفرق بين قائمة بتقف بعد 3 منتجات وقائمة بتعدّي الضِعف.</p>
+
             <p><strong>إيقاع النداءات (v2.14.0):</strong> ووكومرس بترفض النداءات (<code>429</code>) لو جت ورا بعضها
             من غير نفَس — وده اللي حصل فعلاً في أول تشغيلة (10-09-2026). عشان كده: الـ Worker بيعيد المحاولة
             تلقائيًا مع انتظار متزايد على أي <code>429</code>/<code>5xx</code>، والواجهة بتستنى شوية بين كل منتج
@@ -1631,12 +1647,12 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.14.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.15.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة (v2.9.0 — أكشن find_product_relink بتاع مسار Bulk) — منفصلة تمامًا عن
 // TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
 // أي لمس للـ Worker — راجع checkWorkerVersion() تحت)
-const EXPECTED_WORKER_VERSION = 'v2.10.0';
+const EXPECTED_WORKER_VERSION = 'v2.11.0';
 const LS_URL       = 'stylebox_link_worker_url';
 const LS_SECRET    = 'stylebox_link_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url'; // مشترك بين كل الأدوات — ما يتغيرش
@@ -2653,12 +2669,30 @@ function renderSyncResult(data) {
 // وفاصل أطول بكتير بعد أي فشل شكله خنق — الهدف إن القائمة تخلص كلها بدل ما
 // تجري وتتقفل عليها بعد 3 منتجات.
 const BULK_PAUSE_MS          = 700;    // بين كل منتج والتاني في الأحوال العادية
-const BULK_THROTTLE_PAUSE_MS = 15000;  // بعد 429/5xx — ووكومرس محتاجة تاخد نفَس
+const BULK_THROTTLE_PAUSE_MS = 15000;  // أول وقفة بعد خنق
+const BULK_THROTTLE_MAX_MS   = 90000;  // سقف الوقفة مهما تكرر الخنق
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // بيتعرّف على فشل الخنق من نص الخطأ (الـ Worker بيمرّر status ووكومرس بنصّه)
 function isThrottleError(msg) {
   return /\b(429|503|502|504)\b/.test(String(msg || '')) || /too many requests/i.test(String(msg || ''));
+}
+
+// (v2.15.0) الاستضافة بتقول أحيانًا المدة المطلوبة في هيدر Retry-After، والـ
+// Worker بيمرّرها في نص الخطأ. لو موجودة نحترمها — أدق من أي رقم بنخمّنه.
+function retryAfterMsFromError(msg) {
+  const m = String(msg || '').match(/Retry-After:\s*(\d+)s/i);
+  if (!m) return 0;
+  return Math.min(Number(m[1]) * 1000 + 2000, BULK_THROTTLE_MAX_MS);  // + هامش أمان ثانيتين
+}
+
+// وقفة تصاعدية: 15s → 30s → 60s → 90s مع كل خنق متتالي، وبترجع لأولها مع أول
+// منتج بينجح. الوقفة الثابتة (15s) ماكانتش بتفكّ الحجب — نافذة الاستضافة أطول.
+let bulkThrottleStreak = 0;
+function nextThrottlePauseMs(errMsg) {
+  const fromHeader = retryAfterMsFromError(errMsg);
+  const escalating = Math.min(BULK_THROTTLE_PAUSE_MS * Math.pow(2, bulkThrottleStreak), BULK_THROTTLE_MAX_MS);
+  return Math.max(fromHeader, escalating);
 }
 
 let bulkRows          = [];    // [{ id, wpId, name, status, detail }]
@@ -2827,8 +2861,9 @@ function requestBulkStop() {
 
 // ══ التشغيل نفسه — منتج ورا التاني، نداءين لكل منتج (بحث ثم ربط) ══
 async function runBulkList(ids, opts) {
-  bulkOpts          = opts;
-  bulkStopRequested = false;
+  bulkOpts           = opts;
+  bulkStopRequested  = false;
+  bulkThrottleStreak = 0;
   bulkRows = ids.map(id => ({ id, wpId: null, name: null, status: 'pending', detail: '', throttled: false }));
 
   document.getElementById('stepBulkRunCard').style.display = 'block';
@@ -2863,14 +2898,17 @@ async function runBulkList(ids, opts) {
       updateBulkProgress(i + 1);
 
       // ── الإيقاع: ووكومرس بتخنق لو النداءات جت ورا بعضها من غير نفَس ──
-      if (i < bulkRows.length - 1 && !bulkStopRequested) {
-        if (bulkRows[i].throttled) {
-          bulkRows[i + 1].detail = `ووكومرس خنقت النداءات — استنى ${Math.round(BULK_THROTTLE_PAUSE_MS / 1000)} ثانية قبل المنتج اللي بعده...`;
+      if (bulkRows[i].throttled) {
+        const pause = nextThrottlePauseMs(bulkRows[i].detail);
+        bulkThrottleStreak++;
+        if (i < bulkRows.length - 1 && !bulkStopRequested) {
+          bulkRows[i + 1].detail = `ووكومرس خنقت النداءات — استنى ${Math.round(pause / 1000)} ثانية قبل المنتج اللي بعده...`;
           renderBulkTable();
-          await sleep(BULK_THROTTLE_PAUSE_MS);
-        } else {
-          await sleep(BULK_PAUSE_MS);
+          await sleep(pause);
         }
+      } else {
+        if (bulkRows[i].status === 'success' || bulkRows[i].status === 'warning') bulkThrottleStreak = 0;
+        if (i < bulkRows.length - 1 && !bulkStopRequested) await sleep(BULK_PAUSE_MS);
       }
     }
   } finally {
