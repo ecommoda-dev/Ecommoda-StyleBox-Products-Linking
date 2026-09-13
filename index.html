@@ -1117,6 +1117,9 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <span class="cl-ver-date">13-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>تاب "حذف النجمة" كانت بتعمل قائمة أربع أضعاف حجمها لما ووردبريس تخنق النداءات</strong> — في أول تشغيلة طلعت القائمة <strong>218 منتج</strong> والصح كان <strong>60</strong>، وفيهم منتجات مالهاش نجمة أصلاً. السبب: نداء قراءة واحد اتخنق (<code>429</code>)، فالأداة لغت <strong>كل</strong> العناوين اللي قرتها بنجاح واعتبرت كل المنتجات "حالتها مش معروفة" — وبعدين حسبت "مش معروف" على إنه "محتاج تنضيف". دلوقتي: اللي اتقرا بنجاح بيتحفظ، و"مش معروف" بقى <strong>خانة مستقلة مش داخلة التنضيف</strong> بتتحل بجلب تاني.</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>وقت الانتظار بعد الخنق ماكانش بيشتغل خالص</strong> — الأداة كانت بتستنى <strong>1.2 ثانية</strong> بس وتضرب الدفعة اللي بعدها، رغم إن فيها وقفة تصاعدية (15 ثانية وبعدين 30 و60 و90) مكتوبة للحالة دي بالظبط. السبب إن رفض ووردبريس كان بيوصل <strong>جوه نتيجة كل منتج</strong> مش كخطأ عام، والأداة كانت بتدوّر على الخطأ العام بس. دلوقتي بتقرا الخنق من نتايج المنتجات كمان، وبتحترم المدة اللي الاستضافة بتطلبها.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>الدفعة اللي منتجاتها نضيفة على ووردبريس بقت تعدّي من غير ما تلمس ووردبريس خالص</strong> — الجلب بيحدد مين محتاج تنضيف على كل منصة، والتنضيف بيتخطّى جهة ووردبريس للمنتجات اللي اتأكد إنها نضيفة. ومعاه نفَس إلزامي بين كل نداء ووردبريس والتاني (الجلب كان بيرميهم ورا بعضهم من غير أي وقفة). <em>النتيجة: نداءات ووردبريس في التشغيلة قلّت لحد الصفر في معظم الدفعات.</em></span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>النجمة "⭐" اتشالت من الأداة بالكامل</strong> (Worker v2.15.0) — بطلب صاحب الأداة: مش هتتستعمل تاني أبدًا. سؤال "هل تريد إضافة نجمة ⭐ للعنوان؟" اتشال من تاب الربط الفردي ومن تاب Bulk، والأسئلة الإلزامية بقت <strong>اتنين</strong> (حالة المنتج على شوبيفاي / تأكيد فرق السعر) بدل تلاتة. <strong>عنوان المنتج على شوبيفاي مابقاش بيتلمس خالص</strong> في أي تشغيلة ربط.</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>تاب مؤقّتة "⭐ حذف النجمة"</strong> — بتشيل النجمة من <strong>بداية</strong> عنوان كل منتج مربوط، على شوبيفاي <strong>وعلى ووردبريس</strong>، مرة واحدة. الأداة بتجيب القائمة بنفسها من شوبيفاي (كل منتج عليه <code>Wordpress ID</code>) — مفيش أي إدخال يدوي. الخطوة ① جلب (قراءة بس، بتعرض عدد المنتجات اللي عليها نجمة على كل منصة)، والخطوة ② تنضيف بعد نافذة تأكيد، بشريط تقدّم وزرار إيقاف وزرار إعادة محاولة للفاشلة. <em>النجمة اللي في نص العنوان أو في آخره مابتتلمسش، ومفيش أي حاجة تانية بتتغيّر — لا الحالة ولا المخزون ولا السعر ولا الـ SKU ولا التاج.</em> <strong>التاب دي المفروض تتشال من الأداة بعد ما تتنفّذ.</strong></span></li>
           </ul>
@@ -1827,7 +1830,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.19.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.20.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة (v2.9.0 — أكشن find_product_relink بتاع مسار Bulk) — منفصلة تمامًا عن
 // TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
@@ -1836,7 +1839,7 @@ const TOOL_VERSION = 'v2.19.0'; // نسخة الواجهة (UI) — بتزيد �
 // ⚠️ الواجهة دي بتقرا `cap`/`total`/`truncated` من get_logs_export، وهم اتضافوا
 //    في الـ Worker v2.12.0 — فالحد الأدنى لازم يبقى v2.12.0، وإلا الحارس نفسه
 //    بيبقى معطّل ويعدّي Worker مش قادر يخدم الصفحة (Standards #29).
-const MIN_WORKER_VERSION = 'v2.15.0';
+const MIN_WORKER_VERSION = 'v2.16.0';
 // رابط الـ Worker **ثابت** مش حقل إعدادات (html-builder v2.2.0 · Standards #28):
 // اسم الـ Worker بيتحدد وقت الإنشاء ومايتغيّرش، والرابط مش سر أصلاً.
 // لو اتعمل rename أو custom domain، السطر ده هو المكان الوحيد اللي يتغيّر.
@@ -3647,7 +3650,10 @@ function resetBulkTab() {
 //   (STAR_SCAN_PAGE_SIZE = 100) في index.js — التلاتة مع بعض، ولا واحد يتغيّر
 //   لوحده (worker-builder Step 5A ⑪).
 const STAR_CHUNK      = 20;
-const STAR_PAUSE_MS   = 1200;   // نفَس بين كل دفعة والتانية — ووكومرس بتخنق بسرعة
+// ⚠️ (v2.20.0) اترفع من 1200 — الحد المرصود على الاستضافة ~30 نداء، ونافذته
+// أطول من ده بكتير. مع تخطّي قراءة ووردبريس للمنتجات النضيفة، معظم الدفعات
+// بقت بصفر نداء ووكومرس أصلاً، فالثانيتين دول تكلفة شبه معدومة على التشغيلة.
+const STAR_PAUSE_MS   = 2000;   // نفَس بين كل دفعة والتانية — ووكومرس بتخنق بسرعة
 const STAR_TABLE_CAP  = 100;    // أقصى عدد صفوف بتتعرض في جدول المسح قبل "اعرض الكل"
 
 let starScanData        = null;  // آخر نتيجة star_scan
@@ -3657,15 +3663,22 @@ let starStopRequested   = false;
 let starShowAllScanRows = false;
 let starThrottleStreak  = 0;
 
-// منتج محتاج شغل = نجمة على شوبيفاي، أو نجمة على ووردبريس، أو حالة ووردبريس
-// **غير معروفة** (قراءة ووكومرس فشلت). الحالة التالتة مقصودة: "مش عارفين" مش
-// "نضيف" — والـ Worker بيقرا العنوان الحي بنفسه قبل أي كتابة، فالمحاولة آمنة.
-// المنتج المتأكّد إنه اتمسح من ووردبريس وعنوانه نضيف على شوبيفاي = مفيش شغل.
+// 🔴 (v2.20.0) منتج محتاج شغل = **نجمة مؤكَّدة** على شوبيفاي أو على ووردبريس.
+// النسخة الأولى كانت بتعتبر "حالة ووردبريس مش معروفة" شغلًا كمان — والنتيجة
+// وقت عطل 13-09-2026 إن نداء قراءة واحد اتخنق فبقى **كل** منتج مربوط "مش
+// معروف"، والقائمة طلعت 218 منتج بدل الـ60 اللي عليهم نجمة فعلاً (وفيهم
+// منتجات مالهاش نجمة على أي منصة). القائمة المتضخّمة رمت نداءات أكتر على
+// نفس المضيف المخنوق، فغذّت الخنق اللي هي أصلاً نتيجته.
+//
+// "مش معروف" دلوقتي **مش شغل ومش نضيف** — بيتعرض كخانة مستقلة وبيتحل بجلب
+// تاني (الجلب بقى بنفَس وبيحتفظ باللي قراه، فالجلب التاني بيقفل الناقص).
 function starNeedsWork(p) {
-  if (p.shopifyHasStar) return true;
-  if (p.wcHasStar === true) return true;
-  if (p.wcHasStar === null && !p.wcMissing) return true;
-  return false;
+  return p.shopifyHasStar === true || p.wcHasStar === true;
+}
+
+// المنتجات اللي الجلب مقدرش يقرا عنوانها على ووردبريس — مش داخلة التشغيل
+function starWcUnknown(p) {
+  return p.wcHasStar === null && !p.wcMissing;
 }
 
 function setStarScanBusy(active) {
@@ -3707,13 +3720,15 @@ function renderStarScan() {
   const todo     = products.filter(starNeedsWork);
   const shopStar = products.filter(p => p.shopifyHasStar).length;
   const wcStar   = products.filter(p => p.wcHasStar === true).length;
-  const unknown  = products.filter(p => p.wcHasStar === null).length;
+  const unknown  = products.filter(starWcUnknown).length;
+  const missing  = products.filter(p => p.wcMissing).length;
 
   document.getElementById('starScanCountLine').innerHTML =
     `<span class="bulk-chip accent">🔗 مربوط (${products.length.toLocaleString('en-US')})</span>` +
     `<span class="bulk-chip ${shopStar ? 'warn' : 'ok'}">⭐ نجمة على شوبيفاي (${shopStar.toLocaleString('en-US')})</span>` +
     `<span class="bulk-chip ${wcStar ? 'warn' : 'ok'}">⭐ نجمة على ووردبريس (${wcStar.toLocaleString('en-US')})</span>` +
-    (unknown ? `<span class="bulk-chip err">❔ ووردبريس غير معروف (${unknown.toLocaleString('en-US')})</span>` : '') +
+    (unknown ? `<span class="bulk-chip err">❔ ووردبريس مااتقراش (${unknown.toLocaleString('en-US')})</span>` : '') +
+    (missing ? `<span class="bulk-chip">🗑️ اتمسح من ووردبريس (${missing.toLocaleString('en-US')})</span>` : '') +
     `<span class="bulk-chip ${todo.length ? 'warn' : 'ok'}">🧹 محتاج تنضيف (${todo.length.toLocaleString('en-US')})</span>`;
 
   const notes = [];
@@ -3724,10 +3739,17 @@ function renderStarScan() {
       (اتفحص ${Number(d.totalScanned || 0).toLocaleString('en-US')} منتج في ${Number(d.pages || 0)} صفحة).
       نضّف اللي ظهر هنا الأول، وبعدها اعمل جلب تاني — أو زوّد <code>STAR_SCAN_MAX_PAGES</code> في الـ Worker.</div>`);
   }
-  if (d.wcError) {
-    notes.push(`<div class="result-note warn">⚠️ تعذّرت قراءة عناوين ووردبريس: ${esc(d.wcError)} —
-      عمود "نجمة ووردبريس" بيقول "غير معروف" للمنتجات دي. التنضيف هيقرا العنوان الحي بنفسه قبل أي كتابة،
-      فممكن تكمّل عادي — أو تعيد الجلب دلوقتي لو ووكومرس كانت بتخنق.</div>`);
+  if (unknown) {
+    // 🔴 المنتجات دي **مش داخلة التنضيف** عن قصد (v2.20.0): "مش عارفين" مش
+    //    "محتاج شغل". حشرهم في التشغيل هو اللي ضخّم قائمة 13-09-2026 لأربع
+    //    أضعافها وغذّى الخنق. الحل جلب تاني — الجلب بقى بيحتفظ باللي قراه،
+    //    فكل جلب بيقفل جزء من الناقص بدل ما يبدأ من الأول.
+    notes.push(`<div class="result-note warn">⚠️ <strong>${unknown.toLocaleString('en-US')} منتج</strong>
+      مقدرناش نقرا عنوانهم على ووردبريس${d.wcError ? ` (${esc(d.wcError)})` : ''} —
+      <strong>مش داخلين في التنضيف تحت</strong>، عشان "مش معروف" مش معناه إن عليه نجمة.
+      نضّف اللي ظاهر دلوقتي، وبعدين اضغط <strong>"اعمل جلب جديد"</strong> — الجلب بيحتفظ
+      باللي قراه، فكل مرة بيقفل جزء من الناقص. لو الرقم ده مابيقلّش خالص بعد كذا جلب،
+      يبقى ووردبريس بيحجب النداءات وساعتها المشكلة في الاستضافة مش في الأداة.</div>`);
   }
   notes.push(`<div class="result-note" style="margin-top:10px;">
     اتفحص <strong>${Number(d.totalScanned || 0).toLocaleString('en-US')}</strong> منتج على شوبيفاي،
@@ -3757,7 +3779,8 @@ function renderStarScan() {
       : '';
 
   document.getElementById('stepStarScanSubtitle').textContent =
-    `${products.length.toLocaleString('en-US')} منتج مربوط — ${todo.length.toLocaleString('en-US')} محتاج تنضيف`;
+    `${products.length.toLocaleString('en-US')} منتج مربوط — ${todo.length.toLocaleString('en-US')} محتاج تنضيف`
+    + (unknown ? ` (و${unknown.toLocaleString('en-US')} ووردبريس مااتقراش)` : '');
   const scanBadge = document.getElementById('stepStarScanBadge');
   scanBadge.className   = 'step-badge ok';
   scanBadge.textContent = '✓';
@@ -3843,6 +3866,7 @@ async function runStarList(items) {
     shopifyProductId: p.shopifyProductId,
     wpProductId:      p.wpProductId,
     title:            p.shopifyTitle,
+    wcClean:          p.wcHasStar === false,   // الجلب أكّد: مفيش نجمة على ووردبريس
     status:           'pending',
     detail:           '',
     throttled:        false,
@@ -3914,7 +3938,15 @@ function nextStarThrottlePauseMs(errMsg) {
 async function runStarChunk(chunk) {
   try {
     const d = await apiPost('remove_star', {
-      items: chunk.map(r => ({ shopify_product_id: r.shopifyProductId, wp_product_id: r.wpProductId })),
+      // wp_check:false للمنتجات اللي الجلب أكّد إن عنوانها على ووردبريس نضيف —
+      // الدفعة اللي كلها كده بتعدّي بصفر نداء ووكومرس (v2.20.0). آمن اتجاه واحد:
+      // أسوأ حالة نجمة اتضافت بعد الجلب تستنى الجلب اللي بعده، ومستحيل يخلّي
+      // الأداة تكتب عنوان غلط (كل كتابة لسه بتتحسب من العنوان الحي).
+      items: chunk.map(r => ({
+        shopify_product_id: r.shopifyProductId,
+        wp_product_id:      r.wpProductId,
+        wp_check:           !r.wcClean,
+      })),
       employee: currentEmployee.username,
     });
     const byId = new Map((d.results || []).map(r => [String(r.shopifyProductId), r]));
@@ -3929,7 +3961,17 @@ async function runStarChunk(chunk) {
       row.detail = res.detail || '—';
     }
     if (d.logged === false) showToast('العملية تمت لكن جزء من السجل ما اتكتبش (logged: false)', 'warning');
-    return false;
+
+    // 🔴 (v2.20.0) الخنق مش دايمًا بيرمي استثناء. لو ووردبريس رفضت القراءة
+    // بـ429، الـ Worker بيرجّع **HTTP 200** والرفض بييجي جوّه تفاصيل الصف
+    // (`تحذير` + نص فيه 429). النسخة الأولى كانت بتفحص الاستثناء بس فرجّعت
+    // "مفيش خنق"، واللفّة استنّت 1.2 ثانية وضربت الدفعة اللي بعدها — يعني
+    // الوقفة التصاعدية (15s→90s) **عمرها ما اشتغلت** طول عطل 13-09-2026.
+    let throttled = false;
+    for (const row of chunk) {
+      if (isThrottleError(row.detail)) { row.throttled = true; throttled = true; }
+    }
+    return throttled;
   } catch (e) {
     const throttled = isThrottleError(e.message);
     for (const row of chunk) {
@@ -4063,6 +4105,9 @@ function retryFailedStar() {
     shopifyProductId: r.shopifyProductId,
     wpProductId:      r.wpProductId,
     shopifyTitle:     r.title,
+    // ⚠️ إعادة المحاولة بتفحص ووردبريس من جديد **دايمًا** — الصف وصل هنا لأنه
+    // فشل، وغالبًا الفشل نفسه كان في قراءة ووردبريس. wcHasStar:null = "افحص".
+    wcHasStar:        null,
   })));
 }
 

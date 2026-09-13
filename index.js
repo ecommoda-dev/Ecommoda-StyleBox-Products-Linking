@@ -245,7 +245,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.15.0';
+const WORKER_VERSION = 'v2.16.0';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -2035,6 +2035,12 @@ const STAR_SCAN_PAGE_SIZE = 100;
 const STAR_SCAN_MAX_PAGES = 60;   // = 6000 منتج. لو المتجر عدّاهم، الرد بيقول scannedAll:false
 const STAR_MAX_BATCH      = 50;   // أقصى عدد منتجات في نداء remove_star الواحد
 const STAR_WC_CHUNK       = 50;   // أقصى عدد IDs في نداء ووكومرس الواحد (قراءة/كتابة)
+// ⚠️ (v2.16.0) نفَس إلزامي بين أي نداءين ووكومرس متتاليين جوّه القسم ده.
+// عطل 13-09-2026: الجلب رمى نداءاته ورا بعضها من غير أي وقفة، فالاستضافة
+// حجبتهم بـ429 (الحد ~30 نداء — راجع "مسائل مفتوحة"). `wcFetch` بيعيد
+// المحاولة 3 مرات بباكوف، لكن الباكوف بيشتغل **بعد** الرفض؛ النفَس ده
+// بيمنع الرفض من الأساس.
+const STAR_WC_PACE_MS     = 1500;
 
 // ─── §STAR::strip — قاعدة التنضيف الوحيدة، للمنصتين ───
 // بنشيل **بادئة** النجمة بس (U+2B50، مع Variation Selector الاختياري ومسافاتها)
@@ -2085,22 +2091,38 @@ const PRODUCTS_TITLES_QUERY = `
 // retry + باكوف + احترام Retry-After في مكان واحد. وبتستخدم مفاتيح WC REST
 // (المصادقة الافتراضية) مش SYNC_SECRET — زي find_product بالظبط، فمفيش أي
 // تعديل مطلوب على الـ WPCode snippet عشان التاب دي تشتغل.
+// 🔴 (v2.16.0) **فشل دفعة مابيلغيش الدفعات اللي نجحت.** النسخة الأولى كانت
+// بترمي أول ما أي دفعة تفشل، فالعناوين اللي اتقرت فعلاً كانت بتتلغى ومعاها
+// كل المنتجات بتبقى "مش معروفة" — وده اللي حوّل خنق في نداء واحد لقائمة
+// تشغيل أربع أضعاف حجمها (عطل 13-09-2026). دلوقتي بترجّع اللي اتقرا +
+// قائمة صريحة بالـ IDs اللي مااتقرتش.
 async function wcGetProductTitles(env, ids) {
-  const map = new Map();
+  const titles    = new Map();
+  const failedIds = [];
+  let   error     = null;
+
   for (let i = 0; i < ids.length; i += STAR_WC_CHUNK) {
     const slice = ids.slice(i, i + STAR_WC_CHUNK);
+    if (i > 0) await new Promise(r => setTimeout(r, STAR_WC_PACE_MS));  // النفَس
     const qs = new URLSearchParams({
       include:  slice.join(','),
       per_page: String(slice.length),
       _fields:  'id,name',
       status:   'any',
     }).toString();
-    const rows = await wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products?${qs}`, {
-      label: 'WC get product titles',
-    });
-    for (const row of (Array.isArray(rows) ? rows : [])) map.set(String(row.id), row.name);
+    try {
+      const rows = await wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products?${qs}`, {
+        label: 'WC get product titles',
+      });
+      for (const row of (Array.isArray(rows) ? rows : [])) titles.set(String(row.id), row.name);
+    } catch (e) {
+      // نص الخطأ بيتحفظ بالحرف (فيه Retry-After لو الاستضافة بعتته) — الواجهة
+      // بتقراه عشان تعرف إن ده خنق مش عطل بيانات.
+      error = e.message;
+      for (const id of slice) failedIds.push(String(id));
+    }
   }
-  return map;
+  return { titles, failedIds, error };
 }
 
 // POST /wc/v3/products/batch — الرد بيرجع 200 حتى لو صف فشل، والفشل بييجي جوه
@@ -2161,31 +2183,36 @@ async function scanLinkedProducts(env) {
   }
   const scannedAll = cursor === null;
 
-  // ── عناوين ووكومرس للمنتجات المربوطة — نداء لكل 50 منتج ──
-  // فشل القراءة دي **مابيوقفش المسح**: الجزء الخاص بشوبيفاي لسه صحيح،
-  // والمنتجات اللي ما وصلناش لعناوينها بتترجع بـ wcTitle:null والواجهة
-  // بتقول "غير معروف" بدل ما تدّعي إنه نضيف. (نداء remove_star بيقرا عنوان
-  // ووكومرس الحي بنفسه قبل أي كتابة، فمفيش قرار كتابة بيتبني على الفراغ ده.)
-  let wcError = null;
+  // ── عناوين ووكومرس للمنتجات المربوطة — نداء لكل 50 منتج، بنفَس بينهم ──
+  // فشل القراءة دي **مابيوقفش المسح**: الجزء الخاص بشوبيفاي لسه صحيح.
+  // ⚠️ (v2.16.0) والفشل بقى **جزئي**: كل منتج اتقرا عنوانه بيتقفل على حالة
+  // مؤكَّدة، واللي مااتقراش بس هو اللي بيفضل "مش معروف". قبل كده أي فشل كان
+  // بيرمي كل حاجة فالـ 218 منتج كلهم بقوا "مش معروف" — وده اللي خلّى الواجهة
+  // تحطهم كلهم في قائمة التنضيف (عطل 13-09-2026).
   const wpIds = [...new Set(linked.map(p => p.wpProductId))];
-  let titles = new Map();
-  try {
-    if (wpIds.length) titles = await wcGetProductTitles(env, wpIds);
-  } catch (e) {
-    wcError = e.message;
-  }
+  const { titles, failedIds, error: wcError } = wpIds.length
+    ? await wcGetProductTitles(env, wpIds)
+    : { titles: new Map(), failedIds: [], error: null };
+  const unread = new Set(failedIds);
+
   for (const p of linked) {
-    const name = titles.get(String(p.wpProductId));
-    if (name === undefined) {
-      p.wcTitle     = null;
-      p.wcHasStar   = null;      // null = مش معروف، مش "مفيش نجمة"
-      p.wcMissing   = !wcError;  // القراءة نجحت والمنتج مارجعش = اتمسح من ووردبريس
-    } else {
+    const key  = String(p.wpProductId);
+    const name = titles.get(key);
+    if (name !== undefined) {
       const wcStar = stripLeadingStar(name);
       p.wcTitle      = name;
       p.wcHasStar    = wcStar.had;
       p.wcTitleClean = wcStar.after;
       p.wcMissing    = false;
+    } else if (unread.has(key)) {
+      p.wcTitle   = null;
+      p.wcHasStar = null;        // null = مش معروف، مش "مفيش نجمة"
+      p.wcMissing = false;
+    } else {
+      // القراءة نجحت والمنتج مارجعش = اتمسح من ووردبريس (مش خنق)
+      p.wcTitle   = null;
+      p.wcHasStar = null;
+      p.wcMissing = true;
     }
   }
 
@@ -2194,7 +2221,8 @@ async function scanLinkedProducts(env) {
     totalScanned:  totalSeen,
     linkedCount:   linked.length,
     needsCleanup:  linked.filter(p => p.shopifyHasStar || p.wcHasStar === true).length,
-    unknownWc:     linked.filter(p => p.wcHasStar === null).length,
+    unknownWc:     linked.filter(p => p.wcHasStar === null && !p.wcMissing).length,
+    missingWc:     linked.filter(p => p.wcMissing).length,
     scannedAll,
     pages,
     wcError,
@@ -2234,7 +2262,17 @@ async function removeStarBatch(env, items, employee) {
     const sid = String(it?.shopify_product_id ?? '').trim();
     if (!/^\d+$/.test(sid) || seen.has(sid)) continue;
     seen.add(sid);
-    clean.push({ shopifyProductId: sid, wpProductId: String(it?.wp_product_id ?? '').trim() || null });
+    clean.push({
+      shopifyProductId: sid,
+      wpProductId:      String(it?.wp_product_id ?? '').trim() || null,
+      // ⚠️ (v2.16.0) `wp_check:false` = الجلب أكّد إن عنوان ووردبريس نضيف،
+      // فمفيش داعي نقراه تاني. **آمن لأنه اتجاه واحد:** أسوأ حالة إن نجمة
+      // اتضافت بعد الجلب تفضل مكانها لحد الجلب اللي بعده — مستحيل يخلّينا
+      // نكتب عنوان غلط، لأن كل كتابة لسه بتتحسب من العنوان الحي اللي بنقراه
+      // تحت. والمكسب إن الدفعة اللي كل منتجاتها نضيفة على ووردبريس بتعدّي
+      // **بصفر نداء ووكومرس** — ده الفرق بين قائمة بتخلص وقائمة بتتحجب.
+      wpCheck:          it?.wp_check !== false,
+    });
   }
   // كل المدخلات كانت غير صالحة/مكرّرة — رجوع بدري قبل أي نداء خارجي، عشان
   // ماننداش شوبيفاي بـ ids فاضية ونرجّع "نجاح" على دفعة مافيهاش حاجة أصلاً.
@@ -2248,21 +2286,19 @@ async function removeStarBatch(env, items, employee) {
     if (node?.id) shopifyTitles.set(String(node.id).split('/').pop(), node.title);
   }
 
-  const wpIds = clean.map(c => c.wpProductId).filter(Boolean);
-  let wcTitles = new Map();
-  let wcReadError = null;
-  try {
-    if (wpIds.length) wcTitles = await wcGetProductTitles(env, wpIds);
-  } catch (e) {
-    wcReadError = e.message;   // الجانب الشوبيفاي بيكمّل — ووكومرس بس بياخد تحذير
-  }
+  const wpIds = clean.filter(c => c.wpProductId && c.wpCheck).map(c => c.wpProductId);
+  const { titles: wcTitles, failedIds: wcUnreadIds, error: wcReadError } = wpIds.length
+    ? await wcGetProductTitles(env, wpIds)
+    : { titles: new Map(), failedIds: [], error: null };
+  const wcUnread = new Set(wcUnreadIds);
 
   // (3) شوبيفاي أولاً — منتج ورا التاني (مفيش ميوتيشن جماعية للعنوان)
   const rows = clean.map(c => ({
     shopifyProductId: c.shopifyProductId,
     wpProductId:      c.wpProductId,
+    wpCheck:          c.wpCheck,
     shopify: { had: false, done: false, error: null, before: null, after: null },
-    wc:      { had: false, done: false, error: null, before: null, after: null },
+    wc:      { had: false, done: false, error: null, skipped: false, before: null, after: null },
     missingOnShopify: false,
     status: null,
   }));
@@ -2298,8 +2334,16 @@ async function removeStarBatch(env, items, employee) {
   const wcUpdates = [];
   for (const row of rows) {
     if (!row.wpProductId) continue;
-    if (wcReadError) { row.wc.error = `تعذّرت قراءة عنوان ووردبريس: ${wcReadError}`; continue; }
-    const name = wcTitles.get(String(row.wpProductId));
+    // الجلب أكّد إنه نضيف على ووردبريس → مفيش قراءة ومفيش كتابة (v2.16.0)
+    if (!row.wpCheck) { row.wc.skipped = true; continue; }
+    const key  = String(row.wpProductId);
+    const name = wcTitles.get(key);
+    // ⚠️ الخطأ بقى **لكل منتج على حدة**: المنتجات اللي دفعة قراءتها فشلت بس هي
+    // اللي بتاخد التحذير، مش كل الدفعة (v2.16.0 — نفس درس الفشل الجزئي فوق).
+    if (name === undefined && wcUnread.has(key)) {
+      row.wc.error = `تعذّرت قراءة عنوان ووردبريس: ${wcReadError}`;
+      continue;
+    }
     if (name === undefined) { row.wc.error = 'المنتج مش موجود على ووردبريس'; continue; }
     row.wc.before = name;
     const strip = stripLeadingStar(name);
@@ -2310,6 +2354,8 @@ async function removeStarBatch(env, items, employee) {
 
   if (wcUpdates.length) {
     try {
+      // نفَس بين آخر قراءة ووكومرس ونداء الكتابة — الاتنين على نفس المضيف
+      if (wpIds.length) await new Promise(r => setTimeout(r, STAR_WC_PACE_MS));
       const byId = await wcBatchUpdateProductTitles(env, wcUpdates);
       for (const u of wcUpdates) {
         const res = byId.get(String(u.id));
@@ -2370,8 +2416,10 @@ async function removeStarBatch(env, items, employee) {
       parts.push(row.shopify.had ? (row.shopify.done ? 'شوبيفاي: اتنضّف ✓' : `شوبيفاي: فشل — ${row.shopify.error}`)
                                  : 'شوبيفاي: مكانش عليه نجمة');
       if (row.wpProductId) {
-        parts.push(row.wc.had ? (row.wc.done ? 'ووردبريس: اتنضّف ✓' : `ووردبريس: فشل — ${row.wc.error}`)
-                              : (row.wc.error ? `ووردبريس: ${row.wc.error}` : 'ووردبريس: مكانش عليه نجمة'));
+        parts.push(row.wc.had    ? (row.wc.done ? 'ووردبريس: اتنضّف ✓' : `ووردبريس: فشل — ${row.wc.error}`)
+                 : row.wc.error  ? `ووردبريس: ${row.wc.error}`
+                 : row.wc.skipped ? 'ووردبريس: نضيف (اتأكد في الجلب)'
+                 : 'ووردبريس: مكانش عليه نجمة');
       }
       row.detail = parts.join(' | ');
     }
