@@ -115,6 +115,9 @@
 //   global_unique_id قبل التأكيد) — راجع "مسائل مفتوحة" في CLAUDE.md، خصوصًا
 //   افتراض إن /wc/v3/products/brands شغّال (تاكسونومي البراندات الأصلي في
 //   ووكومرس 9.4+).
+//   ⚠️ تحديث v2.14.0 (البند 8 في WCRATELIMIT.md): الحارس نفسه وترتيبه متغيّروش،
+//   لكن آلية التحقق بقت عبر ecommoda/v1/check-brand (نداء لـ endpoint مخصّص
+//   على ووردبريس، مش /wc/v3/products/brands) — راجع wcCheckBrand/BrandNotFoundError.
 //
 // ⚠️ RENAME — 25-08-2026: هذا الملف كان shopify-woo-sync-worker (tool =
 // shopify_woo_sync). اتعمل رينيم كامل + مراجعة شاملة مقابل ecommoda-worker-builder
@@ -238,7 +241,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.13.0';
+const WORKER_VERSION = 'v2.14.0';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -357,6 +360,12 @@ function cairoDayBoundsUTC(dateStr) {
 const ENV_REQUIRED = {
   shopify:     ['SHOP_DOMAIN', 'CLIENT_ID', 'CLIENT_SECRET'],
   woocommerce: ['WC_BASE_URL', 'WC_CONSUMER_KEY', 'WC_CONSUMER_SECRET'],
+  // v2.14.0 — syncProduct بقى بيستخدم ecommoda/v1/link-product بدل wc/v3/*،
+  // مصادقة مختلفة (هيدر X-Sync-Header-Secret + سر SYNC_SECRET — نفس الاتفاق
+  // الموحّد المستخدم في snippet الـ price/stock الموجودين فعلاً على
+  // stylebox.online، مش مفاتيح WC REST). find_product/find_product_relink
+  // لسه بيستخدموا 'woocommerce' زي ما هم بالظبط.
+  wc_link:     ['WC_BASE_URL', 'SYNC_SECRET'],
 };
 function assertEnv(env, ...groups) {
   const missing = [];
@@ -801,8 +810,12 @@ function wcBackoffMs(attempt, retryAfterHeader) {
 }
 
 // label = بادئة رسالة الخطأ زي ما كانت بالظبط ("WC get product 123")
-async function wcFetch(env, url, { label, method = 'GET', payload = null, cacheBust = true, maxAttempts = WC_MAX_ATTEMPTS } = {}) {
-  const headers = { Authorization: wcAuthHeader(env) };
+// ⚠️ headers (v2.14.0): لو اتبعتت، بتستخدَم بدل Authorization: Basic الافتراضي —
+// مطلوبة لـ ecommoda/v1/link-product (X-Sync-Header-Secret، مش مفاتيح WC REST).
+// نفس منطق retry/backoff/Retry-After بيفضل واحد لكل نداءات ووكومرس/ووردبريس،
+// زي ما هو مطلوب (راجع فخاخ v2.10.0 في CLAUDE.md).
+async function wcFetch(env, url, { label, method = 'GET', payload = null, cacheBust = true, maxAttempts = WC_MAX_ATTEMPTS, headers: headersOverride = null } = {}) {
+  const headers = headersOverride ? { ...headersOverride } : { Authorization: wcAuthHeader(env) };
   if (payload !== null) headers['Content-Type'] = 'application/json';
 
   let lastError = null;
@@ -865,44 +878,25 @@ async function wcSearchProducts(env, params) {
   });
 }
 
-// ─── §WOOCOMMERCE::wcSearchBrands — v2.6.0 (البراند إلزامي قبل الربط) ───
-// تاكسونومي `product_brand` الأصلي في ووكومرس (نفس اللي شاشة تحرير المنتج
-// بتاعه فيها "All Brands" checkboxes + "+ Add New Brand" — راجع
-// edit-tags.php?taxonomy=product_brand&post_type=product). الـ REST endpoint
-// بيتبع نفس شكل categories/tags تمامًا: GET بيرجّع array من {id, name, slug}،
-// والـ PUT على المنتج بياخد `brands: [{id}]`.
-// ⚠️ لسه مش متأكَّد فعليًا (زي فلتر global_unique_id في §FIND) إن الـ endpoint
-// ده شغّال على stylebox.online — راجع "مسائل مفتوحة" في CLAUDE.md.
-async function wcSearchBrands(env, params) {
-  const qs = new URLSearchParams(params).toString();
-  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products/brands?${qs}`, {
-    label: 'WC search brands',
-  });
-}
-
-// مطابقة حرفية (case-insensitive، بعد trim) — مش بحث تقريبي. الاسم لازم يطابق
-// اسم الـ Vendor على شوبيفاي بالظبط، وإلا العملية بتُعتبر "مفيش براند" (تتوقف).
-// ─── §WOOCOMMERCE::brandCache — v2.11.0 ───
-// نفس الـ Vendor بيتسأل عنه مع **كل منتج** في القائمة (كل تشغيلة Bulk فيها
-// براند أو اتنين بس عادةً)، وده نداء ووكومرس كامل في كل مرة على متجر بيحجب
-// عند ~30 نداء. الكاش على مستوى الـ isolate — بيعيش بين الطلبات المتتالية.
+// ─── §WOOCOMMERCE::wcSearchBrands/wcFindBrandByName/brandCache — v2.6.0/v2.11.0،
+// اتشالوا v2.14.0 (البند 8 في WCRATELIMIT.md): مطابقة البراند بقت بتحصل جوّه
+// تاكسونومي product_brand على ووردبريس نفسه (نداء DB محلي، مجاني) عن طريق
+// ecommoda/v1/check-brand بدل /wc/v3/products/brands. راجع wcCheckBrand تحت.
 //
-// ⚠️ الإيجابي بس هو اللي بيتخزّن: لو البراند مش موجود، الحارس بيوقف الربط
-// والموظف بيضيفه على ووردبريس — لازم المحاولة اللي بعدها تسأل من جديد وتلاقيه،
-// مش تقراه من كاش قديم بيقول "مش موجود".
-const BRAND_CACHE_TTL_MS = 10 * 60 * 1000;
-const brandCache = new Map();   // vendor(lowercase) → { brand, at }
-
-async function wcFindBrandByName(env, vendorName) {
-  const target = vendorName.trim().toLowerCase();
-  const hit    = brandCache.get(target);
-  if (hit && (Date.now() - hit.at) < BRAND_CACHE_TTL_MS) return hit.brand;
-
-  const results = await wcSearchBrands(env, { search: vendorName, per_page: 100 });
-  if (!Array.isArray(results)) return null;
-  const brand = results.find(b => String(b?.name || '').trim().toLowerCase() === target) || null;
-  if (brand) brandCache.set(target, { brand, at: Date.now() });
-  return brand;
+// ⚠️ ليه لسه نداء مستقل ومش مندمج جوّه GET /link-product أو POST نفسها:
+// حارس البراند **لازم يتنفّذ قبل أي كتابة على أي منصة — شوبيفاي كمان** (نفس
+// القاعدة v2.6.0، "لا شوبيفاي ولا ووكومرس اتلمسوا")، واسم الـ Vendor نفسه
+// مابيتعرفش إلا بعد نداء شوبيفاي GraphQL اللي بيحصل **بعد** أول قراءة من
+// ووردبريس (لازم نعرف shopifyProductId الأول). فالترتيب الوحيد اللي بيحافظ
+// على القاعدة دي: قراءة WC (1) ← شوبيفاي GraphQL (قراءة، مش كتابة) ← حارس
+// البراند (2) ← كتابة شوبيفاي ← كتابة WC (3). الحارس بيتكرّر تاني جوّه POST
+// نفسها كدفاع ثاني (race نادرة جدًا لو حد مسح البراند في نفس الثواني دي).
+async function wcCheckBrand(env, vendorName) {
+  const qs = new URLSearchParams({ vendor_name: vendorName }).toString();
+  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/ecommoda/v1/check-brand?${qs}`, {
+    label:   'WC check-brand',
+    headers: ecommodaLinkHeaders(env),
+  });
 }
 
 // ─── §HELPERS::buildTitleSearchQuery — v2.8.0 (تضييق نطاق البحث بالعنوان) ───
@@ -930,54 +924,53 @@ function slugify(text) {
     .replace(/^-+|-+$/g, '');
 }
 
-// product-level update — used to refresh the legacy "_shopify_product_id"
-// meta field (status=publish call), and also (26-08-2026) to recover a
-// missing global_unique_id (GTIN) + strip the number back out of sku —
-// see extractGtinFromSku()/syncProduct(). meta_data passed here upserts by
-// key — does NOT wipe other existing meta, same behavior relied on in
-// wcUpdateVariation() below.
-async function wcUpdateProduct(env, wpProductId, payload) {
-  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products/${wpProductId}`, {
-    label:     `WC update product ${wpProductId}`,
-    method:    'PUT',
+// ══════════════════════════════════════════════════════════════
+// §WOOCOMMERCE::wcLinkProduct — v2.14.0 (البند 8 في WCRATELIMIT.md)
+// 2-3 نداءات لكل sync_product بدل 5-6 نداء لـ /wc/v3/* منفصلة — WPCode
+// snippet مخصّص على ووردبريس (ecommoda/v1/link-product/{id} +
+// ecommoda/v1/check-brand، كود الـ snippet جوّه wordpress-snippets/
+// ecommoda-stylebox-link-product-api.php في الريبو ده، لازم يُلصق يدويًا في
+// WPCode على stylebox.online — راجع §8 في CLAUDE.md):
+//   1) GET link-product  — قراءة المنتج + كل الـ variations في نداء واحد
+//   2) GET check-brand   — بس لو الـ Vendor مش فاضي (راجع wcCheckBrand فوق)
+//   3) POST link-product — كل الكتابة (publish + slug + meta + Brand + كل
+//      المقاسات) جوّه ووردبريس نفسه في نداء واحد
+// مطابقة المقاس بالحجم وحساب السعر وتصحيح الـ slug **لسه في الـ Worker
+// (JS)** — نفس مصدر الحقيقة الوحيد المستخدم في باقي الأداة، الـ endpoint
+// بينفّذ بس اللي الـ Worker جهّزه.
+//
+// ⚠️ المصادقة هنا مختلفة عن wc/v3/* — مش Basic Auth بمفاتيح REST، هيدر سري
+// X-Sync-Header-Secret + سر env.SYNC_SECRET — **نفس الاتفاق الموحّد** المستخدم
+// فعليًا في snippets الـ price/stock sync الموجودين على stylebox.online (راجع
+// docblock ecommoda-stylebox-link-product-api.php). ⚠️ رغم إن اسم الـ constant
+// على ووردبريس (`SYNC_SECRET`) بيتشارك بين كل الـ snippets، كل Cloudflare
+// Worker (ده منفصل عن price-sync/stock-sync) لازم يتحط له سر Cloudflare
+// مستقل بنفس القيمة — مفيش تشارك أسرار بين الـ Workers نفسها.
+function ecommodaLinkHeaders(env) {
+  return { 'X-Sync-Header-Secret': env.SYNC_SECRET };
+}
+
+async function wcLinkProductGet(env, wpProductId) {
+  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/ecommoda/v1/link-product/${wpProductId}`, {
+    label:   `WC link-product get ${wpProductId}`,
+    headers: ecommodaLinkHeaders(env),
+  });
+}
+
+// ⚠️ حارس البراند (لو vendor_name اتبعت) بيتنفّذ **جوّه** الـ endpoint ده
+// تاني (دفاع ثاني بعد wcCheckBrand — راجعه فوق) أول حاجة قبل أي كتابة — لو
+// مفيش تطابق، الـ endpoint بيرجّع WP_Error بالكود `ec_brand_missing` وHTTP
+// 409 (والـ vendor جوّه `data.vendor`) من غير ما يلمس المنتج ولا أي variation.
+// الكولر (syncProduct) لازم يفرّق بين الـ 409 ده وأي فشل تاني (شبكة/429/5xx
+// بعد كل المحاولات) — راجع syncProduct.
+async function wcLinkProductPost(env, wpProductId, payload) {
+  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/ecommoda/v1/link-product/${wpProductId}`, {
+    label:     `WC link-product write ${wpProductId}`,
+    method:    'POST',
     payload,
     cacheBust: false,
+    headers:   ecommodaLinkHeaders(env),
   });
-}
-
-async function wcGetVariations(env, wpProductId) {
-  return wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products/${wpProductId}/variations?per_page=100`, {
-    label: `WC get variations for ${wpProductId}`,
-  });
-}
-
-// ─── §WOOCOMMERCE::wcBatchUpdateVariations — v2.11.0 ───
-// كل مقاسات المنتج في **نداء واحد** بدل نداء لكل مقاس. الـ endpoint ده رسمي في
-// ووكومرس (نفس نمط /products/batch — راجع woocommerce-sync-helper Step 4،
-// السقف 100 عنصر لكل نداء والمقاسات ليها endpoint منفصل زي ما هو مستخدم هنا).
-//
-// ⚠️ السبب: `stylebox.online` بيحجب عند ~30 نداء (429 برد فاضي — طبقة الاستضافة
-// مش ووكومرس). المقاسات كانت 5-6 نداءات من أصل ~10 لكل منتج، دلوقتي واحد،
-// فالمنتجات اللي بتعدّي قبل الحجب بقت تقريبًا الضِعف.
-//
-// ⚠️ الرد بيرجع **200 حتى لو مقاس فشل** — الفشل بييجي جوه عنصر المقاس نفسه
-// (`{id, error:{code,message,data}}`)، فالكولر لازم يقرا كل عنصر على حدة.
-// ده بالظبط اللي بيخلي عزل المقاسات (v2.10.0) شغّال زي ما هو.
-const WC_VARIATION_BATCH_MAX = 50;   // تحت سقف ووكومرس (100) بهامش أمان
-
-async function wcBatchUpdateVariations(env, wpProductId, updates) {
-  const merged = { update: [] };
-  for (let i = 0; i < updates.length; i += WC_VARIATION_BATCH_MAX) {
-    const chunk = updates.slice(i, i + WC_VARIATION_BATCH_MAX);
-    const resp  = await wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products/${wpProductId}/variations/batch`, {
-      label:     `WC batch update variations (${chunk.length}) for ${wpProductId}`,
-      method:    'POST',
-      payload:   { update: chunk },
-      cacheBust: false,
-    });
-    if (Array.isArray(resp?.update)) merged.update.push(...resp.update);
-  }
-  return merged;
 }
 
 // ⚠️ متسابة عمدًا: لسه بتُستخدم لو احتاج حد يحدّث مقاس واحد بره الدفعة.
@@ -1574,15 +1567,20 @@ async function addStyleboxTag(env, token, shopifyProductGid) {
 // §SYNC::syncProduct — the core operation, called from action=sync_product
 // ⚠️ manual-only by design — لا يوجد sync_all ولا Cron (راجع §CONSTANTS فوق)
 //
-// ترتيب التنفيذ (مهم — اتغيّر 27-08-2026، v2.6.0):
-//   1. قراءة منتج ووكومرس + الـ Variations + منتج شوبيفاي
-//   1.5. ⚠️ حارس إلزامي جديد (v2.6.0) — لازم يكون فيه براند على ووردبريس بنفس
-//        اسم الـ Vendor، وإلا الربط بالكامل يتوقف هنا من غير أي كتابة
-//        (BrandNotFoundError). لو موجود، الـ id بتاعه يتحفظ لحد الخطوة 3.
-//   2. Shopify product-level: status (حسب الخيار) + ⭐ (حسب الخيار) + wordpress_id
-//   3. WooCommerce product-level: status='publish' + meta _shopify_product_id
-//      + slug fix (v2.6.0، إلزامي بدون خيار) + ربط الـ Brand (v2.6.0، لو 1.5 لقى تطابق)
-//   4. لكل Variation: SKU/مخزون/meta على ووكومرس + wordpress_variation_id على شوبيفاي
+// ترتيب التنفيذ (اتغيّر v2.14.0 — البند 8 في WCRATELIMIT.md، راجع §8 في
+// CLAUDE.md للتفاصيل الكاملة؛ **النتيجة النهائية والحرّاس نفسهم زي ما هم
+// بالحرف** — الاختلاف الوحيد إن كتابات ووردبريس بقت جوّه ecommoda/v1/
+// link-product بدل نداءات wc/v3/* منفصلة، فالترتيب بقى مبني حوالين نداءات
+// أقل مش خطوات أقل):
+//   1. GET link-product — قراءة منتج ووكومرس + كل الـ Variations في نداء واحد
+//   2. شوبيفاي GraphQL (قراءة الـ variants + العنوان + الـ Vendor)
+//   1.5. ⚠️ حارس البراند الإلزامي (v2.6.0) — لازم قبل أي كتابة على أي منصة
+//        (شوبيفاي كمان)، فلازم يحصل هنا (GET check-brand) قبل أي نداء كتابة —
+//        راجع wcCheckBrand فوق ليه الترتيب ده بالظبط.
+//   3. Shopify product-level: status (حسب الخيار) + ⭐ (حسب الخيار) + wordpress_id
+//   4. POST link-product — كل كتابة ووردبريس في نداء واحد: status='publish' +
+//      meta _shopify_product_id + slug fix (إلزامي بدون خيار) + ربط الـ Brand
+//      (لو 1.5 لقى تطابق) + كل الـ Variations (SKU/مخزون/meta) مع بعض
 //   5. tagsAdd("stylebox") فورًا ← آخر خطوة، بعد كل اللي فوق (كان فيه انتظار
 //      TAG_DELAY_MS 10 ثواني قبلها لحد v2.3.0 — اتلغى بالكامل v2.4.0)
 // ══════════════════════════════════════════════════════════════
@@ -1591,39 +1589,31 @@ async function syncProduct(env, wpProductId, opts = {}) {
   if (!SHOPIFY_STATUS_CHOICES.includes(shopifyStatus)) {
     throw new Error(`shopify_status غير صالحة: "${shopifyStatus}" — المسموح: ${SHOPIFY_STATUS_CHOICES.join(' / ')}`);
   }
-  assertEnv(env, 'shopify', 'woocommerce');
+  assertEnv(env, 'shopify', 'wc_link');
 
   let loggedOk = true;
 
-  const wooProduct = await wcGetProduct(env, wpProductId);
-  let shopifyProductId    = wooProduct.global_unique_id;
+  // ── (1) قراءة منتج ووكومرس + الـ Variations — نداء واحد بدل اتنين ──
+  const linkData     = await wcLinkProductGet(env, wpProductId);
+  const wooProduct    = linkData.product;
+  const wooVariations = linkData.variations || [];
+
+  let shopifyProductId    = wooProduct.global_unique_id || null;
+  let wcSkuForWrite        = wooProduct.sku;
   let gtinRecoveredFromSku = null;
 
   // ── Fallback (26-08-2026، بطلب صاحب الأداة): global_unique_id (GTIN) فاضي
-  // بس رقم شوبيفاي متكتب في بداية الـ SKU — بنستخرجه، بنكتبه في GTIN، وبننضّف
-  // الـ SKU من الرقم. لو مفيش رقم في الـ SKU برضه، الفشل زي ما كان بالظبط.
+  // بس رقم شوبيفاي متكتب في بداية الـ SKU — بنستخرجه محليًا (صفر نداء إضافي).
+  // الكتابة الفعلية لـ GTIN/SKU المصحّح بتحصل مع بقية تحديثات المنتج في
+  // خطوة (4) (نداء واحد) بدل نداء PUT منفصل زي قبل v2.14.0 — القيمة idempotent
+  // في الحالتين (لو مفيش recovery، بنكتب نفس sku/global_unique_id الموجودين
+  // أصلاً، صفر أثر).
   if (!shopifyProductId) {
     const extracted = extractGtinFromSku(wooProduct.sku);
     if (extracted) {
-      try {
-        const wcUpdated = await wcUpdateProduct(env, wpProductId, {
-          sku:              extracted.sku,
-          global_unique_id: extracted.gtin,
-        });
-        shopifyProductId       = wcUpdated?.global_unique_id || extracted.gtin;
-        gtinRecoveredFromSku    = { skuBefore: wooProduct.sku, skuAfter: extracted.sku, gtin: extracted.gtin };
-        wooProduct.sku              = extracted.sku;
-        wooProduct.global_unique_id = shopifyProductId;
-        const okLog = await safeWriteLog(env.DB, {
-          tool: TOOL_NAME, type: 'product_meta_synced', employee,
-          productTitle: wooProduct.name,
-          notes: `global_unique_id (GTIN) كان فاضي — الرقم ${extracted.gtin} اتستخرج من بداية SKU وكُتب في GTIN، والـ SKU بقى "${extracted.sku}"`,
-          extra: { result: RESULT.SUCCESS, wpProductId, ...gtinRecoveredFromSku },
-        });
-        if (!okLog) loggedOk = false;
-      } catch (e) {
-        throw new Error(`Product ${wpProductId}: no global_unique_id (Shopify Product ID) set، ولقينا رقم ${extracted.gtin} في الـ SKU بس كتابته على ووكومرس فشلت: ${e.message}`);
-      }
+      shopifyProductId    = extracted.gtin;
+      wcSkuForWrite        = extracted.sku;
+      gtinRecoveredFromSku = { skuBefore: wooProduct.sku, skuAfter: extracted.sku, gtin: extracted.gtin };
     }
   }
 
@@ -1631,8 +1621,6 @@ async function syncProduct(env, wpProductId, opts = {}) {
     throw new Error(`Product ${wpProductId}: no global_unique_id (Shopify Product ID) set, ومفيش رقم شوبيفاي في بداية الـ SKU (${wooProduct.sku || '—'}) — skipping`);
   }
   const shopifyProductGid = `gid://shopify/Product/${shopifyProductId}`;
-
-  const wooVariations = await wcGetVariations(env, wpProductId);
 
   const token   = await getAccessToken(env);
   const gqlResp = await shopifyGQL(env, token, VARIANTS_QUERY, { id: shopifyProductGid }, 'getVariants');
@@ -1643,18 +1631,18 @@ async function syncProduct(env, wpProductId, opts = {}) {
   const shopifyTitle    = gqlResp.data.product.title || '';
   const shopifyVendor   = String(gqlResp.data.product.vendor || '').trim();
 
-  // ── حارس إلزامي جديد (v2.6.0) — قبل أي كتابة: لازم يكون فيه براند على
-  // ووردبريس بنفس اسم الـ Vendor على شوبيفاي. Vendor فاضي = تخطّي الحارس
-  // (مفيش حاجة تتطابق أصلاً)، مش اعتبارها "براند موجود". راجع BrandNotFoundError.
-  let wcBrandId = null;
+  // ── (1.5) حارس إلزامي (v2.6.0) — قبل أي كتابة على أي منصة (شوبيفاي كمان):
+  // لازم يكون فيه براند على ووردبريس بنفس اسم الـ Vendor على شوبيفاي. Vendor
+  // فاضي = تخطّي الحارس تمامًا (صفر نداء إضافي)، مش اعتبارها "براند موجود".
+  // راجع BrandNotFoundError وwcCheckBrand فوق.
   if (shopifyVendor) {
-    let brandMatch;
+    let brandCheck;
     try {
-      brandMatch = await wcFindBrandByName(env, shopifyVendor);
+      brandCheck = await wcCheckBrand(env, shopifyVendor);
     } catch (e) {
       throw new Error(`تعذّر التحقق من براند "${shopifyVendor}" على ووردبريس: ${e.message}`);
     }
-    if (!brandMatch) {
+    if (!brandCheck?.brand) {
       await safeWriteLog(env.DB, {
         tool: TOOL_NAME, type: 'error', employee,
         productTitle: wooProduct.name,
@@ -1666,7 +1654,6 @@ async function syncProduct(env, wpProductId, opts = {}) {
         `${wcBaseUrl(env)}/wp-admin/edit-tags.php?taxonomy=product_brand&post_type=product`
       );
     }
-    wcBrandId = brandMatch.id;
   }
 
   // ── Shopify-side product-level fields (metafield + Draft + tag + ⭐ title) ──
@@ -1700,72 +1687,12 @@ async function syncProduct(env, wpProductId, opts = {}) {
     if (!okLog) loggedOk = false;
   }
 
-  // ── WooCommerce-side product-level: status=publish + meta _shopify_product_id
-  //    + slug fix (v2.6.0، إلزامي بدون خيار) + ربط الـ Brand المطابق للـ Vendor
-  //    (v2.6.0، لو الحارس فوق لقى تطابق) ──
-  // status='publish' اتضاف 26-08-2026 — خطوة تلقائية بدون خيار: كل منتج بيتربط
-  // بيتنشر على stylebox.online. (_shopify_product_id حقل قديم legacy بيعكس
-  // global_unique_id.) كل التعديلات دي في نداء PUT واحد — نفس الطلب، نفس الفحص.
-  // معزول عن بلوك شوبيفاي فوق: منصّة مختلفة وأنماط فشل مختلفة، وفشل واحد
-  // مالوش حق يخفي أو يوقف التاني.
+  // ── (أ) تجهيز محلي — صفر نداءات — مطابقة المقاس بالحجم + حساب السعر +
+  // بناء الـ payload بتاع كل مقاس (نفس §SYNC::matching من v2.11.0، بدون تغيير) ──
+  const results = [];
   const expectedSlug = slugify(wooProduct.name);
   const slugNeedsFix  = !!expectedSlug && wooProduct.slug !== expectedSlug;
-  let slugFixed          = null;
-  let wcProductMetaError = null;
-  let wcPublished        = false;
-  try {
-    const updatePayload = {
-      status:    'publish',
-      meta_data: [{ key: '_shopify_product_id', value: shopifyProductId }],
-    };
-    if (slugNeedsFix) updatePayload.slug = expectedSlug;
-    if (wcBrandId)    updatePayload.brands = [{ id: wcBrandId }];
 
-    const wcUpdated = await wcUpdateProduct(env, wpProductId, updatePayload);
-    // ⚠️ HTTP 200 لوحده مش إثبات — ووكومرس بترجّع المنتج بحالته الفعلية بعد
-    // التحديث، فالتأكيد بيتقرا منها هي (نفس مبدأ فحص returnedProduct.status).
-    wcPublished = wcUpdated?.status === 'publish';
-    if (!wcPublished) {
-      throw new Error(`WC status الراجعة "${wcUpdated?.status ?? '—'}" مش publish — العملية غير مؤكَّدة`);
-    }
-    if (slugNeedsFix) {
-      slugFixed = { before: wooProduct.slug, after: expectedSlug, confirmed: wcUpdated?.slug === expectedSlug };
-    }
-    const okLog = await safeWriteLog(env.DB, {
-      tool: TOOL_NAME, type: 'product_meta_synced', employee,
-      notes: `WC status→publish، meta _shopify_product_id refreshed = ${shopifyProductId}` +
-             (slugFixed ? `، slug اتصلّح من "${slugFixed.before}" لـ "${slugFixed.after}"` : '') +
-             (wcBrandId ? `، Brand "${shopifyVendor}" اتربط بالمنتج` : ''),
-      extra: { result: RESULT.SUCCESS, wpProductId, shopifyProductId, wcStatus: 'publish', slugFixed, brandLinked: wcBrandId ? { id: wcBrandId, name: shopifyVendor } : null },
-    });
-    if (!okLog) loggedOk = false;
-  } catch (e) {
-    wcProductMetaError = e.message;
-    console.error(`WC product-level update (publish/meta) failed for ${wpProductId}:`, e);
-    const okLog = await safeWriteLog(env.DB, {
-      tool: TOOL_NAME, type: 'error', employee,
-      notes: `WC product-level update (status=publish + _shopify_product_id) failed: ${e.message}`,
-      extra: { result: RESULT.ERROR, stage: 'write', wpProductId, shopifyProductId },
-    });
-    if (!okLog) loggedOk = false;
-  }
-
-  const results = [];
-
-  // ══════════════════════════════════════════════════════════════
-  // §SYNC::variations — v2.11.0: تلات مراحل بدل لوب واحد
-  //   أ) تجهيز محلي بدون أي نداء (مطابقة المقاس + حساب السعر + بناء الـ payload)
-  //   ب) **نداء ووكومرس واحد لكل المقاسات** (/variations/batch) بدل نداء لكل مقاس
-  //   ج) لكل مقاس: قراءة نتيجته من رد الـ batch + ميتافيلد شوبيفاي + اللوج
-  //
-  // ⚠️ ليه: `stylebox.online` بيحجب عند ~30 نداء (429 برد فاضي = طبقة الاستضافة
-  // مش ووكومرس — راجع §CONSTANTS v2.11.0). المقاسات كانت أكبر بند في الفاتورة:
-  // 5-6 نداءات من أصل ~10 لكل منتج. دلوقتي واحد.
-  // الرد بيرجّع 200 حتى لو مقاس فشل — الفشل بييجي داخل عنصره (`error`)، فالعزل
-  // اللي اتعمل v2.10.0 بيفضل زي ما هو بالظبط: مقاس فاشل بياخد تحذير لوحده.
-  // ══════════════════════════════════════════════════════════════
-
-  // ── (أ) تجهيز محلي — صفر نداءات ──
   const plannedVariations = [];
   for (const variation of wooVariations) {
     const wcSize = findWcSize(variation);
@@ -1807,14 +1734,10 @@ async function syncProduct(env, wpProductId, opts = {}) {
 
     const shopifyVariantNumericId = numericIdFromGid(match.id);
     const payload = {
-      id:                variation.id,   // مطلوب في الـ batch عشان ووكومرس تعرف أي مقاس
+      id:                variation.id,   // مطلوب عشان ecommoda/v1/link-product تعرف أي مقاس
       sku:               match.sku,
       stock_quantity:    match.inventoryQuantity,
-      manage_stock:      true,
       global_unique_id:  shopifyVariantNumericId,
-      meta_data: [
-        { key: '_shopify_variation_id', value: shopifyVariantNumericId },
-      ],
     };
     if (priceInfo) {
       payload.regular_price = priceInfo.regularPrice;
@@ -1828,40 +1751,99 @@ async function syncProduct(env, wpProductId, opts = {}) {
     });
   }
 
-  // ── (ب) نداء واحد لكل المقاسات ──
-  // فشل النداء نفسه (زي 429 بعد كل المحاولات) = كل المقاسات تاخد نفس التحذير،
-  // والمنتج بيكمّل لخطوة التاج زي أي فشل معزول تاني.
-  let batchById   = new Map();
-  let batchError  = null;
-  if (plannedVariations.length) {
-    try {
-      const batchResp = await wcBatchUpdateVariations(env, wpProductId, plannedVariations.map(p => p.payload));
-      for (const row of (batchResp?.update || [])) {
-        if (row && row.id !== undefined) batchById.set(Number(row.id), row);
-      }
-    } catch (e) {
-      batchError = e.message;
-      console.error(`WC batch variations update failed for ${wpProductId}:`, e);
-    }
+  // ══════════════════════════════════════════════════════════════
+  // (4) نداء الكتابة المُجمّع الواحد على ووردبريس — status=publish + slug fix
+  // + meta _shopify_product_id/global_unique_id + ربط الـ Brand + كل الـ
+  // Variations (SKU/مخزون/سعر) مع بعض. بدل 3-4 نداءات wc/v3/* منفصلة
+  // (PUT product + POST variations/batch، والـ GTIN-recovery PUT لو احتاجت)
+  // قبل v2.14.0 — راجع wcLinkProductPost فوق و§8 في CLAUDE.md.
+  //
+  // ⚠️ فشل النداء ده **كله** (زي 429 بعد كل المحاولات) = بلوك المنتج (publish/
+  // slug/brand) وكل المقاسات ياخدوا نفس التحذير، والمنتج بيكمّل لخطوة التاج
+  // زي أي فشل معزول تاني — نفس مبدأ فشل الـ batch القديم (v2.11.0)، بس دلوقتي
+  // بيغطي بلوك المنتج كمان مش المقاسات بس (لأنهم بقوا نداء واحد).
+  // ══════════════════════════════════════════════════════════════
+  let writeResp;
+  let writeCallError = null;
+  try {
+    writeResp = await wcLinkProductPost(env, wpProductId, {
+      vendor_name:      shopifyVendor || null,
+      sku:               wcSkuForWrite,
+      global_unique_id:  shopifyProductId,
+      ...(slugNeedsFix ? { slug: expectedSlug } : {}),
+      variations: plannedVariations.map(p => p.payload),
+    });
+  } catch (e) {
+    writeCallError = e.message;
+    console.error(`WC link-product write failed for ${wpProductId}:`, e);
   }
 
-  // ── (ج) لكل مقاس: نتيجته من الـ batch + ميتافيلد شوبيفاي + اللوج ──
+  const wcProductMetaError = writeCallError || writeResp?.product_error || null;
+  const wcPublished        = writeResp?.product?.status === 'publish';
+  let slugFixed = null;
+  if (!writeCallError && slugNeedsFix) {
+    slugFixed = { before: wooProduct.slug, after: expectedSlug, confirmed: writeResp?.product?.slug === expectedSlug };
+  }
+  const wcBrandId = writeResp?.brand?.id || null;
+
+  if (!wcProductMetaError) {
+    // ⚠️ HTTP 200 لوحده مش إثبات — الـ endpoint بيرجّع حالة المنتج الفعلية
+    // بعد إعادة القراءة (نفس مبدأ فحص returnedProduct.status القديم).
+    if (!wcPublished) {
+      const forcedError = `WC status الراجعة "${writeResp?.product?.status ?? '—'}" مش publish — العملية غير مؤكَّدة`;
+      console.error(`WC product-level update (publish/meta) failed for ${wpProductId}:`, forcedError);
+      const okLog = await safeWriteLog(env.DB, {
+        tool: TOOL_NAME, type: 'error', employee,
+        notes: `WC product-level update (status=publish + _shopify_product_id) failed: ${forcedError}`,
+        extra: { result: RESULT.ERROR, stage: 'write', wpProductId, shopifyProductId },
+      });
+      if (!okLog) loggedOk = false;
+    } else {
+      if (gtinRecoveredFromSku) {
+        const okLog = await safeWriteLog(env.DB, {
+          tool: TOOL_NAME, type: 'product_meta_synced', employee,
+          productTitle: wooProduct.name,
+          notes: `global_unique_id (GTIN) كان فاضي — الرقم ${gtinRecoveredFromSku.gtin} اتستخرج من بداية SKU وكُتب في GTIN، والـ SKU بقى "${gtinRecoveredFromSku.skuAfter}"`,
+          extra: { result: RESULT.SUCCESS, wpProductId, ...gtinRecoveredFromSku },
+        });
+        if (!okLog) loggedOk = false;
+      }
+      const okLog = await safeWriteLog(env.DB, {
+        tool: TOOL_NAME, type: 'product_meta_synced', employee,
+        notes: `WC status→publish، meta _shopify_product_id refreshed = ${shopifyProductId}` +
+               (slugFixed ? `، slug اتصلّح من "${slugFixed.before}" لـ "${slugFixed.after}"` : '') +
+               (wcBrandId ? `، Brand "${shopifyVendor}" اتربط بالمنتج` : ''),
+        extra: { result: RESULT.SUCCESS, wpProductId, shopifyProductId, wcStatus: 'publish', slugFixed, brandLinked: wcBrandId ? { id: wcBrandId, name: shopifyVendor } : null },
+      });
+      if (!okLog) loggedOk = false;
+    }
+  } else {
+    console.error(`WC product-level update (publish/meta) failed for ${wpProductId}:`, wcProductMetaError);
+    const okLog = await safeWriteLog(env.DB, {
+      tool: TOOL_NAME, type: 'error', employee,
+      notes: `WC product-level update (status=publish + _shopify_product_id) failed: ${wcProductMetaError}`,
+      extra: { result: RESULT.ERROR, stage: 'write', wpProductId, shopifyProductId },
+    });
+    if (!okLog) loggedOk = false;
+  }
+
+  // ── لكل مقاس: نتيجته من رد الكتابة المُجمّعة + ميتافيلد شوبيفاي + اللوج ──
+  const resultById = writeCallError ? new Map() : new Map((writeResp?.variations || []).map(r => [Number(r.id), r]));
   for (const p of plannedVariations) {
     const { variation, wcSize, match, priceInfo, shopifyVariantNumericId, stockBefore } = p;
     let priceWarning = p.priceWarning;
 
-    const row = batchById.get(Number(variation.id));
+    const row = resultById.get(Number(variation.id));
 
-    // فشل على مستوى المقاس ده وحده (زي product_invalid_sku) أو فشل الدفعة كلها
-    // batchError جاي أصلاً من wcFetch بنص كامل فيه الـ label والـ status — مالوش
-    // داعي بادئة تانية فوقه (كانت بتطلع مكرّرة مرتين في نفس السطر).
-    const rowError = batchError
-      ? batchError
+    // فشل على مستوى المقاس ده وحده (زي product_invalid_sku) أو فشل النداء
+    // المُجمّع كله — writeCallError جاي أصلاً من wcFetch بنص كامل فيه الـ
+    // label والـ status — مالوش داعي بادئة تانية فوقه.
+    const rowError = writeCallError
+      ? writeCallError
       : !row
-        ? `WC update variation ${variation.id} failed: ووكومرس ما رجّعتش نتيجة للمقاس ده في رد الـ batch`
-        : row.error
-          ? `WC update variation ${variation.id} failed: ${[row.error.code, row.error.message].filter(Boolean).join(' ')}` +
-            (row.error.data ? ` ${JSON.stringify(row.error.data)}` : '')
+        ? `WC update variation ${variation.id} failed: ووردبريس ما رجّعتش نتيجة للمقاس ده في رد الكتابة المُجمّعة`
+        : row.ok === false
+          ? `WC update variation ${variation.id} failed: ${row.error || 'فشل غير معروف'}`
           : null;
 
     if (rowError) {
@@ -2180,6 +2162,7 @@ export default {
         const envKeys = [
           'WORKER_SECRET', 'SHOP_DOMAIN', 'CLIENT_ID', 'CLIENT_SECRET',
           'WC_BASE_URL', 'WC_CONSUMER_KEY', 'WC_CONSUMER_SECRET',
+          'SYNC_SECRET', // v2.14.0 — ecommoda/v1/link-product + check-brand
         ];
         // ⚠️ أسماء وأطوال بس — ممنوع رجوع أي قيمة سر فعلية
         const envReport = envKeys.map(k => ({
@@ -2213,6 +2196,37 @@ export default {
           wcOk = true;
         } catch (e) { wcError = e.message; }
 
+        // ─── §DIAG::wcLink — v2.14.0 ───────────────────────────────────
+        // بيتحقق إن WPCode snippet (wordpress-snippets/
+        // ecommoda-stylebox-link-product-api.php) لاصق ومفعّل على
+        // stylebox.online وإن SYNC_SECRET مضبوط صح على الطرفين — قبل ما حد
+        // يجرّب sync_product ويتفاجئ. product id=0 مش موجود عمدًا: بنستنى
+        // WP_Error بالكود ec_not_found (يعني الراوت شغّال والسر صح) مش
+        // rest_no_route (يعني الـ snippet مش لاصق/مفعّل) ولا ec_unauthorized
+        // (يعني SYNC_SECRET مش متطابق). الفرق بينهم بيتقرا من `code` في جسم
+        // الرد نفسه — مش من الـ HTTP status بس، لأن rest_no_route وec_not_found
+        // الاتنين بيرجّعوا 404. maxAttempts:1 زي بروب WC فوق — الهدف هنا
+        // الحالة الخام، مش إخفاء خنق بإعادة المحاولة.
+        let wcLinkOk = false, wcLinkError = null, wcLinkDetail = null;
+        try {
+          await wcFetch(env, `${wcBaseUrl(env)}/wp-json/ecommoda/v1/link-product/0`,
+            { label: 'diag wcLink probe', maxAttempts: 1, headers: ecommodaLinkHeaders(env) });
+          wcLinkOk = true; // مش متوقّع (منتج 0 مش موجود) — لو حصل برضه مش مشكلة
+        } catch (e) {
+          let body = {};
+          try { body = JSON.parse((e instanceof WcHttpError && e.wcBody) || '{}'); } catch { /* رد مش JSON */ }
+          if (body.code === 'ec_not_found') {
+            wcLinkOk = true; // الراوت شغّال، السر صح، المنتج (0) مش موجود — متوقّع
+          } else {
+            wcLinkError  = e.message;
+            wcLinkDetail = body.code === 'ec_unauthorized'
+              ? 'SYNC_SECRET مش متطابق بين Cloudflare وووردبريس'
+              : body.code === 'rest_no_route'
+                ? 'الراوت ecommoda/v1/link-product مش مسجَّل — راجع تفعيل wordpress-snippets/ecommoda-stylebox-link-product-api.php في WPCode'
+                : null;
+          }
+        }
+
         let d1Ok = false, d1Error = null;
         try { await env.DB.prepare('SELECT 1 AS ok').first(); d1Ok = true; }
         catch (e) { d1Error = e.message; }
@@ -2225,6 +2239,7 @@ export default {
           env: envReport,
           shopify: { scopes: shopifyScopes, error: shopifyError },
           woocommerce: { ok: wcOk, error: wcError },
+          wcLinkProduct: { ok: wcLinkOk, error: wcLinkError, detail: wcLinkDetail },
           d1: { ok: d1Ok, error: d1Error },
           origin: { received: origin, allowed: ALLOWED_ORIGINS.includes(origin) },
         }, 200, request);
