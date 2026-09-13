@@ -516,6 +516,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
   <div class="main-tabs-bar">
     <button class="main-tab-btn active" id="mainTabSync" onclick="switchMainTab('sync')">🔗 ربط منتج</button>
     <button class="main-tab-btn" id="mainTabBulk" onclick="switchMainTab('bulk')">🧩 إعادة ربط Bulk</button>
+    <button class="main-tab-btn" id="mainTabStar" onclick="switchMainTab('star')">⭐ حذف النجمة</button>
     <button class="main-tab-btn" id="mainTabLog" onclick="switchMainTab('log')">📜 سجل العمليات</button>
   </div>
 
@@ -600,16 +601,6 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
           </div>
         </div>
 
-        <div class="opt-block">
-          <div class="opt-block-row">
-            <div class="opt-q">هل تريد إضافة نجمة ⭐ للعنوان؟</div>
-            <div class="opt-choices">
-              <label class="opt-choice"><input type="radio" name="addStar" value="yes" /><span>نعم</span></label>
-              <label class="opt-choice"><input type="radio" name="addStar" value="no" /><span>لا</span></label>
-            </div>
-          </div>
-        </div>
-
         <!-- فرق السعر: مربع برقم افتراضي 100 + زرار تأكيد إلزامي (v2.11.0) — لازم يتضغط في كل
              تشغيلة (زي أي اختيار تاني في الخطوة دي)، نص الزرار بيتحدّث لايف مع أي تعديل في الرقم،
              وأي تعديل في الرقم بعد التأكيد بيلغي التأكيد ولازم يتضغط تاني. -->
@@ -674,7 +665,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
          • المنتجات هنا **مربوطة قبل كده** — الأداة بتسمح بإعادة الربط بدل ما
            توقف عند "هذا المنتج تم ربطه من قبل" (أكشن find_product_relink).
          • مفيش زرار "راجع صور + كاتيجوريز" ومفيش نافذة "تأكيد المراجعة".
-       الأسئلة التلاتة (الحالة / النجمة / تأكيد فرق السعر) لسه إلزامية زي المسار
+       الأسئلة (الحالة / تأكيد فرق السعر) لسه إلزامية زي المسار
        الفردي بالظبط، + نافذة تأكيد قبل بدء التشغيل الجماعي. ══ -->
   <div class="tab-panel" id="panelBulk">
 
@@ -728,16 +719,6 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <label class="opt-choice"><input type="radio" name="bulkShopifyStatus" value="ACTIVE" /><span>Active</span></label>
               <label class="opt-choice"><input type="radio" name="bulkShopifyStatus" value="DRAFT" /><span>Draft</span></label>
               <label class="opt-choice"><input type="radio" name="bulkShopifyStatus" value="KEEP" /><span>تبقى كما هي (بدون تعديل)</span></label>
-            </div>
-          </div>
-        </div>
-
-        <div class="opt-block">
-          <div class="opt-block-row">
-            <div class="opt-q">هل تريد إضافة نجمة ⭐ للعنوان؟</div>
-            <div class="opt-choices">
-              <label class="opt-choice"><input type="radio" name="bulkAddStar" value="yes" /><span>نعم</span></label>
-              <label class="opt-choice"><input type="radio" name="bulkAddStar" value="no" /><span>لا</span></label>
             </div>
           </div>
         </div>
@@ -807,6 +788,89 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         <div class="bulk-row-actions" id="bulkAfterActions" style="display:none;">
           <button class="btn-primary" id="bulkRetryFailedBtn" style="display:none;" onclick="retryFailedBulk()">🔁 أعد محاولة المنتجات الفاشلة فقط</button>
           <button class="btn-primary" onclick="startNewBulkList()">🆕 قائمة جديدة</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ Star Tab (v2.19.0) — ⚠️ تاب مؤقّت: حذف النجمة "⭐" من عناوين كل المنتجات
+       المربوطة على شوبيفاي وووردبريس، مرة واحدة. بطلب صريح من صاحب الأداة
+       (13-09-2026): النجمة مش هتتستعمل تاني أبدًا، فإضافتها اتشالت من مسار الربط
+       (v2.15.0) والتاب دي بتنضّف اللي اتضاف قبل كده.
+       🔴 **المفروض التاب دي تتشال بالكامل بعد ما تتنفّذ** — هي والأكشنين
+       star_scan/remove_star في index.js. راجع §STAR في الملفين. ══ -->
+  <div class="tab-panel" id="panelStar">
+
+    <div class="result-note warn" style="margin-bottom:18px;">
+      ⚠️ <strong>تاب مؤقّت — لمرة واحدة.</strong> بتشيل النجمة "⭐" من <strong>بداية</strong> عنوان كل منتج
+      مربوط، على شوبيفاي وعلى ووردبريس. النجمة اللي في نص العنوان أو في آخره <strong>مابتتلمسش</strong>.
+      مفيش أي حاجة تانية بتتغيّر: لا الحالة، ولا المخزون، ولا السعر، ولا الـ SKU، ولا التاج.
+      <strong>فعل كتابة غير قابل للتراجع</strong> — بعد ما التاب دي تخلص شغلها المفروض تتشال من الأداة.
+    </div>
+
+    <!-- ─── خطوة ① — جلب المنتجات المربوطة من شوبيفاي ─── -->
+    <div class="step-card" id="stepStarScanCard">
+      <div class="step-card-hdr" onclick="toggleStep('StarScan')">
+        <div class="step-badge" id="stepStarScanBadge">1</div>
+        <div class="step-hdr-text">
+          <div class="step-title">🔍 جلب المنتجات المربوطة</div>
+          <div class="step-subtitle" id="stepStarScanSubtitle">الأداة بتجيب القائمة بنفسها من شوبيفاي — مفيش أي إدخال</div>
+        </div>
+        <span class="step-chevron open" id="stepStarScanChevron">▲</span>
+      </div>
+
+      <div class="step-card-body" id="stepStarScanBody">
+        <p style="margin:0 0 14px;line-height:1.9;color:var(--text-secondary);font-size:13.5px;">
+          "منتج مربوط" = منتج على شوبيفاي عليه قيمة في ميتافيلد <code>custom.wordpress_id</code> —
+          نفس الميتافيلد اللي الربط بيكتبه، ومنه بنعرف رقم المنتج المقابل على ووردبريس من غير أي بحث.
+          الجلب <strong>قراءة بس</strong>: مفيش أي كتابة على أي منصة في الخطوة دي.
+        </p>
+
+        <button class="btn-primary btn-block" id="starScanBtn" onclick="runStarScan()">🔍 ابدأ جلب كل المنتجات المربوطة</button>
+
+        <div class="bulk-count-line" id="starScanCountLine" style="margin-top:14px;"></div>
+        <div id="starScanNotes"></div>
+
+        <div style="overflow-x:auto;margin-top:14px;">
+          <table class="bulk-table" id="starScanTable"></table>
+        </div>
+        <div id="starScanMore" style="text-align:center;margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- ─── خطوة ② — التنضيف ─── -->
+    <div class="step-card" id="stepStarRunCard" style="display:none;">
+      <div class="step-card-hdr" onclick="toggleStep('StarRun')">
+        <div class="step-badge" id="stepStarRunBadge">2</div>
+        <div class="step-hdr-text">
+          <div class="step-title">🧹 حذف النجمة</div>
+          <div class="step-subtitle" id="stepStarRunSubtitle">—</div>
+        </div>
+        <span class="step-chevron open" id="stepStarRunChevron">▲</span>
+      </div>
+
+      <div class="step-card-body" id="stepStarRunBody">
+        <button class="btn-primary success btn-block" id="starRunBtn" onclick="openStarConfirmModal()">🧹 احذف النجمة من كل المنتجات دي</button>
+
+        <div class="bulk-progress-wrap" id="starProgressWrap" style="display:none;">
+          <div class="bulk-progress-top">
+            <span id="starProgressLabel">—</span>
+            <button class="btn-outline" id="starStopBtn" style="display:none;" onclick="requestStarStop()">⏹ إيقاف بعد الدفعة الحالية</button>
+          </div>
+          <div class="bulk-progress-track"><div class="bulk-progress-fill" id="starProgressFill"></div></div>
+          <div class="bulk-count-line" id="starStatsLine"></div>
+        </div>
+
+        <div id="starBannerWrap"></div>
+
+        <div style="overflow-x:auto;">
+          <table class="bulk-table" id="starRunTable"></table>
+        </div>
+
+        <div class="bulk-row-actions" id="starAfterActions" style="display:none;">
+          <button class="btn-primary" id="starRetryFailedBtn" style="display:none;" onclick="retryFailedStar()">🔁 أعد محاولة الفاشلة/المتوقّفة</button>
+          <button class="btn-primary" onclick="startNewStarScan()">🔄 اعمل جلب جديد</button>
         </div>
       </div>
     </div>
@@ -1050,6 +1114,16 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         <div class="cl-version-block">
           <div class="cl-version-row">
             <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+            <span class="cl-ver-date">13-09-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>النجمة "⭐" اتشالت من الأداة بالكامل</strong> (Worker v2.15.0) — بطلب صاحب الأداة: مش هتتستعمل تاني أبدًا. سؤال "هل تريد إضافة نجمة ⭐ للعنوان؟" اتشال من تاب الربط الفردي ومن تاب Bulk، والأسئلة الإلزامية بقت <strong>اتنين</strong> (حالة المنتج على شوبيفاي / تأكيد فرق السعر) بدل تلاتة. <strong>عنوان المنتج على شوبيفاي مابقاش بيتلمس خالص</strong> في أي تشغيلة ربط.</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>تاب مؤقّتة "⭐ حذف النجمة"</strong> — بتشيل النجمة من <strong>بداية</strong> عنوان كل منتج مربوط، على شوبيفاي <strong>وعلى ووردبريس</strong>، مرة واحدة. الأداة بتجيب القائمة بنفسها من شوبيفاي (كل منتج عليه <code>Wordpress ID</code>) — مفيش أي إدخال يدوي. الخطوة ① جلب (قراءة بس، بتعرض عدد المنتجات اللي عليها نجمة على كل منصة)، والخطوة ② تنضيف بعد نافذة تأكيد، بشريط تقدّم وزرار إيقاف وزرار إعادة محاولة للفاشلة. <em>النجمة اللي في نص العنوان أو في آخره مابتتلمسش، ومفيش أي حاجة تانية بتتغيّر — لا الحالة ولا المخزون ولا السعر ولا الـ SKU ولا التاج.</em> <strong>التاب دي المفروض تتشال من الأداة بعد ما تتنفّذ.</strong></span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.18.0</span>
             <span class="cl-ver-date">10-09-2026</span>
           </div>
           <ul class="cl-items">
@@ -1300,8 +1374,9 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <h4>إيه اللي بيتزامن في كل تشغيلة</h4>
             <ul>
               <li><strong>على مستوى المنتج (Shopify):</strong> metafield <code>custom.wordpress_id</code>
-              (دائمًا) + حالة المنتج (<code>ACTIVE</code>/<code>DRAFT</code>/بدون تعديل — حسب السؤال الأول)
-              + إضافة "⭐ " لبداية العنوان (حسب السؤال التاني) — السؤالين مستقلّين تمامًا عن بعض</li>
+              (دائمًا) + حالة المنتج (<code>ACTIVE</code>/<code>DRAFT</code>/بدون تعديل — حسب السؤال الأول).
+              <strong>(v2.15.0)</strong> عنوان المنتج على شوبيفاي <strong>مابيتلمسش خالص</strong> — إضافة
+              النجمة اتشالت بالكامل من الأداة</li>
               <li><strong>على مستوى المنتج (WooCommerce):</strong> نشر المنتج
               (<code>status = publish</code>) — دائمًا وبدون خيار — + تحديث
               <code>meta_data._shopify_product_id</code> (الحقل القديم legacy، بيعكس <code>global_unique_id</code>)
@@ -1343,13 +1418,14 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               المنتج" و"تم اضافة كاتيجوري فئة الشوز + كاتيجوري البراند" — زرار "تأكيد المراجعة" في النافذة
               فاضل معطّل لحد ما الاتنين يتأكدوا. خطوة ③ ما بتظهرش إلا بعد الضغط على "تأكيد المراجعة". الخطوة
               ① بتتطوى تلقائيًا (بعلامة ✓ خضرا) وتفتح خطوة ② تلقائيًا</li>
-              <li><strong>الخطوة ③ — الربط (+ تحديث السعر):</strong> ثلاثة صناديق مستقلة بإطار — كل واحد فيه
+              <li><strong>الخطوة ③ — الربط (+ تحديث السعر):</strong> صندوقان مستقلان بإطار (كانوا تلاتة —
+              سؤال النجمة اتشال v2.19.0) — كل واحد فيه
               عنوان السؤال واختياراته في نفس الصف، <strong>ومن غير أي اختيار افتراضي جاهز (v2.11.0)</strong> —
               الموظف لازم يضغط بنفسه على إجابة لكل سؤال في كل تشغيلة: <strong>حالة المنتج على شوبيفاي بعد
-              الربط؟</strong> — Active / Draft / تبقى كما هي، <strong>هل تريد إضافة نجمة ⭐ للعنوان؟</strong> —
-              نعم / لا، و<strong>فرق السعر</strong> — مربع فيه رقم افتراضي 100 (سيبه فاضي لتخطّي تحديث السعر)
+              الربط؟</strong> — Active / Draft / تبقى كما هي، و<strong>فرق السعر</strong> — مربع فيه رقم
+              افتراضي 100 (سيبه فاضي لتخطّي تحديث السعر)
               + زرار "تأكيد فرق السعر (+100) جنيه" لازم يتضغط في كل تشغيلة (نص الزرار بيتحدّث لايف مع أي رقم
-              تاني، وأي تعديل في الرقم بعد الضغط بيلغي التأكيد). لو أي سؤال من التلاتة من غير إجابة/تأكيد، زرار
+              تاني، وأي تعديل في الرقم بعد الضغط بيلغي التأكيد). لو أي سؤال من الاتنين من غير إجابة/تأكيد، زرار
               "ابدأ ربط المنتج" بيرفض ويظهر تنبيه. وتحتهم في آخر الخطوة (v2.10.0) صندوق <code>.opt-block</code>
               عرض فقط بعنوان "🔒 تعديلات أخرى تحدث تلقائي عند الربط:" مقسّم لقسمين (على Stylebox.online — من
               ضمنها ضبط رابط المنتج URL/Slug — / وعلى Ecommoda.com). التلاتة أسئلة مستقلّون تمامًا عن بعض،
@@ -1375,7 +1451,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><strong>الخطوة ① — قائمة المنتجات:</strong> رقم منتج شوبيفاي في كل سطر (أو رابط صفحة
               المنتج والأداة بتستخرج الرقم — نفس <code>extractShopifyProductId()</code>). الأرقام المكرّرة
               بتتشال تلقائيًا، والسطور غير الصالحة بتتعرض كتنبيه قبل التشغيل</li>
-              <li><strong>الخطوة ② — خيارات إعادة الربط:</strong> نفس الأسئلة التلاتة (الحالة / النجمة /
+              <li><strong>الخطوة ② — خيارات إعادة الربط:</strong> نفس الأسئلة (الحالة /
               تأكيد فرق السعر) بنفس القواعد الإلزامية بالظبط — بتتحدد <strong>مرة واحدة</strong> وبتتطبّق
               على كل منتجات القائمة</li>
               <li><strong>الخطوة ③ — التشغيل والنتيجة:</strong> نافذة تأكيد بتعرض عدد المنتجات والخيارات
@@ -1408,14 +1484,39 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             الـ payload بالظبط — <strong>منتج واحد لكل نداء</strong>، بالترتيب. مفيش <code>sync_all</code>
             ومفيش Cron — الأداة لسه manual-only بالكامل، ولازم موظف مسجّل دخول.</p>
 
+            <h4>⭐ التاب المؤقّتة — "حذف النجمة" (v2.19.0)</h4>
+            <p>⚠️ <strong>تاب لمرة واحدة، المفروض تتشال من الأداة بعد ما تتنفّذ.</strong> النجمة "⭐" كانت
+            بتتضاف لبداية عنوان المنتج على شوبيفاي كخيار في خطوة الربط — الخيار ده اتشال بالكامل
+            (Worker v2.15.0)، والتاب دي بتنضّف اللي اتضاف قبل كده.</p>
+            <ol>
+              <li><strong>الخطوة ① — الجلب:</strong> زرار واحد، والأداة بتجيب القائمة بنفسها من شوبيفاي —
+              <strong>مفيش أي إدخال يدوي</strong>. "منتج مربوط" = منتج عليه قيمة في ميتافيلد
+              <code>custom.wordpress_id</code> (نفس الميتافيلد اللي الربط بيكتبه)، ومنه بييجي رقم منتج
+              ووردبريس المقابل من غير أي بحث. بعدها الأداة بتقرا عناوين ووردبريس كمان، وبتعرض جدول بكل منتج
+              محتاج تنضيف وحالة النجمة على كل منصة. <strong>قراءة بس — مفيش أي كتابة في الخطوة دي.</strong></li>
+              <li><strong>الخطوة ② — التنضيف:</strong> بعد نافذة تأكيد بتعرض العدد وتفصيل كل منصة، الأداة
+              بتشتغل على دفعات (20 منتج لكل نداء) بشريط تقدّم وزرار "⏹ إيقاف بعد الدفعة الحالية" وزرار
+              "🔁 أعد محاولة الفاشلة" بعد الانتهاء — بنفس إيقاع تاب Bulk بالظبط (نفَس بين كل دفعة والتانية،
+              ووقفة أطول تصاعدية لو ووكومرس خنقت).</li>
+            </ol>
+            <p><strong>اللي بيتغيّر بالظبط:</strong> النجمة في <strong>بداية</strong> العنوان بس — مع مسافاتها،
+            ولو متكررة. النجمة اللي في نص العنوان أو في آخره <strong>مابتتلمسش</strong> (ممكن تكون جزء أصلي من
+            اسم المنتج). وعنوان اسمه نجمة وبس مابيتغيّرش خالص (التنضيف كان هيطلّع عنوان فاضي).
+            <strong>مفيش أي حاجة تانية بتتغيّر:</strong> لا الحالة، ولا المخزون، ولا السعر، ولا الـ SKU،
+            ولا الـ slug، ولا التاج.</p>
+            <p><strong>النتيجة لكل منتج:</strong> <span class="badge-ok">✓ اتنضّف</span> (اتأكد من رد المنصة
+            نفسها، مش من HTTP 200) · <span class="badge-skip">✦ مكانش عليه نجمة</span> (محايد — مفيش حاجة كانت
+            مطلوبة) · <span class="badge-warn">⚠ تحذير</span> (منصة اتنضّفت والتانية لأ) ·
+            <span class="badge-danger">✗ فشل</span> (كل منصة كان عليها نجمة فشلت) ·
+            <span class="badge-skip">⊘ مرفوض</span> (المنتج نفسه مش موجود على شوبيفاي — مفيش أي محاولة كتابة).</p>
+
             <h4>⚙️ إجراءات كل اختيار</h4>
             <table>
               <tr><th>السؤال / الاختيار</th><th>التأثير</th></tr>
               <tr><td>الحالة → <strong>Active</strong></td><td><code>productUpdate</code> يبعت <code>status: ACTIVE</code> — المنتج يبقى Active على شوبيفاي</td></tr>
               <tr><td>الحالة → <strong>Draft</strong> (افتراضي)</td><td><code>productUpdate</code> يبعت <code>status: DRAFT</code></td></tr>
               <tr><td>الحالة → <strong>تبقى كما هي</strong></td><td><code>productUpdate</code> ميبعتش <code>status</code> خالص — حالة المنتج متتلمسش</td></tr>
-              <tr><td>النجمة → <strong>نعم</strong> (افتراضي)</td><td>"⭐ " تتضاف لبداية العنوان (idempotent — مايتكررش لو موجود بالفعل)</td></tr>
-              <tr><td>النجمة → <strong>لا</strong></td><td><code>productUpdate</code> ميبعتش <code>title</code> — العنوان يفضل زي ما هو</td></tr>
+              <tr><td>عنوان المنتج على شوبيفاي <strong>(v2.15.0)</strong></td><td>مابيتلمسش خالص — سؤال النجمة اتشال، و<code>productUpdate</code> عمره ما بيبعت <code>title</code></td></tr>
               <tr><td>فرق السعر → <strong>رقم</strong></td><td>كل Variation على ووكومرس بياخد <code>regular_price</code>/<code>sale_price</code> = سعر شوبيفاي + الفرق ده (نفس معادلة أداة "مزامنة أسعار Stylebox")</td></tr>
               <tr><td>فرق السعر → <strong>فاضي</strong> (افتراضي)</td><td>تحديث السعر يتخطّى تمامًا — regular_price/sale_price متتلمسش</td></tr>
               <tr><td>(في كل الحالات — بدون خيار، "تعديلات أخرى تحدث تلقائي عند الربط")</td><td>نشر المنتج على ووردبريس (<code>status=publish</code>) + metafield <code>wordpress_id</code> + تصحيح <code>slug</code> ليطابق العنوان (v2.6.0) + مزامنة كل الـ SKU/المخزون لكل Variation + Tag <code>stylebox</code> فورًا في آخر العملية</td></tr>
@@ -1432,7 +1533,9 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <tr><td><code>get_employees</code></td><td>GET — قائمة الموظفين النشطين</td></tr>
               <tr><td><code>find_product</code></td><td>GET — أكشن قراءة بس (خطوة 1): بياخد <code>shopify_product_id</code>. <strong>(v2.7.0)</strong> أول حاجة بيتحقق من <code>custom.wordpress_id</code> على شوبيفاي. <strong>(v2.13.0)</strong> لو مش فاضية، مابيوقفش: <code>verifyExistingLink()</code> بيتأكد إن منتج ووكومرس ده بيحمل نفس رقم شوبيفاي (GTIN/بداية SKU) ويرجّع <code>{alreadyLinked:true, relinkAllowed, relinkStatus, linkedProduct, searchProduct}</code> — <code>relinkAllowed:true</code> معاها نفس حقول نتيجة البحث العادية، و<code>false</code> معاها سبب مسمّى (<code>meta_invalid</code>/<code>meta_missing</code>/<code>cross_linked</code>/<code>unverified</code>/<code>duplicate</code>) وتفاصيل الطرفين. لو فاضية، يدوّر على منتج ووكومرس المطابق (GTIN، أو بحث بالعنوان لتضييق النطاق + تأكيد قاطع بالـ SKU)، ويرجّع <code>{alreadyLinked:false, wp_product_id, wpEditUrl, ...}</code></td></tr>
               <tr><td><code>find_product_relink</code></td><td>GET — <strong>(v2.9.0)</strong> نسخة "إعادة الربط" من <code>find_product</code>، بيستخدمها تاب Bulk بس: المنتج المربوط قبل كده مش سبب رفض هنا — رقم ووردبريس بيتاخد من <code>custom.wordpress_id</code> مباشرةً. منتج لسه مش مربوط بيرجع للبحث العادي، ولو الميتافيلد بيشاور على منتج بيخص رقم شوبيفاي تاني بيرجّع <code>{found:false, conflict:true}</code> من غير أي كتابة. قراءة بس، مفيش D1 log</td></tr>
-              <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code>، <code>add_star</code>: <code>true</code>/<code>false</code>، و<code>price_difference</code>: رقم اختياري لتحديث السعر في نفس التشغيلة — الثلاثة اختياريون، الافتراضي <code>DRAFT</code> + <code>true</code> + بدون تحديث سعر). <strong>(v2.6.0)</strong> ممكن يرجع HTTP 409 بـ <code>{code:'brand_missing', vendor, addBrandUrl}</code> لو مفيش براند مطابق على ووردبريس — الربط بيتوقف كامل من غير أي كتابة</td></tr>
+              <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code>، و<code>price_difference</code>: رقم اختياري لتحديث السعر في نفس التشغيلة — الاتنين اختياريين، الافتراضي <code>DRAFT</code> + بدون تحديث سعر). <strong>(v2.15.0)</strong> <code>add_star</code>/<code>skip_star</code> بيتجاهلوا بالكامل — العنوان مابيتكتبش خالص. <strong>(v2.6.0)</strong> ممكن يرجع HTTP 409 بـ <code>{code:'brand_missing', vendor, addBrandUrl}</code> لو مفيش براند مطابق على ووردبريس — الربط بيتوقف كامل من غير أي كتابة</td></tr>
+              <tr><td><code>star_scan</code> <strong>(مؤقّت)</strong></td><td>GET — <strong>(v2.15.0)</strong> قراءة بس (مفيش كتابة ومفيش D1 log): بيمشي على منتجات شوبيفاي صفحة صفحة وبيرجّع اللي عليهم <code>custom.wordpress_id</code> بس، مع حالة النجمة في بداية العنوان على شوبيفاي وعلى ووردبريس. <em>مفيش فلتر ميتافيلد في الاستعلام عن قصد — <code>metafields.custom.KEY:*</code> بيتجاهل الفلتر ويرجّع المتجر كله من غير أي خطأ، فالفلترة بتحصل بعد ما الحقل يترجع.</em> بيرجّع <code>scannedAll:false</code> لو المسح وقف عند سقف الصفحات</td></tr>
+              <tr><td><code>remove_star</code> <strong>(مؤقّت)</strong></td><td>POST — <strong>(v2.15.0)</strong> بيشيل النجمة من بداية العنوان على المنصتين لدفعة منتجات (<code>items[]</code>، الحد 50، و<code>employee</code> مطلوب). بيقرا العنوان <strong>الحي</strong> من كل منصة قبل أي كتابة، وبيتأكد من القيمة الراجعة مش من HTTP 200. نتيجة لكل منتج بخمس حالات (<code>success</code>/<code>already</code>/<code>warning</code>/<code>error</code>/<code>rejected</code>)</td></tr>
               <tr><td><code>diag</code></td><td>GET — فحص ذاتي كامل (env، صلاحيات شوبيفاي، اتصال WooCommerce، D1) بدون كتابة</td></tr>
               <tr><td><code>get_config</code></td><td>GET — يرجّع نسخة الـ Worker لمقارنتها بنسخة الواجهة</td></tr>
               <tr><td><code>get_logs</code></td><td>GET — سجل مُقسّم صفحات (حتى 100 لكل صفحة)</td></tr>
@@ -1461,6 +1564,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>renderSyncResult()</code> — خطوة ④: تفاصيل بيانات المنتج + جدول "📦 المقاسات" (+ صفوف Brand/Slug من v2.6.0، عنوان الجدول اتغيّر v2.10.0) + جدول فرق السعر تحت الجدول لو <code>priceApplied</code> (اتنقل تحت v2.10.0، كان صف فوق الجدول)، وبعدهم بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + زرار "إبدأ ربط منتج جديد" كامل العرض في آخر الخطوة (<code>.btn-primary.btn-block</code> من v2.10.1 — كان <code>.btn-new-product</code> بتصميم منفصل أبيض/أزرق عند hover)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
               <li><code>openBrandMissingModal()</code>/<code>closeBrandMissingModal()</code> (v2.6.0) — نافذة خطأ مخصصة (<code>#brandMissingOverlay</code>) لما <code>runSync()</code> يلقى <code>e.data.code === 'brand_missing'</code>؛ <code>apiRequest()</code> بقى يحط رد الـ Worker كامل على <code>err.data</code> مش بس <code>err.message</code> عشان الكود ده يتقرا</li>
               <li><code>§BULK-JS</code> (v2.13.0) — تاب "إعادة ربط Bulk" بالكامل: <code>parseBulkIds()</code> (سطر لكل رقم/رابط، شيل المكرّر ورصد غير الصالح) · <code>validateBulkStart()</code> (نفس حارس الأسئلة التلاتة) · <code>openBulkConfirmModal()</code>/<code>startBulkRun()</code> · <code>runBulkList()</code>/<code>runBulkOne()</code> (نداءين لكل منتج: <code>find_product_relink</code> ثم <code>sync_product</code>، وفشل أي منتج معزول عن باقي القائمة) · <code>setBulkBusy()</code> (قفل الإدخال + حارس <code>beforeunload</code>) · <code>requestBulkStop()</code>/<code>retryFailedBulk()</code>/<code>resetBulkTab()</code></li>
+              <li><code>§STAR-JS</code> (v2.19.0، <strong>مؤقّت</strong>) — تاب "⭐ حذف النجمة" بالكامل: <code>runStarScan()</code>/<code>renderStarScan()</code> (الجلب + جدول المنتجات المحتاجة تنضيف) · <code>starNeedsWork()</code> (نجمة على شوبيفاي أو على ووردبريس أو حالة ووردبريس غير معروفة) · <code>openStarConfirmModal()</code>/<code>startStarRun()</code> · <code>runStarList()</code>/<code>runStarChunk()</code> (دفعة من <code>STAR_CHUNK</code>=20 منتج لكل نداء <code>remove_star</code>، والمطابقة بالـ <code>shopifyProductId</code> مش بالفهرس) · <code>setStarBusy()</code>/<code>requestStarStop()</code>/<code>retryFailedStar()</code>/<code>resetStarTab()</code>. <strong>القسم ده كله المفروض يتشال مع التاب بعد ما تتنفّذ</strong></li>
               <li><code>§BULK::findWcProductForRelink</code> (Worker، v2.9.0) — أكشن <code>find_product_relink</code>: بياخد رقم ووردبريس من <code>custom.wordpress_id</code> بدل ما يوقف عند حارس "اتربط قبل كده"، مع حارس تعارض (GTIN/SKU بتاع منتج ووردبريس لازم يخص نفس رقم شوبيفاي) و fallback للبحث العادي لو المنتج لسه مش مربوط</li>
               <li><code>esc()</code> (v2.13.0) — تهريب أي نص جاي من الـ API قبل <code>innerHTML</code>، مستخدم في كل جداول تاب Bulk</li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
@@ -1534,7 +1638,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               على payload النداءات لـ <code>find_product</code>/<code>sync_product</code>)</li>
               <li>الأداة manual-only بالتصميم — مفيش <code>sync_all</code> ومفيش Cron، تشغيلة واحدة = منتج واحد (Worker Builder Step 5A + woocommerce-sync-helper Step 6)</li>
               <li>فشل الخطوة على مستوى المنتج (metafield/status/title) بيتسجل في اللوج كـ <code>error</code> لكن ما بيوقفش باقي الخطوات — نشر ووردبريس، مزامنة الـ Variations، والـ Tag كلهم معزولين في try/catch منفصلة</li>
-              <li>ترتيب التنفيذ في <code>syncProduct</code> مقصود: شوبيفاي (status/⭐/metafield) ← ووردبريس (publish + meta) ← كل الـ Variations (SKU/مخزون + سعر اختياري مع بعض في نفس نداء <code>wcUpdateVariation</code>) ← <code>tagsAdd("stylebox")</code> فورًا. الـ Tag آخر أثر بيظهر على المنتج — متغيّرش الترتيب ده من غير سبب (كان فيه انتظار <code>TAG_DELAY_MS</code> 10 ثواني قبل الـ Tag لحد v2.3.0 — اتلغى بالكامل v2.4.0)</li>
+              <li>ترتيب التنفيذ في <code>syncProduct</code> مقصود: شوبيفاي (status/metafield) ← ووردبريس (publish + meta) ← كل الـ Variations (SKU/مخزون + سعر اختياري مع بعض في نفس نداء <code>wcUpdateVariation</code>) ← <code>tagsAdd("stylebox")</code> فورًا. الـ Tag آخر أثر بيظهر على المنتج — متغيّرش الترتيب ده من غير سبب (كان فيه انتظار <code>TAG_DELAY_MS</code> 10 ثواني قبل الـ Tag لحد v2.3.0 — اتلغى بالكامل v2.4.0)</li>
               <li>الحقل <code>global_unique_id</code> (GTIN) على مستوى المنتج في ووكومرس هو اللي بيربط المنتجين — لو فاضي، الـ Worker (26-08-2026) بيدوّر على رقم شوبيفاي في بداية الـ <code>SKU</code> (نمط "رقم-slug")، ولو لقاه بيكتبه في GTIN وبيشيله من الـ SKU تلقائيًا قبل ما يكمّل. لو مفيش رقم في الـ SKU برضه، بيرجّع خطأ فورًا زي الأول</li>
               <li>سجلات D1 القديمة تحت اسم <code>shopify_woo_sync</code> (523 صف حتى 25-08-2026) اتنقلت لـ <code>stylebox_products_linking</code> — راجع ملخّص التسليم لتوقيت الـ SQL بالظبط</li>
               <li>تحديث السعر (<code>price_difference</code>) اندمج v2.5.0 جوه <code>sync_product</code> نفسها — كان أكشن <code>update_price</code> منفصل في v2.3.0، اتشال بالكامل. مفيش GTIN-from-SKU fallback لتحديث السعر — لو المنتج لسه مش مربوط (<code>global_unique_id</code> فاضي)، خطوة السعر ببساطة مش هتلاقي <code>shopifyProductId</code> والعملية كلها بترفض زي أي محاولة ربط تانية بمنتج مش لاقي رقمه. D1 بيستخدم نفس <code>type='synced'/'error'</code> الأصليين لكل variation، مع <code>extra.priceApplied=true</code> كمُميِّز لو الخطوة دي اتنفذت</li>
@@ -1589,6 +1693,29 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn-primary success" style="flex:1;margin-top:0;" onclick="startBulkRun()">▶ ابدأ التشغيل الآن</button>
           <button class="btn-outline" onclick="closeBulkConfirmModal()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ نافذة تأكيد حذف النجمة (v2.19.0) — فعل كتابة جماعي غير قابل للتراجع
+       على منصتين، فالتأكيد الصريح بالعدد إلزامي قبل أول نداء (زي نافذة Bulk) ══ -->
+  <div class="eco-overlay" id="starConfirmOverlay" onclick="if(event.target===this)closeStarConfirmModal()">
+    <div class="eco-modal" style="max-width:520px;">
+      <div class="eco-modal-hdr">
+        <span>⚠️ تأكيد حذف النجمة من العناوين</span>
+        <button class="modal-close-x" onclick="closeStarConfirmModal()">✕</button>
+      </div>
+      <div class="eco-modal-body">
+        <p style="margin:0 0 14px;line-height:1.9;">
+          هتشيل النجمة "⭐" من بداية عنوان <strong style="color:var(--accent);" id="starConfirmCount">—</strong>،
+          على شوبيفاي وعلى ووردبريس. <strong>مفيش تراجع بعد ما تبدأ</strong>.
+        </p>
+        <div id="starConfirmOpts"></div>
+        <div class="result-note warn" style="margin-top:14px;">⚠️ سيب الصفحة مفتوحة لحد ما التشغيل يخلص — قفلها في النص بيوقف باقي القائمة.</div>
+        <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-primary success" style="flex:1;margin-top:0;" onclick="startStarRun()">▶ ابدأ الحذف الآن</button>
+          <button class="btn-outline" onclick="closeStarConfirmModal()">إلغاء</button>
         </div>
       </div>
     </div>
@@ -1700,7 +1827,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.18.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.19.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة (v2.9.0 — أكشن find_product_relink بتاع مسار Bulk) — منفصلة تمامًا عن
 // TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
@@ -1709,7 +1836,7 @@ const TOOL_VERSION = 'v2.18.0'; // نسخة الواجهة (UI) — بتزيد �
 // ⚠️ الواجهة دي بتقرا `cap`/`total`/`truncated` من get_logs_export، وهم اتضافوا
 //    في الـ Worker v2.12.0 — فالحد الأدنى لازم يبقى v2.12.0، وإلا الحارس نفسه
 //    بيبقى معطّل ويعدّي Worker مش قادر يخدم الصفحة (Standards #29).
-const MIN_WORKER_VERSION = 'v2.13.0';
+const MIN_WORKER_VERSION = 'v2.15.0';
 // رابط الـ Worker **ثابت** مش حقل إعدادات (html-builder v2.2.0 · Standards #28):
 // اسم الـ Worker بيتحدد وقت الإنشاء ومايتغيّرش، والرابط مش سر أصلاً.
 // لو اتعمل rename أو custom domain، السطر ده هو المكان الوحيد اللي يتغيّر.
@@ -1737,15 +1864,16 @@ function isConfigured() {
 // §SHELL-JS — Main Tabs
 // ══════════════════════════════════════════════════════════════
 // v2.13.0 — بقت تلات تابات (ربط فردي / إعادة ربط Bulk / السجل) بدل اتنين
+// ⚠️ v2.19.0 — تاب رابعة **مؤقّتة**: "⭐ حذف النجمة" (§STAR-JS). المفروض تتشال
+// هي وسطرها هنا بعد ما تتنفّذ مرة واحدة — راجع التعليق فوق #panelStar.
 function switchMainTab(tab) {
-  const tabs = { sync: 'panelSync', bulk: 'panelBulk', log: 'panelLog' };
+  const tabs = { sync: 'panelSync', bulk: 'panelBulk', star: 'panelStar', log: 'panelLog' };
   if (!tabs[tab]) tab = 'sync';
-  document.getElementById('mainTabSync').classList.toggle('active', tab === 'sync');
-  document.getElementById('mainTabBulk').classList.toggle('active', tab === 'bulk');
-  document.getElementById('mainTabLog').classList.toggle('active',  tab === 'log');
-  document.getElementById('panelSync').classList.toggle('active', tab === 'sync');
-  document.getElementById('panelBulk').classList.toggle('active', tab === 'bulk');
-  document.getElementById('panelLog').classList.toggle('active',  tab === 'log');
+  for (const [name, panelId] of Object.entries(tabs)) {
+    document.getElementById('mainTab' + name.charAt(0).toUpperCase() + name.slice(1))
+      .classList.toggle('active', tab === name);
+    document.getElementById(panelId).classList.toggle('active', tab === name);
+  }
   if (tab === 'log' && !logLoaded) loadLog();
 }
 
@@ -2245,6 +2373,7 @@ async function doLogout() {
   resetFindStep();
   resetSyncOptions();
   resetBulkTab(); // v2.13.0 — تاب Bulk بيتصفّر برضه مع الخروج
+  resetStarTab(); // v2.19.0 — وتاب "حذف النجمة" المؤقّتة كمان
   document.getElementById('activeUserBtn').textContent = '👤 —';
   switchMainTab('sync');
 
@@ -2415,7 +2544,7 @@ function renderFindResult(data) {
         ${data.productName ? `<div class="result-row"><span>اسم المنتج</span><span>${esc(data.productName)}</span></div>` : ''}
         <div style="margin-top:18px;">
           <button class="btn-primary btn-block" id="relinkOpenBtn" onclick="openRelinkModal()">🔁 تفاصيل الربط الحالي وتأكيد إعادة الربط</button>
-          <div class="result-note warn" id="relinkRequiredNote" style="margin-top:10px;">⚠️ إعادة الربط هتعيد كتابة الحالة/النجمة/الميتافيلد على شوبيفاي والـ SKU/المخزون/السعر على ووكومرس لنفس المنتج — لازم تأكيدها من النافذة الأول.</div>
+          <div class="result-note warn" id="relinkRequiredNote" style="margin-top:10px;">⚠️ إعادة الربط هتعيد كتابة الحالة/الميتافيلد على شوبيفاي والـ SKU/المخزون/السعر على ووكومرس لنفس المنتج — لازم تأكيدها من النافذة الأول.</div>
           <div id="relinkReviewWrap"></div>
         </div>`;
     } else {
@@ -2593,7 +2722,7 @@ function openRelinkModal() {
     ${relinkCompareTable(data)}
     ${data.relinkAllowed && data.searchConfirmed === false ? `<div class="result-note warn" style="margin-top:10px;">ملحوظة: البحث المستقل في ووكومرس مالقاش المنتج بالرقم ده (فلتر GTIN رجّع صفر) — لكن الإثبات موجود على المنتج المربوط نفسه، فإعادة الربط مسموحة.</div>` : ''}
     ${data.relinkAllowed ? `
-      <div class="result-note warn" style="margin-top:12px;">⚠️ <strong>إعادة الربط هتعيد الكتابة على نفس المنتج:</strong> الحالة والنجمة والميتافيلد على شوبيفاي، والـ SKU والمخزون والسعر وحالة النشر على ووكومرس، وتاج <code>stylebox</code> آخر خطوة. فعل كتابة غير قابل للتراجع.</div>
+      <div class="result-note warn" style="margin-top:12px;">⚠️ <strong>إعادة الربط هتعيد الكتابة على نفس المنتج:</strong> الحالة والميتافيلد على شوبيفاي، والـ SKU والمخزون والسعر وحالة النشر على ووكومرس، وتاج <code>stylebox</code> آخر خطوة. فعل كتابة غير قابل للتراجع.</div>
       <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn-primary success" style="flex:1;margin-top:0;" onclick="confirmRelink()">✅ أكّد إعادة الربط</button>
         <button class="btn-outline" onclick="closeRelinkModal()">إلغاء</button>
@@ -2722,10 +2851,10 @@ function setSyncBusy(active) {
 }
 
 // v2.11.0: مفيش اختيار افتراضي جاهز — الموظف لازم يضغط بنفسه على إجابة لكل سؤال
-// (الحالة / النجمة / تأكيد فرق السعر) في كل تشغيلة. راجع runSync() للحارس المزدوج.
+// (الحالة / تأكيد فرق السعر) في كل تشغيلة. راجع runSync() للحارس المزدوج.
+// ⚠️ v2.19.0: سؤال النجمة اتشال بالكامل — الأسئلة بقت اتنين مش تلاتة.
 function resetSyncOptions() {
   document.querySelectorAll('input[name="shopifyStatus"]').forEach(r => { r.checked = false; });
-  document.querySelectorAll('input[name="addStar"]').forEach(r => { r.checked = false; });
   priceDiffConfirmed = false;
   const btn = document.getElementById('priceConfirmBtn');
   if (btn) btn.classList.remove('confirmed');
@@ -2733,12 +2862,8 @@ function resetSyncOptions() {
 }
 
 function readSyncOptions() {
-  const st   = document.querySelector('input[name="shopifyStatus"]:checked');
-  const star = document.querySelector('input[name="addStar"]:checked');
-  return {
-    shopifyStatus: st ? st.value : null,
-    addStar:       star ? star.value === 'yes' : null,
-  };
+  const st = document.querySelector('input[name="shopifyStatus"]:checked');
+  return { shopifyStatus: st ? st.value : null };
 }
 
 const LS_PRICE_DIFF = 'stylebox_link_price_difference'; // آخر قيمة استُخدمت — للراحة بس، مش مصدر حقيقة
@@ -2785,9 +2910,9 @@ async function runSync() {
   if (!foundWpProductId) { showToast('ابحث عن المنتج الأول (الخطوة 1)', 'warning'); return; }
   if (relinkMode && !relinkConfirmed) { showToast('المنتج ده مربوط قبل كده — أكّد إعادة الربط من نافذة التفاصيل الأول', 'warning'); return; }
   if (!productReviewed) { showToast('راجع صور وكاتيجوريز المنتج الأول (زرار المراجعة في نتيجة البحث)', 'warning'); return; }
-  const { shopifyStatus, addStar } = readSyncOptions();
-  if (shopifyStatus === null || addStar === null || !priceDiffConfirmed) {
-    showToast('لازم تختار إجابة لكل الأسئلة الثلاثة (الحالة / النجمة / تأكيد فرق السعر) قبل الربط', 'warning');
+  const { shopifyStatus } = readSyncOptions();
+  if (shopifyStatus === null || !priceDiffConfirmed) {
+    showToast('لازم تختار إجابة للسؤالين (حالة المنتج على شوبيفاي / تأكيد فرق السعر) قبل الربط', 'warning');
     return;
   }
 
@@ -2804,7 +2929,6 @@ async function runSync() {
     const data = await apiPost('sync_product', {
       wp_product_id:    foundWpProductId,
       shopify_status:   shopifyStatus,
-      add_star:         addStar,
       price_difference: priceDifference,
       employee:         currentEmployee.username,
     });
@@ -2910,15 +3034,13 @@ function renderSyncResult(data) {
     const statusCell = pl.keptStatus
       ? '<span class="badge-skip">اتسابت زي ما هي</span>'
       : `<span class="badge-ok">${pl.statusApplied ? `${pl.shopifyStatus} ✓` : '—'}</span>`;
-    const titleCell = !pl.addStar
-      ? '<span class="badge-skip">لا — العنوان زي ما هو</span>'
-      : `<span class="badge-ok">${pl.titleApplied ? '⭐ اتضافت' : '—'}</span>`;
+    // ⚠️ v2.19.0 — صف "إضافة ⭐ للعنوان" اتشال: الأداة مابقتش بتلمس العنوان
+    // خالص. العنوان لسه بيتعرض للمعلومية بس (بيرجع من الـ Worker كـ pl.title).
     plHtml = `<div class="result-card">
       <h4>🏷️ بيانات المنتج (Shopify + WooCommerce) ${overallBadge}</h4>
       <div class="result-row"><span>Wordpress ID (metafield)</span><span style="font-family:var(--font-mono);direction:ltr;">${pl.wordpress_id}</span></div>
       <div class="result-row"><span>حالة المنتج على شوبيفاي</span><span>${statusCell}</span></div>
-      <div class="result-row"><span>إضافة ⭐ للعنوان</span><span>${titleCell}</span></div>
-      ${pl.newTitle ? `<div class="result-row"><span>العنوان الحالي</span><span style="font-family:var(--font-body);text-align:right;">${pl.newTitle}</span></div>` : ''}
+      ${pl.title ? `<div class="result-row"><span>العنوان على شوبيفاي (ما اتلمسش)</span><span style="font-family:var(--font-body);text-align:right;">${esc(pl.title)}</span></div>` : ''}
       ${wcPublishRow}
       ${brandRow}
       ${slugRow}
@@ -3020,8 +3142,8 @@ function renderSyncResult(data) {
 //     custom.wordpress_id نفسه بدل ما يوقف عند "هذا المنتج تم ربطه من قبل".
 //   • مفيش زرار "راجع صور + كاتيجوريز المنتج" ومفيش نافذة "تأكيد المراجعة".
 //
-// اللي **متغيّرش**: الأسئلة التلاتة (الحالة / النجمة / تأكيد فرق السعر) لسه
-// إلزامية بالظبط زي المسار الفردي، والربط نفسه بيستخدم نفس أكشن sync_product
+// اللي **متغيّرش**: الأسئلة (الحالة / تأكيد فرق السعر) لسه إلزامية بالظبط زي
+// المسار الفردي — سؤال النجمة اتشال من الاتنين v2.19.0 — والربط بيستخدم نفس sync_product
 // بنفس الـ payload — منتج واحد لكل نداء، بالترتيب (مفيش sync_all، الأداة لسه
 // manual-only). زيادةً على كده: نافذة تأكيد قبل التشغيل (فعل جماعي غير قابل
 // للتراجع)، قفل الإدخال أثناء التشغيل، وزرار إيقاف بيقف بعد المنتج الحالي.
@@ -3095,19 +3217,14 @@ let bulkPriceDiffConfirmed = false;
 
 function resetBulkSyncOptions() {
   document.querySelectorAll('input[name="bulkShopifyStatus"]').forEach(r => { r.checked = false; });
-  document.querySelectorAll('input[name="bulkAddStar"]').forEach(r => { r.checked = false; });
   bulkPriceDiffConfirmed = false;
   document.getElementById('bulkPriceConfirmBtn')?.classList.remove('confirmed');
   updateBulkPriceConfirmLabel();
 }
 
 function readBulkSyncOptions() {
-  const st   = document.querySelector('input[name="bulkShopifyStatus"]:checked');
-  const star = document.querySelector('input[name="bulkAddStar"]:checked');
-  return {
-    shopifyStatus: st ? st.value : null,
-    addStar:       star ? star.value === 'yes' : null,
-  };
+  const st = document.querySelector('input[name="bulkShopifyStatus"]:checked');
+  return { shopifyStatus: st ? st.value : null };
 }
 
 function loadBulkPriceDiffPref() {
@@ -3149,9 +3266,9 @@ function validateBulkStart() {
   const { ids, invalid } = parseBulkIds(document.getElementById('bulkIdsInput').value);
   if (!ids.length) { showToast('القائمة فاضية — حط رقم منتج شوبيفاي في كل سطر', 'warning'); return null; }
 
-  const { shopifyStatus, addStar } = readBulkSyncOptions();
-  if (shopifyStatus === null || addStar === null || !bulkPriceDiffConfirmed) {
-    showToast('لازم تختار إجابة لكل الأسئلة الثلاثة (الحالة / النجمة / تأكيد فرق السعر) قبل التشغيل', 'warning');
+  const { shopifyStatus } = readBulkSyncOptions();
+  if (shopifyStatus === null || !bulkPriceDiffConfirmed) {
+    showToast('لازم تختار إجابة للسؤالين (حالة المنتجات على شوبيفاي / تأكيد فرق السعر) قبل التشغيل', 'warning');
     return null;
   }
 
@@ -3162,7 +3279,7 @@ function validateBulkStart() {
     if (!Number.isFinite(priceDifference)) { showToast('فرق السعر لازم يكون رقم', 'warning'); return null; }
   }
 
-  return { ids, invalid, shopifyStatus, addStar, priceDifference };
+  return { ids, invalid, shopifyStatus, priceDifference };
 }
 
 // ── نافذة التأكيد — فعل كتابة جماعي غير قابل للتراجع ──
@@ -3176,7 +3293,6 @@ function openBulkConfirmModal() {
   const statusLabel = v.shopifyStatus === 'KEEP' ? 'تبقى كما هي' : v.shopifyStatus;
   document.getElementById('bulkConfirmOpts').innerHTML = `
     <div class="result-row"><span>حالة المنتجات على شوبيفاي</span><span>${esc(statusLabel)}</span></div>
-    <div class="result-row"><span>إضافة ⭐ للعنوان</span><span>${v.addStar ? 'نعم' : 'لا'}</span></div>
     <div class="result-row"><span>فرق السعر على ووكومرس</span><span>${v.priceDifference === null ? 'تخطّي تحديث السعر' : esc(String(v.priceDifference))}</span></div>
     ${v.invalid.length ? `<div class="result-note err" style="margin-top:10px;">⚠️ فيه ${v.invalid.length.toLocaleString('en-US')} سطر مش رقم/رابط صالح — هيتم تجاهله بالكامل.</div>` : ''}`;
   document.getElementById('bulkConfirmOverlay').classList.add('open');
@@ -3191,7 +3307,7 @@ function startBulkRun() {
   const v = bulkPendingStart;
   bulkPendingStart = null;
   closeBulkConfirmModal();
-  runBulkList(v.ids, { shopifyStatus: v.shopifyStatus, addStar: v.addStar, priceDifference: v.priceDifference });
+  runBulkList(v.ids, { shopifyStatus: v.shopifyStatus, priceDifference: v.priceDifference });
 }
 
 // ── قفل الإدخال أثناء التشغيل (ecommoda-html-builder — إلزامي لأي تشغيل مقسّم) ──
@@ -3203,7 +3319,7 @@ function setBulkBusy(active) {
     ? '<span class="mini-spinner"></span> جاري إعادة الربط...'
     : '▶ ابدأ إعادة ربط كل منتجات القائمة';
   document.getElementById('bulkIdsInput').disabled = active;
-  document.querySelectorAll('input[name="bulkShopifyStatus"], input[name="bulkAddStar"]').forEach(el => { el.disabled = active; });
+  document.querySelectorAll('input[name="bulkShopifyStatus"]').forEach(el => { el.disabled = active; });
   document.getElementById('bulkPriceDifference').disabled = active;
   document.getElementById('bulkPriceConfirmBtn').disabled = active;
   document.getElementById('bulkStopBtn').style.display = active ? '' : 'none';
@@ -3317,7 +3433,6 @@ async function runBulkOne(row, opts) {
     const data = await apiPost('sync_product', {
       wp_product_id:    find.wp_product_id,
       shopify_status:   opts.shopifyStatus,
-      add_star:         opts.addStar,
       price_difference: opts.priceDifference,
       employee:         currentEmployee.username,
     });
@@ -3472,13 +3587,13 @@ function finishBulkRun() {
 }
 
 // إعادة محاولة الفاشلة/المتوقّفة بس — بنفس خيارات آخر تشغيلة (لسه محتاجة نفس
-// الحارس: الأسئلة التلاتة لازم تكون لسه متأكدة، ومنتجات القائمة ماتتغيّرش تحت رجلينا)
+// الحارس: السؤالين لازم يكونوا لسه متأكدين، ومنتجات القائمة ماتتغيّرش تحت رجلينا)
 function retryFailedBulk() {
   const v = validateBulkStart();
   if (!v) return;
   const retryIds = bulkRows.filter(r => r.status === 'error' || r.status === 'stopped').map(r => r.id);
   if (!retryIds.length) { showToast('مفيش منتجات فاشلة لإعادة المحاولة', 'neutral'); return; }
-  runBulkList(retryIds, { shopifyStatus: v.shopifyStatus, addStar: v.addStar, priceDifference: v.priceDifference });
+  runBulkList(retryIds, { shopifyStatus: v.shopifyStatus, priceDifference: v.priceDifference });
 }
 
 function startNewBulkList() {
@@ -3507,6 +3622,477 @@ function resetBulkTab() {
   onBulkIdsInput();
   resetBulkSyncOptions();
   loadBulkPriceDiffPref();
+}
+
+// ══════════════════════════════════════════════════════════════
+// §STAR-JS — تاب "⭐ حذف النجمة" (v2.19.0)
+//
+// ⚠️ **تاب مؤقّتة بالتصميم — المفروض تتشال بالكامل بعد ما تتنفّذ مرة واحدة**،
+// هي وزرارها في شريط التابات وسطرها في switchMainTab() وأكشنَي star_scan/
+// remove_star في index.js. بطلب صريح من صاحب الأداة (13-09-2026): النجمة مش
+// هتتستعمل تاني أبدًا، فإضافتها اتشالت من مسار الربط (Worker v2.15.0) والتاب
+// دي بتنضّف اللي اتضاف قبل كده على المنصتين.
+//
+// الشكل هنا مطابق عمدًا لتاب Bulk (نفس شريط التقدّم، نفس قفل الإدخال، نفس
+// حارس beforeunload، نفس زرار الإيقاف وزرار إعادة المحاولة) — الموظف اتعلّم
+// الشكل ده خلاص، وتاب مؤقتة مش المكان اللي نعلّمه فيه شكل جديد.
+//
+// الفرق الجوهري عن Bulk: الإدخال **مفيش** — الأداة بتجيب القائمة بنفسها من
+// شوبيفاي (star_scan)، والتشغيل بيتقسّم **دفعات** (STAR_CHUNK منتج لكل نداء)
+// مش منتج لكل نداء، لأن الفعل هنا أخف بكتير (عنوان واحد على كل منصة).
+// ══════════════════════════════════════════════════════════════
+
+// ① سقف الواجهة — الوقت: ~0.35 ث/منتج (productUpdate واحد) × 20 ≈ 7 ث للنداء.
+//   ② سقف الـ Worker (STAR_MAX_BATCH = 50) و③ سقف تكلفة استعلام شوبيفاي
+//   (STAR_SCAN_PAGE_SIZE = 100) في index.js — التلاتة مع بعض، ولا واحد يتغيّر
+//   لوحده (worker-builder Step 5A ⑪).
+const STAR_CHUNK      = 20;
+const STAR_PAUSE_MS   = 1200;   // نفَس بين كل دفعة والتانية — ووكومرس بتخنق بسرعة
+const STAR_TABLE_CAP  = 100;    // أقصى عدد صفوف بتتعرض في جدول المسح قبل "اعرض الكل"
+
+let starScanData        = null;  // آخر نتيجة star_scan
+let starRows            = [];    // صفوف التشغيلة الحالية
+let starRunning         = false;
+let starStopRequested   = false;
+let starShowAllScanRows = false;
+let starThrottleStreak  = 0;
+
+// منتج محتاج شغل = نجمة على شوبيفاي، أو نجمة على ووردبريس، أو حالة ووردبريس
+// **غير معروفة** (قراءة ووكومرس فشلت). الحالة التالتة مقصودة: "مش عارفين" مش
+// "نضيف" — والـ Worker بيقرا العنوان الحي بنفسه قبل أي كتابة، فالمحاولة آمنة.
+// المنتج المتأكّد إنه اتمسح من ووردبريس وعنوانه نضيف على شوبيفاي = مفيش شغل.
+function starNeedsWork(p) {
+  if (p.shopifyHasStar) return true;
+  if (p.wcHasStar === true) return true;
+  if (p.wcHasStar === null && !p.wcMissing) return true;
+  return false;
+}
+
+function setStarScanBusy(active) {
+  const btn = document.getElementById('starScanBtn');
+  btn.disabled  = active;
+  btn.innerHTML = active ? '<span class="mini-spinner"></span> جاري الجلب من شوبيفاي...' : '🔍 ابدأ جلب كل المنتجات المربوطة';
+}
+
+// ── خطوة ① — الجلب (قراءة بس، مفيش أي كتابة) ──
+async function runStarScan() {
+  if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'warning'); return; }
+  if (starRunning) { showToast('فيه تشغيلة شغّالة دلوقتي — استنى لحد ما تخلص', 'warning'); return; }
+
+  setStarScanBusy(true);
+  document.getElementById('starScanNotes').innerHTML = '';
+  try {
+    const d = await apiGet('star_scan');
+    starScanData        = d;
+    starShowAllScanRows = false;
+    renderStarScan();
+    const n = (d.products || []).filter(starNeedsWork).length;
+    showToast(n ? `${n} منتج محتاج تنضيف` : 'مفيش أي منتج عليه نجمة ✓', n ? 'success' : 'neutral');
+  } catch (e) {
+    starScanData = null;
+    document.getElementById('starScanNotes').innerHTML =
+      `<div class="result-note err" style="margin-top:12px;">⚠️ فشل الجلب: ${esc(e.message)}</div>`;
+    document.getElementById('starScanTable').innerHTML = '';
+    document.getElementById('starScanCountLine').innerHTML = '';
+    document.getElementById('stepStarRunCard').style.display = 'none';
+    showToast('فشل الجلب ✗', 'error');
+  } finally {
+    setStarScanBusy(false);
+  }
+}
+
+function renderStarScan() {
+  const d        = starScanData;
+  const products = d.products || [];
+  const todo     = products.filter(starNeedsWork);
+  const shopStar = products.filter(p => p.shopifyHasStar).length;
+  const wcStar   = products.filter(p => p.wcHasStar === true).length;
+  const unknown  = products.filter(p => p.wcHasStar === null).length;
+
+  document.getElementById('starScanCountLine').innerHTML =
+    `<span class="bulk-chip accent">🔗 مربوط (${products.length.toLocaleString('en-US')})</span>` +
+    `<span class="bulk-chip ${shopStar ? 'warn' : 'ok'}">⭐ نجمة على شوبيفاي (${shopStar.toLocaleString('en-US')})</span>` +
+    `<span class="bulk-chip ${wcStar ? 'warn' : 'ok'}">⭐ نجمة على ووردبريس (${wcStar.toLocaleString('en-US')})</span>` +
+    (unknown ? `<span class="bulk-chip err">❔ ووردبريس غير معروف (${unknown.toLocaleString('en-US')})</span>` : '') +
+    `<span class="bulk-chip ${todo.length ? 'warn' : 'ok'}">🧹 محتاج تنضيف (${todo.length.toLocaleString('en-US')})</span>`;
+
+  const notes = [];
+  // "مش لقيت" مش قاطعة لو المسح وقف عند السقف — لازم تتقال صراحةً بدل ما
+  // الموظف يفتكر إن دي كل المنتجات (نفس قاعدة scannedAll في find_product).
+  if (d.scannedAll === false) {
+    notes.push(`<div class="result-note err">⚠️ المسح وقف عند سقف الصفحات — <strong>دي مش كل منتجات المتجر</strong>
+      (اتفحص ${Number(d.totalScanned || 0).toLocaleString('en-US')} منتج في ${Number(d.pages || 0)} صفحة).
+      نضّف اللي ظهر هنا الأول، وبعدها اعمل جلب تاني — أو زوّد <code>STAR_SCAN_MAX_PAGES</code> في الـ Worker.</div>`);
+  }
+  if (d.wcError) {
+    notes.push(`<div class="result-note warn">⚠️ تعذّرت قراءة عناوين ووردبريس: ${esc(d.wcError)} —
+      عمود "نجمة ووردبريس" بيقول "غير معروف" للمنتجات دي. التنضيف هيقرا العنوان الحي بنفسه قبل أي كتابة،
+      فممكن تكمّل عادي — أو تعيد الجلب دلوقتي لو ووكومرس كانت بتخنق.</div>`);
+  }
+  notes.push(`<div class="result-note" style="margin-top:10px;">
+    اتفحص <strong>${Number(d.totalScanned || 0).toLocaleString('en-US')}</strong> منتج على شوبيفاي،
+    منهم <strong>${products.length.toLocaleString('en-US')}</strong> مربوط بووردبريس.</div>`);
+  document.getElementById('starScanNotes').innerHTML = notes.join('');
+
+  const shown = starShowAllScanRows ? todo : todo.slice(0, STAR_TABLE_CAP);
+  const body  = shown.map((p, i) => `<tr>
+      <td class="mono">${i + 1}</td>
+      <td class="mono">${esc(p.shopifyProductId)}</td>
+      <td class="mono">${esc(p.wpProductId)}</td>
+      <td class="right">${esc(p.shopifyTitle || '—')}</td>
+      <td>${p.shopifyHasStar ? '<span class="badge-warn">⭐ موجودة</span>' : '<span class="badge-skip">—</span>'}</td>
+      <td>${p.wcHasStar === true ? '<span class="badge-warn">⭐ موجودة</span>'
+           : p.wcHasStar === false ? '<span class="badge-skip">—</span>'
+           : p.wcMissing ? '<span class="badge-danger">المنتج مش موجود</span>'
+           : '<span class="badge-skip">غير معروف</span>'}</td>
+    </tr>`).join('');
+
+  document.getElementById('starScanTable').innerHTML =
+    '<tr><th>#</th><th>رقم شوبيفاي</th><th>ووردبريس</th><th>العنوان على شوبيفاي</th><th>نجمة شوبيفاي</th><th>نجمة ووردبريس</th></tr>' +
+    (body || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px;">مفيش أي منتج محتاج تنضيف ✓</td></tr>');
+
+  document.getElementById('starScanMore').innerHTML =
+    (!starShowAllScanRows && todo.length > STAR_TABLE_CAP)
+      ? `<button class="btn-outline" onclick="starShowAllScanRows=true;renderStarScan();">اعرض كل الـ ${todo.length.toLocaleString('en-US')} منتج</button>`
+      : '';
+
+  document.getElementById('stepStarScanSubtitle').textContent =
+    `${products.length.toLocaleString('en-US')} منتج مربوط — ${todo.length.toLocaleString('en-US')} محتاج تنضيف`;
+  const scanBadge = document.getElementById('stepStarScanBadge');
+  scanBadge.className   = 'step-badge ok';
+  scanBadge.textContent = '✓';
+
+  // خطوة ② بتظهر بس لو فيه شغل فعلاً
+  // ⚠️ خطوة ① **مابتتطويش هنا** (على عكس باقي خطوات الأداة): الجدول ده هو مادة
+  // المراجعة الوحيدة قبل فعل كتابة جماعي غير قابل للتراجع — طيّه بيخلّي الموظف
+  // يأكّد على رقم مجرّد من غير ما يشوف أي منتج.
+  document.getElementById('stepStarRunCard').style.display = todo.length ? 'block' : 'none';
+  if (todo.length) {
+    document.getElementById('stepStarRunSubtitle').textContent = `${todo.length.toLocaleString('en-US')} منتج جاهز للتنضيف`;
+    setStepCollapsed('StarRun', false);
+  }
+}
+
+// ── نافذة التأكيد — فعل كتابة جماعي غير قابل للتراجع على منصتين ──
+let starPendingItems = null;
+
+function validateStarStart() {
+  if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'warning'); return null; }
+  if (starRunning)      { showToast('فيه تشغيلة شغّالة دلوقتي — استنى لحد ما تخلص', 'warning'); return null; }
+  if (!starScanData)    { showToast('اعمل الجلب الأول (الخطوة 1)', 'warning'); return null; }
+  const todo = (starScanData.products || []).filter(starNeedsWork);
+  if (!todo.length)     { showToast('مفيش أي منتج محتاج تنضيف', 'neutral'); return null; }
+  return todo;
+}
+
+function openStarConfirmModal() {
+  const todo = validateStarStart();
+  if (!todo) return;
+  starPendingItems = todo;
+  const shopStar = todo.filter(p => p.shopifyHasStar).length;
+  const wcStar   = todo.filter(p => p.wcHasStar === true).length;
+  document.getElementById('starConfirmCount').textContent = `${todo.length.toLocaleString('en-US')} منتج`;
+  document.getElementById('starConfirmOpts').innerHTML = `
+    <div class="result-row"><span>نجمة على شوبيفاي هتتشال</span><span>${shopStar.toLocaleString('en-US')} منتج</span></div>
+    <div class="result-row"><span>نجمة على ووردبريس هتتشال</span><span>${wcStar.toLocaleString('en-US')} منتج</span></div>
+    <div class="result-row"><span>الدفعة الواحدة</span><span>${STAR_CHUNK} منتج لكل نداء</span></div>
+    <div class="result-note" style="margin-top:10px;">مفيش أي حاجة تانية بتتغيّر: لا الحالة ولا المخزون ولا السعر ولا الـ SKU ولا التاج.</div>`;
+  document.getElementById('starConfirmOverlay').classList.add('open');
+}
+
+function closeStarConfirmModal() { document.getElementById('starConfirmOverlay').classList.remove('open'); }
+
+function startStarRun() {
+  if (!starPendingItems) return;
+  const todo = starPendingItems;
+  starPendingItems = null;
+  closeStarConfirmModal();
+  runStarList(todo);
+}
+
+// ── قفل الإدخال أثناء التشغيل (إلزامي لأي تشغيل مقسّم) ──
+function setStarBusy(active) {
+  starRunning = active;
+  const runBtn  = document.getElementById('starRunBtn');
+  runBtn.disabled  = active;
+  runBtn.innerHTML = active ? '<span class="mini-spinner"></span> جاري حذف النجمة...' : '🧹 احذف النجمة من كل المنتجات دي';
+  document.getElementById('starScanBtn').disabled = active;
+  document.getElementById('starStopBtn').style.display = active ? '' : 'none';
+  const retryBtn = document.getElementById('starRetryFailedBtn');
+  if (retryBtn) retryBtn.disabled = active;
+  if (active) window.addEventListener('beforeunload', bulkBeforeUnload);
+  else        window.removeEventListener('beforeunload', bulkBeforeUnload);
+}
+
+function requestStarStop() {
+  if (!starRunning) return;
+  starStopRequested = true;
+  document.getElementById('starStopBtn').disabled = true;
+  showToast('هيقف بعد ما الدفعة الحالية تخلص', 'neutral');
+}
+
+// ══ التشغيل — دفعة ورا دفعة، STAR_CHUNK منتج لكل نداء remove_star ══
+// العقد مع الـ Worker: بيرجّع نتيجة لكل عنصر في `items`، والمطابقة هنا
+// **بالـ shopifyProductId** مش بالفهرس (الـ Worker بيشيل المكرّر، فعدد النتايج
+// ممكن يقل عن عدد المدخلات). أي عنصر مارجعتش له نتيجة بياخد تحذير صريح بدل
+// ما يفضل "جاري التنفيذ" للأبد.
+async function runStarList(items) {
+  starStopRequested  = false;
+  starThrottleStreak = 0;
+  starRows = items.map(p => ({
+    shopifyProductId: p.shopifyProductId,
+    wpProductId:      p.wpProductId,
+    title:            p.shopifyTitle,
+    status:           'pending',
+    detail:           '',
+    throttled:        false,
+  }));
+
+  document.getElementById('starAfterActions').style.display = 'none';
+  document.getElementById('starBannerWrap').innerHTML = '';
+  document.getElementById('starProgressWrap').style.display = '';
+  document.getElementById('starStopBtn').disabled = false;
+  document.getElementById('stepStarRunBadge').className = 'step-badge';
+  document.getElementById('stepStarRunBadge').textContent = '2';
+  setStepCollapsed('StarScan', true);
+  setStepCollapsed('StarRun', false);
+  renderStarRunTable();
+  updateStarProgress();
+  document.getElementById('stepStarRunCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  setStarBusy(true);
+  try {
+    for (let i = 0; i < starRows.length; i += STAR_CHUNK) {
+      if (starStopRequested) {
+        for (let j = i; j < starRows.length; j++) {
+          starRows[j].status = 'stopped';
+          starRows[j].detail = 'اتوقف قبل ما يبدأ (طلب إيقاف)';
+        }
+        break;
+      }
+      const chunk = starRows.slice(i, i + STAR_CHUNK);
+      chunk.forEach(r => { r.status = 'running'; r.detail = 'جاري التنضيف...'; });
+      renderStarRunTable();
+      updateStarProgress(i);
+
+      const throttled = await runStarChunk(chunk);
+      renderStarRunTable();
+      updateStarProgress(i + chunk.length);
+
+      const isLast = i + STAR_CHUNK >= starRows.length;
+      if (throttled) {
+        // نفس إيقاع تاب Bulk: وقفة تصاعدية بتحترم Retry-After لو الاستضافة بعتته
+        const pause = nextStarThrottlePauseMs(chunk.find(r => r.throttled)?.detail);
+        starThrottleStreak++;
+        if (!isLast && !starStopRequested) {
+          document.getElementById('starProgressLabel').textContent =
+            `ووكومرس خنقت النداءات — استنى ${Math.round(pause / 1000)} ثانية قبل الدفعة اللي بعدها...`;
+          await sleep(pause);
+        }
+      } else {
+        starThrottleStreak = 0;
+        if (!isLast && !starStopRequested) await sleep(STAR_PAUSE_MS);
+      }
+    }
+  } finally {
+    setStarBusy(false);
+    renderStarRunTable();
+    updateStarProgress();
+    finishStarRun();
+  }
+}
+
+// وقفة تصاعدية مستقلة عن تاب Bulk (streak منفصل) بنفس الثوابت والقاعدة
+function nextStarThrottlePauseMs(errMsg) {
+  const fromHeader = retryAfterMsFromError(errMsg);
+  const escalating = Math.min(BULK_THROTTLE_PAUSE_MS * Math.pow(2, starThrottleStreak), BULK_THROTTLE_MAX_MS);
+  return Math.max(fromHeader, escalating);
+}
+
+// دفعة واحدة. بترجّع true لو الفشل شكله خنق (عشان اللفّة تاخد نفَس أطول).
+// فشل الدفعة كلها معزول عن باقي الدفعات — بالظبط زي عزل المنتج في تاب Bulk.
+async function runStarChunk(chunk) {
+  try {
+    const d = await apiPost('remove_star', {
+      items: chunk.map(r => ({ shopify_product_id: r.shopifyProductId, wp_product_id: r.wpProductId })),
+      employee: currentEmployee.username,
+    });
+    const byId = new Map((d.results || []).map(r => [String(r.shopifyProductId), r]));
+    for (const row of chunk) {
+      const res = byId.get(String(row.shopifyProductId));
+      if (!res) {
+        row.status = 'warning';
+        row.detail = 'الـ Worker مارجّعش نتيجة للمنتج ده — راجع تاب السجل قبل إعادة المحاولة';
+        continue;
+      }
+      row.status = res.status || 'warning';
+      row.detail = res.detail || '—';
+    }
+    if (d.logged === false) showToast('العملية تمت لكن جزء من السجل ما اتكتبش (logged: false)', 'warning');
+    return false;
+  } catch (e) {
+    const throttled = isThrottleError(e.message);
+    for (const row of chunk) {
+      row.status    = 'error';
+      row.throttled = throttled;
+      row.detail    = throttled
+        // الخنق مش "مشكلة في المنتج" — لازم يبان كده بالنص عشان محدش يدوّر في
+        // بيانات منتج سليم. الـ Worker بيعيد المحاولة 3 مرات قبل ما يوصلنا ده.
+        ? `⏱️ ووكومرس رفضت النداء (خنق مؤقت). ممكن يكون شوبيفاي اتنضّف وووردبريس لأ — راجع تاب السجل. التفاصيل: ${e.message}`
+        : (e.message || 'خطأ غير معروف');
+    }
+    return throttled;
+  }
+}
+
+function updateStarProgress(doneOverride) {
+  const total = starRows.length;
+  const done  = doneOverride !== undefined
+    ? doneOverride
+    : starRows.filter(r => r.status !== 'pending' && r.status !== 'running').length;
+  const pct   = total ? Math.round((done / total) * 100) : 0;
+
+  const fill = document.getElementById('starProgressFill');
+  fill.style.width = `${pct}%`;
+  fill.classList.toggle('done', !starRunning && pct === 100);
+  fill.classList.toggle('stopped', !starRunning && pct < 100);
+
+  document.getElementById('starProgressLabel').textContent = starRunning
+    ? `جاري الدفعة — ${Math.min(done + STAR_CHUNK, total)} من ${total}`
+    : `${done.toLocaleString('en-US')} من ${total.toLocaleString('en-US')} (${pct}%)`;
+
+  const ok    = starRows.filter(r => r.status === 'success').length;
+  const already = starRows.filter(r => r.status === 'already').length;
+  const warn  = starRows.filter(r => r.status === 'warning').length;
+  const err   = starRows.filter(r => r.status === 'error').length;
+  const rej   = starRows.filter(r => r.status === 'rejected').length;
+  const left  = starRows.filter(r => r.status === 'pending' || r.status === 'running').length;
+  const stop  = starRows.filter(r => r.status === 'stopped').length;
+  document.getElementById('starStatsLine').innerHTML =
+    `<span class="bulk-chip ok">✓ اتنضّف (${ok})</span>` +
+    (already ? `<span class="bulk-chip">✦ مكانش عليه نجمة (${already})</span>` : '') +
+    `<span class="bulk-chip warn">⚠ تحذير (${warn})</span>` +
+    `<span class="bulk-chip err">✗ فشل (${err})</span>` +
+    (rej ? `<span class="bulk-chip">⊘ مرفوض (${rej})</span>` : '') +
+    `<span class="bulk-chip accent">⏳ متبقي (${left})</span>` +
+    (stop ? `<span class="bulk-chip">⏹ متوقف (${stop})</span>` : '');
+}
+
+// 🔴 خمس حالات — `already` و`rejected` **محايدين**، ممنوع يتعدّوا فشل ولا
+//    ياخدوا لون تحذير (ecommoda-constants §12). already هنا = مكانش على المنتج
+//    نجمة أصلاً (مفيش حاجة كانت مطلوبة)، وrejected = المنتج نفسه مش موجود على
+//    شوبيفاي فمفيش أي محاولة كتابة حصلت.
+const STAR_STATUS_CELL = {
+  pending:  '<span class="badge-skip">في الانتظار</span>',
+  running:  '<span class="badge-warn">⏳ جاري التنفيذ</span>',
+  success:  '<span class="badge-ok">✓ اتنضّف</span>',
+  already:  '<span class="badge-skip">✦ مكانش عليه نجمة</span>',
+  warning:  '<span class="badge-warn">⚠ تحذير</span>',
+  rejected: '<span class="badge-skip">⊘ مرفوض — مفيش أي تعديل</span>',
+  error:    '<span class="badge-danger">✗ فشل</span>',
+  stopped:  '<span class="badge-skip">⏹ اتوقف</span>',
+};
+
+function renderStarRunTable() {
+  const rows = starRows.map((r, i) => {
+    const cls = r.status === 'running' ? 'running' : r.status === 'error' ? 'row-err' : r.status === 'warning' ? 'row-warn' : '';
+    return `<tr class="${cls}">
+      <td class="mono">${i + 1}</td>
+      <td class="mono">${esc(r.shopifyProductId)}</td>
+      <td class="mono">${r.wpProductId ? esc(r.wpProductId) : '—'}</td>
+      <td class="right">${esc(r.title || '—')}</td>
+      <td>${STAR_STATUS_CELL[r.status] || '—'}</td>
+      <td class="right">${esc(r.detail || '—')}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('starRunTable').innerHTML =
+    '<tr><th>#</th><th>رقم شوبيفاي</th><th>ووردبريس</th><th>العنوان قبل التنضيف</th><th>الحالة</th><th>التفاصيل</th></tr>' +
+    (rows || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px;">لا توجد منتجات</td></tr>');
+}
+
+function finishStarRun() {
+  const total   = starRows.length;
+  const ok      = starRows.filter(r => r.status === 'success').length;
+  const already = starRows.filter(r => r.status === 'already').length;
+  const warn    = starRows.filter(r => r.status === 'warning').length;
+  const err     = starRows.filter(r => r.status === 'error').length;
+  const rej     = starRows.filter(r => r.status === 'rejected').length;
+  const stop    = starRows.filter(r => r.status === 'stopped').length;
+
+  const cfg = err === total
+    ? { cls: 'err',  icon: '❌', title: 'فشلت كل المنتجات — راجع التفاصيل تحت', badge: 'err' }
+    : (err || warn || stop)
+      ? { cls: 'warn', icon: '⚠️', title: 'خلص مع ملاحظات — راجع الصفوف تحت', badge: 'warn' }
+      : { cls: 'ok',   icon: '✅', title: 'اتشالت النجمة من كل المنتجات', badge: 'ok' };
+
+  document.getElementById('starBannerWrap').innerHTML = `
+    <div class="status-banner ${cfg.cls}">
+      <div class="status-banner-icon">${cfg.icon}</div>
+      <div>
+        <div class="status-banner-title">${cfg.title}</div>
+        <div class="status-banner-sub">المنتجات: ✓ اتنضّف (${ok})${already ? ` | ✦ مكانش عليه نجمة (${already})` : ''} | ⚠ تحذير (${warn}) | ✗ فشل (${err})${rej ? ` | ⊘ مرفوض (${rej})` : ''}${stop ? ` | ⏹ متوقف (${stop})` : ''} — من أصل ${total}</div>
+      </div>
+    </div>` +
+    ((!err && !warn && !stop)
+      ? `<div class="result-note" style="margin-top:12px;">✅ خلصت. اعمل <strong>جلب جديد</strong> للتأكيد إن مفيش نجمة فاضلة — وبعدها التاب دي ملهاش لازمة وتقدر تتشال من الأداة.</div>`
+      : '');
+
+  const badge = document.getElementById('stepStarRunBadge');
+  badge.className   = `step-badge ${cfg.badge === 'ok' ? 'ok' : cfg.badge}`;
+  badge.textContent = cfg.badge === 'ok' ? '✓' : cfg.badge === 'warn' ? '⚠' : '✗';
+  document.getElementById('stepStarRunSubtitle').textContent = cfg.title;
+
+  document.getElementById('starAfterActions').style.display = 'flex';
+  const retryBtn  = document.getElementById('starRetryFailedBtn');
+  // ⊘ `rejected` و✦ `already` **مستثنيين عمدًا**: مفيش حاجة اتحاولت وفشلت،
+  //   وإعادة المحاولة هترجع بنفس النتيجة بالظبط.
+  const retryable = starRows.filter(r => r.status === 'error' || r.status === 'stopped').length;
+  retryBtn.style.display = retryable ? '' : 'none';
+  retryBtn.textContent   = `🔁 أعد محاولة الفاشلة/المتوقّفة (${retryable})`;
+
+  showToast(cfg.cls === 'ok' ? 'خلص التنضيف ✓' : cfg.cls === 'warn' ? 'خلص مع ملاحظات ⚠' : 'فشل التنضيف ✗', cfg.cls === 'err' ? 'error' : 'success');
+}
+
+function retryFailedStar() {
+  if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'warning'); return; }
+  if (starRunning)      { showToast('فيه تشغيلة شغّالة دلوقتي — استنى لحد ما تخلص', 'warning'); return; }
+  const retry = starRows.filter(r => r.status === 'error' || r.status === 'stopped');
+  if (!retry.length) { showToast('مفيش منتجات فاشلة لإعادة المحاولة', 'neutral'); return; }
+  runStarList(retry.map(r => ({
+    shopifyProductId: r.shopifyProductId,
+    wpProductId:      r.wpProductId,
+    shopifyTitle:     r.title,
+  })));
+}
+
+function startNewStarScan() {
+  if (starRunning) { showToast('استنى لحد ما التشغيلة الحالية تخلص', 'warning'); return; }
+  resetStarTab();
+  runStarScan();
+}
+
+// تصفير كامل للتاب — بيتنادى من "اعمل جلب جديد" ومن تسجيل الخروج
+function resetStarTab() {
+  if (starRunning) return; // تشغيلة شغّالة مابتتصفّرش من تحت رجليها
+  starScanData        = null;
+  starRows            = [];
+  starPendingItems    = null;
+  starStopRequested   = false;
+  starShowAllScanRows = false;
+  document.getElementById('starScanTable').innerHTML  = '';
+  document.getElementById('starScanCountLine').innerHTML = '';
+  document.getElementById('starScanNotes').innerHTML  = '';
+  document.getElementById('starScanMore').innerHTML   = '';
+  document.getElementById('starRunTable').innerHTML   = '';
+  document.getElementById('starBannerWrap').innerHTML = '';
+  document.getElementById('starProgressWrap').style.display = 'none';
+  document.getElementById('starAfterActions').style.display = 'none';
+  document.getElementById('stepStarRunCard').style.display  = 'none';
+  document.getElementById('stepStarScanBadge').className    = 'step-badge';
+  document.getElementById('stepStarScanBadge').textContent  = '1';
+  document.getElementById('stepStarScanSubtitle').textContent = 'الأداة بتجيب القائمة بنفسها من شوبيفاي — مفيش أي إدخال';
+  setStepCollapsed('StarScan', false);
 }
 
 // ══════════════════════════════════════════════════════════════

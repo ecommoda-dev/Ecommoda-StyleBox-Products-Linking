@@ -140,7 +140,9 @@
 //   Shopify product.metafield(custom.wordpress_id) ← WooCommerce product ID
 //     (wpProductId) — always
 //   Shopify product.status ← حسب خيار shopify_status (ACTIVE / DRAFT / KEEP)
-//   Shopify product.title  ← "⭐ " prefix added once, idempotent — UNLESS add_star=false
+//   ⚠️ Shopify product.title **مابقاش بيتلمس خالص** — إضافة "⭐ " للعنوان
+//     اتشالت بالكامل v2.15.0 (13-09-2026) بطلب صريح من صاحب الأداة: "مش
+//     هنستعملها تاني أبدًا". راجع §STAR تحت (أكشن حذف النجمة لمرة واحدة).
 //   WooCommerce product.status ← 'publish' — دايمًا، بدون خيار (اتضاف 26-08-2026)
 //   WooCommerce product.meta_data._shopify_product_id ← Shopify product
 //     numeric ID (legacy field, mirrors global_unique_id) — always
@@ -153,12 +155,14 @@
 //        DRAFT  → productUpdate يبعت status:'DRAFT'   (الافتراضي — سلوك v2.0.0)
 //        KEEP   → productUpdate ميبعتش status خالص    (الحالة تفضل زي ما هي)
 //   skip_star (boolean) ← اتشال، بقى add_star: true | false
-//        true  → "⭐ " تتضاف لبداية العنوان (الافتراضي — سلوك v2.0.0)
-//        false → productUpdate ميبعتش title (العنوان يفضل زي ما هو)
-//   الاتنين لسه مستقلّين تمامًا عن بعض — قيمة واحد مالهاش أي أثر على التاني.
+//   ⚠️ **الاتنين (add_star وskip_star) اتشالوا بالكامل v2.15.0** — الأداة
+//   مابقتش بتلمس عنوان شوبيفاي خالص، فمفيش خيار أصلاً. أي واجهة قديمة لسه
+//   بتبعت add_star/skip_star: القيمة **بتتجاهل بالكامل** (مش بتتنفّذ ومش
+//   بترجع خطأ) — العنوان مابيتكتبش في كل الحالات.
 //   الـ Tag "stylebox" + الـ metafield wordpress_id + WC status=publish +
-//   مزامنة كل الـ SKU/المخزون بتشتغل عادي في كل الحالات بغض النظر عن قيمتهم.
-//   (الـ Worker لسه بيقبل skip_draft/skip_star القديمين كـ fallback — راجع §HANDLER.)
+//   مزامنة كل الـ SKU/المخزون بتشتغل عادي زي ما هي.
+//   (الـ Worker لسه بيقبل skip_draft القديم كـ fallback لـ shopify_status —
+//   راجع §HANDLER.)
 //
 // ⚠️ WooCommerce publish (26-08-2026): كل تشغيلة بتحوّل حالة منتج ووكومرس لـ
 //   'publish' — خطوة تلقائية بدون خيار، بطلب صاحب الأداة. النتيجة بتتفحص من رد
@@ -194,7 +198,7 @@
 //
 // ⚠️ فرق السعر (price_difference) — v2.3.0 (26-08-2026) كان أكشن منفصل
 // (update_price)، اتدمج v2.5.0 (26-08-2026 برضه) جوه sync_product نفسها
-// كخطوة اختيارية زي شوبيفاي status/⭐ بالظبط — مش أكشن قائم بذاته. لو
+// كخطوة اختيارية زي شوبيفاي status بالظبط — مش أكشن قائم بذاته. لو
 // price_difference مبعوتش، الخطوة دي بتتخطّى تمامًا (سلوك sync_product القديم
 // زي ما هو). لو مبعوت: بيحدّث regular_price/sale_price لكل Variation في نفس
 // نداء wcUpdateVariation بتاع SKU/المخزون (مش نداء إضافي) = سعر شوبيفاي + الفرق.
@@ -241,7 +245,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.14.0';
+const WORKER_VERSION = 'v2.15.0';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -698,7 +702,7 @@ async function shopifyGQL(env, token, query, variables = {}, opName = 'shopify')
   throw lastErr || new Error(`${opName}: فشل غير معروف`);
 }
 
-// title مطلوب — الـ idempotency check الخاص بالـ "⭐ " prefix
+// title بيتقرا للعرض والسجل بس — الأداة مابقتش بتكتب عنوان شوبيفاي (v2.15.0)
 // price/compareAtPrice — بيتستخدموا في خطوة تحديث السعر الاختيارية جوه
 // syncProduct (لو price_difference اتبعت)، وبيتجاهلوا زي أي field تاني لو لأ
 const VARIANTS_QUERY = `
@@ -1479,24 +1483,23 @@ class BrandNotFoundError extends Error {
 // syncProduct() so a failure here never blocks the variation/stock sync.
 // ══════════════════════════════════════════════════════════════
 async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId, currentTitle, opts) {
-  const { shopifyStatus, addStar } = opts;
+  const { shopifyStatus } = opts;
 
-  // ── 1. Title candidate: prepend "⭐ " — idempotent, never double-prefixes ──
-  const alreadyStarred = typeof currentTitle === 'string' && currentTitle.startsWith('⭐');
-  const newTitle        = alreadyStarred ? currentTitle : `⭐ ${currentTitle}`;
+  // ⚠️ v2.15.0 — إضافة "⭐ " لبداية العنوان **اتشالت بالكامل** بطلب صريح من
+  // صاحب الأداة (13-09-2026): "مش هنستعملها تاني أبدًا". `productUpdate`
+  // مابقاش بيبعت `title` خالص في أي حالة — العنوان على شوبيفاي مابيتلمسش
+  // من مسار الربط نهائيًا. (حذف النجم من العناوين الموجودة فعلاً = أكشن
+  // منفصل تمامًا لمرة واحدة — راجع §STAR::removeStarBatch.)
 
-  // ── 2. productUpdate — input بيتبني حسب shopify_status/add_star، مستقلّين ──
-  //   shopifyStatus === 'KEEP' → مافيش status في الـ input خالص
-  //   addStar       === false  → مافيش title في الـ input خالص
-  //   لو الاتنين متعطّلين → الميوتيشن نفسها مبتتنفّذش (مافيش حاجة تتغيّر)
+  // ── productUpdate — الحقل الوحيد المتبقي هو status، وهو نفسه اختياري ──
+  //   shopifyStatus === 'KEEP' → الميوتيشن مبتتنفّذش خالص (مافيش حاجة تتغيّر)
   const wantsStatus = shopifyStatus !== 'KEEP';
   const productInput = { id: shopifyProductGid };
   if (wantsStatus) productInput.status = shopifyStatus;
-  if (addStar)     productInput.title  = newTitle;
 
-  let statusApplied = false, titleApplied = false;
+  let statusApplied = false;
 
-  if (wantsStatus || addStar) {
+  if (wantsStatus) {
     const productUpdateResp   = await shopifyGQL(env, token, PRODUCT_UPDATE_MUTATION, { input: productInput }, 'productUpdate');
     const productUpdateResult = productUpdateResp?.data?.productUpdate;
     const productUpdateErrors = productUpdateResult?.userErrors || [];
@@ -1508,14 +1511,8 @@ async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId
       // Step 5A ②③ — userErrors فاضية مش كافية، لازم تأكيد الـ payload نفسه
       throw new Error('productUpdate: شوبيفاي ما رجّعتش المنتج المحدَّث — العملية غير مؤكَّدة');
     }
-    if (wantsStatus) {
-      statusApplied = returnedProduct.status === shopifyStatus;
-      if (!statusApplied) throw new Error(`productUpdate: الحالة الراجعة "${returnedProduct.status}" مش ${shopifyStatus} — العملية غير مؤكَّدة`);
-    }
-    if (addStar) {
-      titleApplied = returnedProduct.title === newTitle;
-      if (!titleApplied) throw new Error('productUpdate: العنوان الراجع مختلف عن المتوقع — العملية غير مؤكَّدة');
-    }
+    statusApplied = returnedProduct.status === shopifyStatus;
+    if (!statusApplied) throw new Error(`productUpdate: الحالة الراجعة "${returnedProduct.status}" مش ${shopifyStatus} — العملية غير مؤكَّدة`);
   }
 
   // ⚠️ tagsAdd كان هنا (الخطوة 3) لحد v2.0.0 — اتنقل بالكامل لآخر syncProduct
@@ -1539,10 +1536,9 @@ async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId
   return {
     shopifyStatus,                                   // 'ACTIVE' | 'DRAFT' | 'KEEP'
     keptStatus:   shopifyStatus === 'KEEP',
-    addStar,
     statusApplied,
-    titleApplied,
-    newTitle:     addStar ? newTitle : currentTitle,
+    // العنوان بيرجع للعرض بس — الأداة مابقتش بتكتبه (v2.15.0)
+    title:        currentTitle,
     status:       shopifyStatus !== 'KEEP' ? shopifyStatus : null,
     wordpress_id: wpProductId,
   };
@@ -1577,7 +1573,9 @@ async function addStyleboxTag(env, token, shopifyProductGid) {
 //   1.5. ⚠️ حارس البراند الإلزامي (v2.6.0) — لازم قبل أي كتابة على أي منصة
 //        (شوبيفاي كمان)، فلازم يحصل هنا (GET check-brand) قبل أي نداء كتابة —
 //        راجع wcCheckBrand فوق ليه الترتيب ده بالظبط.
-//   3. Shopify product-level: status (حسب الخيار) + ⭐ (حسب الخيار) + wordpress_id
+//   3. Shopify product-level: status (حسب الخيار) + wordpress_id
+//      (⚠️ v2.15.0: العنوان اتشال من الخطوة دي بالكامل — مفيش ⭐ ومفيش أي
+//      كتابة على title خالص)
 //   4. POST link-product — كل كتابة ووردبريس في نداء واحد: status='publish' +
 //      meta _shopify_product_id + slug fix (إلزامي بدون خيار) + ربط الـ Brand
 //      (لو 1.5 لقى تطابق) + كل الـ Variations (SKU/مخزون/meta) مع بعض
@@ -1585,7 +1583,7 @@ async function addStyleboxTag(env, token, shopifyProductGid) {
 //      TAG_DELAY_MS 10 ثواني قبلها لحد v2.3.0 — اتلغى بالكامل v2.4.0)
 // ══════════════════════════════════════════════════════════════
 async function syncProduct(env, wpProductId, opts = {}) {
-  const { shopifyStatus = 'DRAFT', addStar = true, employee = null, priceDifference = null } = opts;
+  const { shopifyStatus = 'DRAFT', employee = null, priceDifference = null } = opts;
   if (!SHOPIFY_STATUS_CHOICES.includes(shopifyStatus)) {
     throw new Error(`shopify_status غير صالحة: "${shopifyStatus}" — المسموح: ${SHOPIFY_STATUS_CHOICES.join(' / ')}`);
   }
@@ -1656,23 +1654,23 @@ async function syncProduct(env, wpProductId, opts = {}) {
     }
   }
 
-  // ── Shopify-side product-level fields (metafield + Draft + tag + ⭐ title) ──
+  // ── Shopify-side product-level fields (metafield + status) — العنوان مابقاش
+  // بيتلمس خالص من v2.15.0 (راجع syncProductLevelFields) ──
   // Isolated try/catch: a failure here is logged but never blocks the
   // variation/stock sync below from running for this product.
   let productLevelResult = null;
   let productLevelError  = null;
   try {
     productLevelResult = await syncProductLevelFields(
-      env, token, shopifyProductGid, wpProductId, shopifyTitle, { shopifyStatus, addStar }
+      env, token, shopifyProductGid, wpProductId, shopifyTitle, { shopifyStatus }
     );
     const okLog = await safeWriteLog(env.DB, {
       tool:         TOOL_NAME,
       type:         'product_meta_synced',
       employee,
-      productTitle: productLevelResult.newTitle,
+      productTitle: productLevelResult.title,
       notes:        `wordpress_id=${wpProductId} set` +
-                    (shopifyStatus === 'KEEP' ? '، حالة شوبيفاي اتسابت زي ما هي' : `، status→${shopifyStatus}`) +
-                    (addStar ? (productLevelResult.titleApplied ? '، ⭐ اتضافت للعنوان' : '، العنوان كان متعلّم من قبل') : '، إضافة ⭐ اتخطّت'),
+                    (shopifyStatus === 'KEEP' ? '، حالة شوبيفاي اتسابت زي ما هي' : `، status→${shopifyStatus}`),
       extra: { result: RESULT.SUCCESS, wpProductId, shopifyProductId, ...productLevelResult },
     });
     if (!okLog) loggedOk = false;
@@ -1681,7 +1679,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
     console.error(`Product-level sync failed for ${wpProductId}:`, e);
     const okLog = await safeWriteLog(env.DB, {
       tool: TOOL_NAME, type: 'error', employee,
-      notes: `Product-level sync (metafield/status/title) failed: ${e.message}`,
+      notes: `Product-level sync (metafield/status) failed: ${e.message}`,
       extra: { result: RESULT.ERROR, stage: 'write', wpProductId, shopifyProductId },
     });
     if (!okLog) loggedOk = false;
@@ -1953,7 +1951,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
     tagAdded = await addStyleboxTag(env, token, shopifyProductGid);
     const okLog = await safeWriteLog(env.DB, {
       tool: TOOL_NAME, type: 'product_meta_synced', employee,
-      productTitle: productLevelResult?.newTitle || shopifyTitle,
+      productTitle: productLevelResult?.title || shopifyTitle,
       notes: `Tag "${STYLEBOX_TAG}" اتضاف (آخر خطوة)`,
       extra: { result: RESULT.SUCCESS, wpProductId, shopifyProductId, tag: STYLEBOX_TAG },
     });
@@ -1999,6 +1997,403 @@ async function syncProduct(env, wpProductId, opts = {}) {
     variants: results,
     logged: loggedOk,
   };
+}
+
+// ══════════════════════════════════════════════════════════════
+// §STAR — حذف النجمة "⭐" من عناوين كل المنتجات المربوطة (v2.15.0)
+//
+// ⚠️ **قسم مؤقّت بالتصميم — المفروض يتشال بالكامل بعد ما يتنفّذ مرة واحدة.**
+// بطلب صريح من صاحب الأداة (13-09-2026): النجمة مش هتتستعمل تاني أبدًا، فـ
+// (أ) إضافتها اتشالت من مسار الربط نفسه (راجع syncProductLevelFields)، و
+// (ب) القسم ده بيمسح النجمة من العناوين اللي اتضافت عليها قبل كده — على
+// شوبيفاي **وعلى ووردبريس** — لكل المنتجات المربوطة دفعة واحدة.
+//
+// "منتج مربوط" = منتج على شوبيفاي عليه قيمة في metafield `custom.wordpress_id`
+// (نفس الميتافيلد اللي `syncProduct` بيكتبه) — ده تعريف الربط في الأداة دي،
+// ومنه بنعرف رقم منتج ووردبريس المقابل من غير أي بحث في ووكومرس.
+//
+// 🔴 **مفيش فلتر ميتافيلد في استعلام شوبيفاي — عن قصد.**
+// `metafields.custom.KEY:*` **بيتجاهل الفلتر بالكامل ويرجّع المتجر كله من غير
+// أي خطأ** (`shopify-graphql-helper` §3.3 — فشل صامت مقيس 10-09-2026). البديل
+// الوحيد الموثّق: نسحب الحقل مع كل منتج ونفلتر client-side — وده اللي
+// `scanLinkedProducts()` بتعمله بالظبط.
+//
+// أكشنان:
+//   GET  ?action=star_scan    — قراءة بس، مفيش كتابة ومفيش D1 log (زي find_product)
+//   POST ?action=remove_star  — الكتابة، دفعة واحدة لكل نداء (الواجهة بتقسّم)
+// ══════════════════════════════════════════════════════════════
+
+// ─── §STAR::caps — سلسلة السقوف التلاتة (worker-builder Step 5A ⑪) ───
+// ① الواجهة    STAR_CHUNK (في index.html) = 20  ← وقت: ~0.35 ث/منتج × 20 ≈ 7 ث
+// ② الـ Worker  STAR_MAX_BATCH            = 50  ← حارس لصق + سقف subrequests
+//                                                 (كل منتج = productUpdate واحد)
+// ③ شوبيفاي     STAR_SCAN_PAGE_SIZE       = 100 ← تكلفة الاستعلام بالنقط، مش عدد.
+//     products(first:100) + حقلين scalar + metafield واحد ≈ 100 × ~2 نقطة.
+//     الميزانية الآمنة 700 نقطة (ecommoda-constants §1: maximumAvailable=1000).
+//     التكلفة الحقيقية بترجع في رد star_scan (`cost`) — راجع ④ في نفس البند.
+const STAR_SCAN_PAGE_SIZE = 100;
+const STAR_SCAN_MAX_PAGES = 60;   // = 6000 منتج. لو المتجر عدّاهم، الرد بيقول scannedAll:false
+const STAR_MAX_BATCH      = 50;   // أقصى عدد منتجات في نداء remove_star الواحد
+const STAR_WC_CHUNK       = 50;   // أقصى عدد IDs في نداء ووكومرس الواحد (قراءة/كتابة)
+
+// ─── §STAR::strip — قاعدة التنضيف الوحيدة، للمنصتين ───
+// بنشيل **بادئة** النجمة بس (U+2B50، مع Variation Selector الاختياري ومسافاتها)
+// — نفس الشكل اللي الأداة كانت بتضيفه بالظبط (`⭐ ${title}`). أي نجمة في نص
+// العنوان أو في آخره **مابتتلمسش**: ممكن تكون جزء أصلي من اسم المنتج، ومسحها
+// تعديل مالحدش طلبه.
+const LEADING_STAR_RE = /^(?:\s*⭐️?)+\s*/;
+
+function stripLeadingStar(rawTitle) {
+  const before = String(rawTitle ?? '');
+  if (!LEADING_STAR_RE.test(before)) return { had: false, before, after: before };
+  const after = before.replace(LEADING_STAR_RE, '');
+  // عنوان نجمة وبس → التنضيف بيطلّع عنوان فاضي، وده مرفوض على المنصتين.
+  // بنعتبره "مفيش حاجة نعملها" بدل ما نكتب عنوان فاضي على منتج حقيقي.
+  if (!after.trim()) return { had: false, before, after: before, emptyResult: true };
+  return { had: true, before, after };
+}
+
+// ─── §STAR::queries ───
+// ⚠️ pageInfo إلزامية مع أي first:N (shopify-graphql-helper Step 4) — من غيرها
+// القصّ الصامت بيخلّي "كل المنتجات المربوطة" تساوي أول صفحة بس.
+const LINKED_PRODUCTS_QUERY = `
+  query linkedProducts($n: Int!, $cursor: String) {
+    products(first: $n, after: $cursor) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        title
+        metafield(namespace: "custom", key: "wordpress_id") { value }
+      }
+    }
+  }
+`;
+
+// قراءة العناوين الحيّة قبل الكتابة مباشرةً — نداء واحد للدفعة كلها.
+// ⚠️ العنوان اللي الواجهة شافته في المسح ممكن يكون اتغيّر بعده؛ التنضيف لازم
+// يتحسب من العنوان **الحالي**، وإلا ممكن نكتب عنوان قديم فوق تعديل حصل بعده.
+const PRODUCTS_TITLES_QUERY = `
+  query productTitles($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on Product { id title }
+    }
+  }
+`;
+
+// ─── §STAR::wc — قراءة/كتابة عناوين ووكومرس ───
+// ⚠️ بتعدّي من wcFetch زي أي نداء ووردبريس تاني (فخ v2.10.0 في CLAUDE.md):
+// retry + باكوف + احترام Retry-After في مكان واحد. وبتستخدم مفاتيح WC REST
+// (المصادقة الافتراضية) مش SYNC_SECRET — زي find_product بالظبط، فمفيش أي
+// تعديل مطلوب على الـ WPCode snippet عشان التاب دي تشتغل.
+async function wcGetProductTitles(env, ids) {
+  const map = new Map();
+  for (let i = 0; i < ids.length; i += STAR_WC_CHUNK) {
+    const slice = ids.slice(i, i + STAR_WC_CHUNK);
+    const qs = new URLSearchParams({
+      include:  slice.join(','),
+      per_page: String(slice.length),
+      _fields:  'id,name',
+      status:   'any',
+    }).toString();
+    const rows = await wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products?${qs}`, {
+      label: 'WC get product titles',
+    });
+    for (const row of (Array.isArray(rows) ? rows : [])) map.set(String(row.id), row.name);
+  }
+  return map;
+}
+
+// POST /wc/v3/products/batch — الرد بيرجع 200 حتى لو صف فشل، والفشل بييجي جوه
+// عنصر الصف نفسه (`{id, error:{code,message}}`). فلازم كل عنصر يتقرا على حدة —
+// قراءة الـ HTTP status لوحده = نجاح كاذب لكل الصفوف (نفس قاعدة batch المقاسات).
+async function wcBatchUpdateProductTitles(env, updates) {
+  const byId = new Map();
+  for (let i = 0; i < updates.length; i += STAR_WC_CHUNK) {
+    const slice = updates.slice(i, i + STAR_WC_CHUNK);
+    const resp = await wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products/batch`, {
+      label:   'WC batch update product titles',
+      method:  'POST',
+      payload: { update: slice.map(u => ({ id: u.id, name: u.name })) },
+    });
+    for (const row of (resp?.update || [])) byId.set(String(row.id), row);
+  }
+  return byId;
+}
+
+// ─── §STAR::scan — كل المنتجات المربوطة، مع حالة النجمة على المنصتين ───
+// قراءة بس: مفيش أي كتابة ومفيش D1 log (نفس عقد find_product/find_product_relink).
+async function scanLinkedProducts(env) {
+  assertEnv(env, 'shopify', 'woocommerce');
+  const token = await getAccessToken(env);
+
+  const linked  = [];
+  let cursor    = null;
+  let pages     = 0;
+  let totalSeen = 0;
+  let cost      = null;
+
+  while (pages < STAR_SCAN_MAX_PAGES) {
+    const resp = await shopifyGQL(env, token, LINKED_PRODUCTS_QUERY,
+      { n: STAR_SCAN_PAGE_SIZE, cursor }, 'linkedProducts');
+    const conn = resp?.data?.products;
+    if (!conn) throw new Error('star_scan: شوبيفاي ما رجّعتش قائمة المنتجات — العملية غير مؤكَّدة');
+    pages++;
+    // التكلفة بترجع مع كل رد — بنحتفظ بآخر واحدة عشان تبان في الرد (⑪ ④)
+    cost = resp?.extensions?.cost?.throttleStatus || cost;
+
+    for (const node of (conn.nodes || [])) {
+      totalSeen++;
+      const wpId = String(node?.metafield?.value ?? '').trim();
+      if (!wpId) continue;   // ← الفلترة client-side (§3.3 — الـ wildcard مابيفلترش)
+      const shopifyStar = stripLeadingStar(node.title);
+      linked.push({
+        shopifyProductId: String(node.id).split('/').pop(),
+        shopifyGid:       node.id,
+        wpProductId:      wpId,
+        shopifyTitle:     node.title,
+        shopifyHasStar:   shopifyStar.had,
+        shopifyTitleClean: shopifyStar.after,
+      });
+    }
+
+    if (!conn.pageInfo?.hasNextPage) { cursor = null; break; }
+    cursor = conn.pageInfo.endCursor;
+  }
+  const scannedAll = cursor === null;
+
+  // ── عناوين ووكومرس للمنتجات المربوطة — نداء لكل 50 منتج ──
+  // فشل القراءة دي **مابيوقفش المسح**: الجزء الخاص بشوبيفاي لسه صحيح،
+  // والمنتجات اللي ما وصلناش لعناوينها بتترجع بـ wcTitle:null والواجهة
+  // بتقول "غير معروف" بدل ما تدّعي إنه نضيف. (نداء remove_star بيقرا عنوان
+  // ووكومرس الحي بنفسه قبل أي كتابة، فمفيش قرار كتابة بيتبني على الفراغ ده.)
+  let wcError = null;
+  const wpIds = [...new Set(linked.map(p => p.wpProductId))];
+  let titles = new Map();
+  try {
+    if (wpIds.length) titles = await wcGetProductTitles(env, wpIds);
+  } catch (e) {
+    wcError = e.message;
+  }
+  for (const p of linked) {
+    const name = titles.get(String(p.wpProductId));
+    if (name === undefined) {
+      p.wcTitle     = null;
+      p.wcHasStar   = null;      // null = مش معروف، مش "مفيش نجمة"
+      p.wcMissing   = !wcError;  // القراءة نجحت والمنتج مارجعش = اتمسح من ووردبريس
+    } else {
+      const wcStar = stripLeadingStar(name);
+      p.wcTitle      = name;
+      p.wcHasStar    = wcStar.had;
+      p.wcTitleClean = wcStar.after;
+      p.wcMissing    = false;
+    }
+  }
+
+  return {
+    products:      linked,
+    totalScanned:  totalSeen,
+    linkedCount:   linked.length,
+    needsCleanup:  linked.filter(p => p.shopifyHasStar || p.wcHasStar === true).length,
+    unknownWc:     linked.filter(p => p.wcHasStar === null).length,
+    scannedAll,
+    pages,
+    wcError,
+    cost,
+  };
+}
+
+// ─── §STAR::removeStarBatch — الكتابة ───
+// العقد: نتيجة واحدة لكل عنصر في `items`، **بنفس الترتيب**، في كل الفروع
+// (worker-builder Step 5A ⑬). الواجهة بتطابق بالـ shopifyProductId مش بالفهرس،
+// والاتنين صح هنا لأن الحارس تحت بيشيل المكرّر قبل أي حلقة.
+//
+// ⚠️ حارس التكرار (⑫) بالكيان اللي بنكتب عليه (منتج شوبيفاي) — نفس المنتج
+// مرتين في نفس الدفعة = صفّين في D1 لكتابة واحدة، وproductUpdate تاني على
+// عنوان اتنضّف خلاص.
+//
+// 🔴 أربع حالات نتيجة (⑭ + constants §12):
+//   already  = مفيش نجمة على أي منصة → **محايد**، ومفيش صف D1 (شوف تحت)
+//   success  = كل منصة كان عليها نجمة اتنضّفت و**اتأكدت** من رد المنصة نفسها
+//   warning  = منصة اتنضّفت والتانية لأ (أو منتج ووردبريس مش موجود)
+//   error    = كل منصة كان عليها نجمة فشلت
+//   rejected = المنتج نفسه مش موجود على شوبيفاي → مفيش أي محاولة كتابة
+//
+// ⚠️ صفوف `already` **مابتتسجّلش في D1 عن قصد**: دي عملية لمرة واحدة على كل
+// المنتجات المربوطة، وتسجيل صف لكل منتج مالوش نجمة بيضيف مئات الصفوف بلا أي
+// أثر خارجي على جدول `logs` **المشترك بين الستاك كله**. العدّاد بيرجع للواجهة
+// في كل رد (`alreadyCount`) وبيتعرض هناك — يعني `already` مش متبلّعة ولا
+// متحسبة فشل، هي بس مش متسجّلة.
+async function removeStarBatch(env, items, employee) {
+  assertEnv(env, 'shopify', 'woocommerce');
+  const token = await getAccessToken(env);
+
+  // (1) حارس التكرار — بالكيان (منتج شوبيفاي)
+  const seen = new Set();
+  const clean = [];
+  for (const it of items) {
+    const sid = String(it?.shopify_product_id ?? '').trim();
+    if (!/^\d+$/.test(sid) || seen.has(sid)) continue;
+    seen.add(sid);
+    clean.push({ shopifyProductId: sid, wpProductId: String(it?.wp_product_id ?? '').trim() || null });
+  }
+  // كل المدخلات كانت غير صالحة/مكرّرة — رجوع بدري قبل أي نداء خارجي، عشان
+  // ماننداش شوبيفاي بـ ids فاضية ونرجّع "نجاح" على دفعة مافيهاش حاجة أصلاً.
+  if (!clean.length) return { results: [], alreadyCount: 0, wcReadError: null, logged: true };
+
+  // (2) العناوين الحيّة من المنصتين — نداء واحد لكل منصة للدفعة كلها
+  const gqlResp = await shopifyGQL(env, token, PRODUCTS_TITLES_QUERY,
+    { ids: clean.map(c => `gid://shopify/Product/${c.shopifyProductId}`) }, 'productTitles');
+  const shopifyTitles = new Map();
+  for (const node of (gqlResp?.data?.nodes || [])) {
+    if (node?.id) shopifyTitles.set(String(node.id).split('/').pop(), node.title);
+  }
+
+  const wpIds = clean.map(c => c.wpProductId).filter(Boolean);
+  let wcTitles = new Map();
+  let wcReadError = null;
+  try {
+    if (wpIds.length) wcTitles = await wcGetProductTitles(env, wpIds);
+  } catch (e) {
+    wcReadError = e.message;   // الجانب الشوبيفاي بيكمّل — ووكومرس بس بياخد تحذير
+  }
+
+  // (3) شوبيفاي أولاً — منتج ورا التاني (مفيش ميوتيشن جماعية للعنوان)
+  const rows = clean.map(c => ({
+    shopifyProductId: c.shopifyProductId,
+    wpProductId:      c.wpProductId,
+    shopify: { had: false, done: false, error: null, before: null, after: null },
+    wc:      { had: false, done: false, error: null, before: null, after: null },
+    missingOnShopify: false,
+    status: null,
+  }));
+
+  for (const row of rows) {
+    const currentTitle = shopifyTitles.get(row.shopifyProductId);
+    if (currentTitle === undefined) { row.missingOnShopify = true; continue; }
+    row.shopify.before = currentTitle;
+    const strip = stripLeadingStar(currentTitle);
+    if (!strip.had) continue;
+    row.shopify.had = true;
+    try {
+      const resp = await shopifyGQL(env, token, PRODUCT_UPDATE_MUTATION, {
+        input: { id: `gid://shopify/Product/${row.shopifyProductId}`, title: strip.after },
+      }, 'productUpdate(removeStar)');
+      const result = resp?.data?.productUpdate;
+      const errs   = result?.userErrors || [];
+      if (errs.length) throw new Error(errs.map(e => e.message).join(' | '));
+      // userErrors فاضية مش كفاية — لازم تأكيد من الـ payload نفسه (Step 5A ②③)
+      const returned = result?.product;
+      if (!returned) throw new Error('شوبيفاي ما رجّعتش المنتج المحدَّث — العملية غير مؤكَّدة');
+      if (returned.title !== strip.after) {
+        throw new Error(`العنوان الراجع مختلف عن المتوقع ("${returned.title}") — العملية غير مؤكَّدة`);
+      }
+      row.shopify.done  = true;
+      row.shopify.after = returned.title;
+    } catch (e) {
+      row.shopify.error = e.message;
+    }
+  }
+
+  // (4) ووكومرس — نداء batch واحد لكل اللي محتاج تنضيف فعلاً
+  const wcUpdates = [];
+  for (const row of rows) {
+    if (!row.wpProductId) continue;
+    if (wcReadError) { row.wc.error = `تعذّرت قراءة عنوان ووردبريس: ${wcReadError}`; continue; }
+    const name = wcTitles.get(String(row.wpProductId));
+    if (name === undefined) { row.wc.error = 'المنتج مش موجود على ووردبريس'; continue; }
+    row.wc.before = name;
+    const strip = stripLeadingStar(name);
+    if (!strip.had) continue;
+    row.wc.had = true;
+    wcUpdates.push({ id: row.wpProductId, name: strip.after, row, expected: strip.after });
+  }
+
+  if (wcUpdates.length) {
+    try {
+      const byId = await wcBatchUpdateProductTitles(env, wcUpdates);
+      for (const u of wcUpdates) {
+        const res = byId.get(String(u.id));
+        if (!res)            { u.row.wc.error = 'ووكومرس ما رجّعتش نتيجة للمنتج ده — العملية غير مؤكَّدة'; continue; }
+        if (res.error)       { u.row.wc.error = `${res.error.code || 'error'}: ${res.error.message || ''}`.trim(); continue; }
+        // نفس قاعدة شوبيفاي: التأكيد من القيمة الراجعة، مش من HTTP 200
+        if (res.name !== u.expected) {
+          u.row.wc.error = `العنوان الراجع من ووكومرس مختلف عن المتوقع ("${res.name}") — العملية غير مؤكَّدة`;
+          continue;
+        }
+        u.row.wc.done  = true;
+        u.row.wc.after = res.name;
+      }
+    } catch (e) {
+      for (const u of wcUpdates) u.row.wc.error = e.message;
+    }
+  }
+
+  // (5) الحالة النهائية لكل صف + السجل
+  let loggedOk = true;
+  let alreadyCount = 0;
+  for (const row of rows) {
+    if (row.missingOnShopify) {
+      // اتوقف **قبل** أي محاولة كتابة على أي منصة → rejected مش error
+      row.status = RESULT.REJECTED;
+      row.detail = 'المنتج ده مش موجود على شوبيفاي (اتمسح؟) — مفيش أي تعديل حصل';
+      const ok = await safeWriteLog(env.DB, {
+        tool: TOOL_NAME, type: 'error', employee,
+        notes: `حذف النجمة اتوقف — المنتج ${row.shopifyProductId} مش موجود على شوبيفاي`,
+        extra: { result: RESULT.REJECTED, stage: 'lookup', operation: 'star_removal',
+                 shopifyProductId: row.shopifyProductId, wpProductId: row.wpProductId },
+      });
+      if (!ok) loggedOk = false;
+      continue;
+    }
+
+    const attempted = (row.shopify.had ? 1 : 0) + (row.wc.had ? 1 : 0);
+    const doneCount = (row.shopify.done ? 1 : 0) + (row.wc.done ? 1 : 0);
+    // خطأ قراءة/غياب على جهة ووكومرس من غير محاولة كتابة = نقص معلومة، مش فشل كتابة
+    const wcUnknown = !row.wc.had && !!row.wc.error;
+
+    if (!attempted) {
+      row.status = wcUnknown ? RESULT.WARNING : RESULT.ALREADY;
+      row.detail = wcUnknown
+        ? `مفيش نجمة على شوبيفاي، وجهة ووردبريس مش متأكّدة: ${row.wc.error}`
+        : 'مفيش نجمة على أي منصة — مفيش حاجة كانت مطلوبة';
+      if (row.status === RESULT.ALREADY) { alreadyCount++; continue; }  // ← مفيش صف D1، شوف التعليق فوق
+    } else if (doneCount === attempted) {
+      row.status = wcUnknown ? RESULT.WARNING : RESULT.SUCCESS;
+    } else if (doneCount === 0) {
+      row.status = RESULT.ERROR;
+    } else {
+      row.status = RESULT.WARNING;
+    }
+
+    if (!row.detail) {
+      const parts = [];
+      parts.push(row.shopify.had ? (row.shopify.done ? 'شوبيفاي: اتنضّف ✓' : `شوبيفاي: فشل — ${row.shopify.error}`)
+                                 : 'شوبيفاي: مكانش عليه نجمة');
+      if (row.wpProductId) {
+        parts.push(row.wc.had ? (row.wc.done ? 'ووردبريس: اتنضّف ✓' : `ووردبريس: فشل — ${row.wc.error}`)
+                              : (row.wc.error ? `ووردبريس: ${row.wc.error}` : 'ووردبريس: مكانش عليه نجمة'));
+      }
+      row.detail = parts.join(' | ');
+    }
+
+    const ok = await safeWriteLog(env.DB, {
+      tool:         TOOL_NAME,
+      type:         row.status === RESULT.ERROR ? 'error' : 'product_meta_synced',
+      employee,
+      productTitle: row.shopify.after || row.shopify.before || null,
+      valueBefore:  row.shopify.before || row.wc.before || null,
+      valueAfter:   row.shopify.after  || row.wc.after  || null,
+      notes:        `حذف النجمة من العنوان — ${row.detail}`,
+      extra: {
+        result: row.status, stage: 'write', operation: 'star_removal',
+        shopifyProductId: row.shopifyProductId, wpProductId: row.wpProductId,
+        shopify: row.shopify, wc: row.wc,
+      },
+    });
+    if (!ok) loggedOk = false;
+  }
+
+  return { results: rows, alreadyCount, wcReadError, logged: loggedOk };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2123,9 +2518,9 @@ export default {
         if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
         const body = await request.json().catch(() => ({}));
         if (!body.wp_product_id) return json({ error: 'wp_product_id required' }, 400, request);
-        // shopify_status / add_star هما الخيارين الحاليين (v2.1.0). skip_draft /
-        // skip_star القديمين لسه مقبولين كـ fallback عشان أي واجهة متخزّنة في
-        // كاش المتصفح قبل التحديث ماتكسرش — بيتقرا منهم بس لو الجديد مش مبعوت.
+        // shopify_status هو الخيار الوحيد الباقي على مستوى المنتج (v2.15.0).
+        // skip_draft القديم لسه مقبول كـ fallback عشان أي واجهة متخزّنة في كاش
+        // المتصفح قبل التحديث ماتكسرش — بيتقرا منه بس لو الجديد مش مبعوت.
         let shopifyStatus = String(body.shopify_status || '').toUpperCase();
         if (!shopifyStatus) shopifyStatus = body.skip_draft ? 'KEEP' : 'DRAFT';
         if (!SHOPIFY_STATUS_CHOICES.includes(shopifyStatus)) {
@@ -2133,9 +2528,11 @@ export default {
             error: `shopify_status غير صالحة — المسموح: ${SHOPIFY_STATUS_CHOICES.join(' / ')}`,
           }, 400, request);
         }
-        const addStar = body.add_star !== undefined ? !!body.add_star : !body.skip_star;
+        // ⚠️ v2.15.0 — `add_star`/`skip_star` **بيتجاهلوا بالكامل** لو واجهة
+        // قديمة لسه بتبعتهم: مش خطأ ومش تحذير، العنوان مابيتكتبش خالص في أي
+        // حالة (راجع syncProductLevelFields).
 
-        // price_difference (v2.5.0) — اختياري، زي shopify_status/add_star بالظبط:
+        // price_difference (v2.5.0) — اختياري، زي shopify_status بالظبط:
         // اتشال أكشن update_price المنفصل، وبقى خطوة جوه sync_product نفسها.
         // غير مبعوت/فاضي = مفيش تحديث سعر في التشغيلة دي خالص.
         let priceDifference = null;
@@ -2149,11 +2546,38 @@ export default {
 
         const results = await syncProduct(env, body.wp_product_id, {
           shopifyStatus,
-          addStar,
           priceDifference,
           employee: body.employee || null,
         });
         return json({ ok: true, wp_product_id: body.wp_product_id, results }, 200, request);
+      }
+      // ──────────────────────────────────────────────────────────────
+
+      // ─── §STAR — حذف النجمة من العناوين (v2.15.0، قسم مؤقّت) ───────
+      // ⚠️ الأكشنين دول مؤقتين زي القسم نفسه — المفروض يتشالوا مع تاب
+      // "حذف النجمة" في الواجهة بعد ما العملية تتنفّذ مرة واحدة.
+      if (action === 'star_scan') {
+        // قراءة بس — مفيش كتابة ومفيش D1 log (نفس عقد find_product)
+        const result = await scanLinkedProducts(env);
+        return json({ ok: true, ...result }, 200, request);
+      }
+
+      if (action === 'remove_star') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        const body = await request.json().catch(() => ({}));
+        const items = Array.isArray(body.items) ? body.items : null;
+        if (!items || !items.length) return json({ error: 'items[] مطلوبة' }, 400, request);
+        // حارس لصق + سقف subrequests (⑪ ②) — الواجهة الملتزمة عمرها ما هتعدّيه
+        if (items.length > STAR_MAX_BATCH) {
+          return json({
+            error: `الدفعة أكبر من الحد (${items.length} من ${STAR_MAX_BATCH}) — قسّمها`,
+          }, 400, request);
+        }
+        // ⚠️ الكتابة دي بتغيّر عناوين منتجات على منصتين — لازم موظف مسجّل دخول
+        // زي sync_product بالظبط (مفيش استثناء "تشغيل يدوي بدون تسجيل دخول")
+        if (!body.employee) return json({ error: 'employee مطلوب' }, 400, request);
+        const result = await removeStarBatch(env, items, body.employee);
+        return json({ ok: true, ...result }, 200, request);
       }
       // ──────────────────────────────────────────────────────────────
 
