@@ -6,6 +6,20 @@
 // skills: worker-builder v3.0.0 · html-builder v7.0.0 · woocommerce-sync-helper v1.0.0
 //         · ecommoda-constants v2.0.0 · shopify-graphql-helper v2.1.0 — 10-09-2026
 //
+// ⚠️ v2.17.0 (13-09-2026) — تاب "إعادة ربط Bulk" وتاب "حذف النجمة" **اتشالوا
+//   بالكامل** من الأداة، بطلب صريح من صاحب الأداة. اللي اتشال من الـ Worker:
+//   • §STAR كله + أكشنَي star_scan/remove_star — ده كان **قسم مؤقّت بالتصميم**
+//     من يوم ما اتكتب (v2.15.0): "وبعد ما نخلص هنحذف التاب دي". خلص شغله،
+//     فاتشال زي ما كان متفق.
+//   • §BULK::findWcProductForRelink + أكشن find_product_relink — المسار
+//     الجماعي اللي كان بيستخدمه هو التاب اللي اتشالت، فمابقاش ليه أي مستهلك.
+//   ⚠️ **الأداة بقت مسار واحد بس: تاب "ربط منتج" الفردي** — ومتغيّرش ولا سطر
+//   فيه في الجولة دي: find_product بحرّاسه (checkShopifyAlreadyLinked +
+//   verifyExistingLink) وsyncProduct بترتيب تنفيذه وحارس البراند وتاج stylebox
+//   آخر خطوة، كلهم زي ما هم بالحرف.
+//   ⚠️ إعادة الربط **لسه مسموحة في المسار الفردي** عبر verifyExistingLink()
+//   (v2.13.0) — اللي اتشال هو المسار الجماعي بس، مش إعادة الربط نفسها.
+
 // ⚠️ v2.13.0 (10-09-2026) — إعادة ربط منتج مربوط قبل كده، بشرط إثبات الهوية.
 //   بطلب صريح من صاحب الأداة: حارس "اتربط قبل كده" (v2.7.0) كان بيوقف
 //   find_product تمامًا — alreadyLinked:true ومفيش أي طريق للربط تاني من تاب
@@ -62,7 +76,7 @@
 //      429/5xx/فشل الشبكة، واحترام Retry-After. قبل كده الـ retry كان لشوبيفاي
 //      بس (shopifyGQL) وووكومرس من غير أي حماية — أول 429 = فشل نهائي.
 //      الأخطاء بقت WcHttpError شايلة الـ status عشان الكولر يفرّق 404 عن 429.
-//   2) findWcProductForRelink() بقت **ترفع** أي خطأ WC مش 404 بدل ما تبلعه في
+//   2) findWcProductForRelink() (اتشالت v2.17.0) بقت **ترفع** أي خطأ WC مش 404 بدل ما تبلعه في
 //      fallback صامت — الرسالة بقت بتقول السبب الحقيقي (429/401/5xx) بدل
 //      "مفيش منتج". و findWcProductByShopifyId() أخدت خيار skipScan، ومسار
 //      Bulk بيستخدمه: المسح الاحتياطي (لحد 30 نداء لكل منتج) كان بيتنفّذ على
@@ -71,7 +85,9 @@
 //      (زي SKU مكرر) كان بيوقّع المنتج كله وبيمنع تاج stylebox وباقي المقاسات.
 //      وكمان: كل المقاسات فشلت = overallStatus 'error' مش 'warning'.
 //
-// ⚠️ v2.9.0 (10-09-2026) — أكشن جديد find_product_relink (قراءة بس، زي
+// ⚠️ v2.9.0 (10-09-2026) — 🔴 **تاريخي: الأكشن ده اتشال بالكامل v2.17.0**
+//   مع تاب Bulk اللي كان الكولر الوحيد بتاعه.
+//   أكشن جديد find_product_relink (قراءة بس، زي
 //   find_product بالظبط: مفيش كتابة ومفيش D1 log)، مخصّص **لمسار إعادة الربط
 //   الجماعي (Bulk)** الجديد في الواجهة، بطلب صاحب الأداة. الفرق الوحيد عن
 //   find_product إن المنتج **المربوط قبل كده مش حالة رفض هنا — ده الوضع
@@ -83,7 +99,9 @@
 //   (findWcProductByShopifyId) كـ fallback. وفيه حارس تعارض: لو منتج ووردبريس
 //   اللي الميتافيلد بيشاور عليه GTIN/SKU بتاعه بيقول رقم شوبيفاي **تاني**،
 //   بيرجّع {found:false, conflict:true} من غير أي كتابة — ربط متقاطع غلط أسوأ
-//   بكتير من "مش لقيته". راجع findWcProductForRelink() في §BULK.
+//   بكتير من "مش لقيته".
+//   🔴 **البند ده تاريخي بالكامل من v2.17.0** — الأكشن find_product_relink
+//   ودالته findWcProductForRelink() اتشالوا مع تاب Bulk اللي كان بيستخدمهم.
 //   الربط نفسه في المسار الجماعي بيستخدم sync_product الموجود زي ما هو، منتج
 //   واحد لكل نداء (الواجهة بتلفّ عليهم بالترتيب) — مفيش sync_all ومفيش Cron،
 //   الأداة لسه manual-only بالكامل.
@@ -142,7 +160,8 @@
 //   Shopify product.status ← حسب خيار shopify_status (ACTIVE / DRAFT / KEEP)
 //   ⚠️ Shopify product.title **مابقاش بيتلمس خالص** — إضافة "⭐ " للعنوان
 //     اتشالت بالكامل v2.15.0 (13-09-2026) بطلب صريح من صاحب الأداة: "مش
-//     هنستعملها تاني أبدًا". راجع §STAR تحت (أكشن حذف النجمة لمرة واحدة).
+//     هنستعملها تاني أبدًا". (تاب حذف النجمة المؤقّتة وأكشنَي star_scan/
+//     remove_star نفّذوا التنضيف مرة واحدة واتشالوا v2.17.0 زي ما كان متفق.)
 //   WooCommerce product.status ← 'publish' — دايمًا، بدون خيار (اتضاف 26-08-2026)
 //   WooCommerce product.meta_data._shopify_product_id ← Shopify product
 //     numeric ID (legacy field, mirrors global_unique_id) — always
@@ -245,7 +264,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.16.0';
+const WORKER_VERSION = 'v2.17.0';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -792,7 +811,7 @@ const TAGS_ADD_MUTATION = `
 //   • احترام هيدر Retry-After لو ووكومرس بعتته (بالثواني)، وإلا باكوف تربيعي.
 //   • الأخطاء بترجع كـ WcHttpError شايلة الـ status — عشان الكولر يفرّق بين
 //     404 (مش موجود فعلاً) و429/5xx/401 (خنق أو عطل)، والفرق ده هو اللي منع
-//     تكرار العطل فوق. راجع findWcProductForRelink().
+//     تكرار العطل فوق.
 //   • نص رسالة الخطأ **متغيّرش** عن النسخ القديمة عمدًا (الواجهة والسجل بيعرضوه).
 class WcHttpError extends Error {
   constructor(message, status, body = '') {
@@ -1141,10 +1160,12 @@ async function wcScanProductsBySkuPrefix(env, idStr) {
   return { match: null, scanned: SKU_SCAN_MAX_PAGES * SKU_SCAN_PER_PAGE, exhausted: false };
 }
 
-// opts.skipScan (v2.10.0) — بيقفل المسح الاحتياطي (المرحلة 3) تمامًا. بيتبعت
-// من مسار Bulk بس: هناك رقم ووردبريس معروف أصلاً من الميتافيلد، فالمسح (لحد 30
-// نداء لكل منتج) بيبقى رمي في الفاضي — وهو اللي خنق ووكومرس فعليًا 10-09-2026
-// (429 من المنتج الرابع وطول القائمة بعده). راجع findWcProductForRelink().
+// opts.skipScan (v2.10.0) — بيقفل المسح الاحتياطي (المرحلة 3) تمامًا. المسح
+// (لحد 30 نداء لكل منتج) هو اللي خنق ووكومرس فعليًا 10-09-2026 (429 من المنتج
+// الرابع وطول القائمة بعده)، فبيتقفل في أي مسار **الإثبات فيه موجود أصلاً**.
+// ⚠️ من v2.17.0 الكولر الوحيد بالخيار ده هو verifyExistingLink() — المنتج
+// مربوط ومعانا رقم ووردبريس من الميتافيلد، فالبحث للتأكيد بس مش للاكتشاف.
+// (كان بيتبعت كمان من مسار Bulk، اللي اتشال بالكامل v2.17.0.)
 async function findWcProductByShopifyId(env, shopifyProductId, { skipScan = false } = {}) {
   assertEnv(env, 'shopify', 'woocommerce');
   const idStr = String(shopifyProductId);
@@ -1240,7 +1261,8 @@ async function findWcProductByShopifyId(env, shopifyProductId, { skipScan = fals
 // ⚠️ الإثبات هو نفس قاعدة القبول في كل الأداة — GTIN حرفي أو بداية SKU
 // (wcProductMatchesShopifyId)، **مش العنوان ولا رقم الميتافيلد لوحده**:
 // ميتافيلد قديم/غلط يقدر يخلّي الأداة تكتب مخزون وأسعار منتج على منتج تاني
-// خالص (نفس منطق حارس التعارض في find_product_relink، §BULK).
+// خالص (نفس قاعدة حارس التعارض اللي كان في find_product_relink قبل ما يتشال
+// v2.17.0 — القاعدة نفسها عاشت هنا).
 //
 // الحالات (relinkStatus):
 //   • match        → إثبات موجود، وإعادة الربط مسموحة (relinkAllowed:true)
@@ -1379,87 +1401,6 @@ async function verifyExistingLink(env, shopifyProductId, linked) {
   };
 }
 
-// ══════════════════════════════════════════════════════════════
-// §BULK::findWcProductForRelink — v2.9.0 (أكشن find_product_relink)
-// نسخة "إعادة الربط" من البحث، مخصّصة للمسار الجماعي (Bulk) في الواجهة.
-//
-// الفرق الوحيد عن findWcProductByShopifyId()/find_product:
-//   • المنتج المربوط قبل كده **مش حالة رفض هنا — ده الوضع المتوقع**. حارس
-//     "اتربط قبل كده" (checkShopifyAlreadyLinked) لسه بيتنفّذ، لكن نتيجته
-//     بتُستخدم كـ**مصدر لرقم ووردبريس** بدل ما توقف العملية: قيمة
-//     custom.wordpress_id هي الربط نفسه، فمفيش أي داعي ندوّر في ووكومرس تاني
-//     (نداء wcGetProduct واحد بدل ما نوصل لعشرات في المسح الاحتياطي).
-//   • منتج لسه مش مربوط (أو ميتافيلد بيشاور على منتج مش موجود على ووردبريس) →
-//     بنرجع للبحث العادي findWcProductByShopifyId() بالظبط زي المسار الفردي.
-//
-// ⚠️ حارس التعارض: رقم ووردبريس من الميتافيلد **مش كفاية لوحده** — بنتأكد إن
-// منتج ووكومرس ده فعلاً بيخص رقم شوبيفاي المطلوب (GTIN حرفي أو بداية SKU، نفس
-// wcProductMatchesShopifyId بالظبط). لو الـ GTIN/SKU بيقول رقم شوبيفاي **تاني**،
-// بنرجّع {found:false, conflict:true} من غير أي كتابة — ربط متقاطع غلط بين
-// منتجين أسوأ بكتير من "مش لقيته". (GTIN فاضي وSKU من غير بادئة رقمية =
-// مش تعارض — syncProduct نفسه بيتعامل مع الحالة دي بالـ fallback المعتاد.)
-// ══════════════════════════════════════════════════════════════
-async function findWcProductForRelink(env, shopifyProductId) {
-  assertEnv(env, 'shopify', 'woocommerce');
-  const idStr  = String(shopifyProductId);
-  const linked = await checkShopifyAlreadyLinked(env, idStr);
-  const wpIdFromMeta = String(linked.wordpressId || '').trim();
-
-  if (linked.linked && /^\d+$/.test(wpIdFromMeta)) {
-    let wooProduct = null;
-    try {
-      wooProduct = await wcGetProduct(env, wpIdFromMeta);
-    } catch (e) {
-      // ⚠️ v2.10.0 — الفرق بين "مش موجود" و"عطل" لازم يفضل واضح:
-      //   • 404 بس = الميتافيلد بيشاور على منتج اتمسح فعلاً → نكمّل بالبحث العادي.
-      //   • أي حاجة تانية (429 خنق · 401 أسرار · 5xx · فشل شبكة) = **عطل بنية
-      //     تحتية**، بيترفع بنصّه للواجهة. بلعه هنا هو اللي خلّى 429 يظهر
-      //     للموظف كـ"مفيش منتج على ووردبريس بالرقم ده" في عطل 10-09-2026 —
-      //     رسالة بتشاور على البيانات والمشكلة في الاتصال.
-      if (!(e instanceof WcHttpError) || e.status !== 404) throw e;
-      console.error(`find_product_relink: wcGetProduct(${wpIdFromMeta}) رجّع 404 — المنتج اتمسح من ووردبريس، بنكمّل بالبحث العادي`);
-    }
-
-    if (wooProduct && wooProduct.id) {
-      const gtin      = String(wooProduct.global_unique_id || '').trim();
-      const skuPrefix = (String(wooProduct.sku || '').match(/^(\d{6,})-/) || [])[1] || '';
-      // تعارض = فيه رقم شوبيفاي صريح على منتج ووكومرس وهو **مش** الرقم المطلوب
-      const conflicting = gtin ? (gtin !== idStr) : (!!skuPrefix && skuPrefix !== idStr);
-      if (conflicting) {
-        return {
-          found:         false,
-          conflict:      true,
-          alreadyLinked: true,
-          wordpressId:   wooProduct.id,
-          productName:   wooProduct.name,
-          wcGtin:        gtin || null,
-          wcSkuPrefix:   skuPrefix || null,
-          productTitle:  linked.productTitle,
-        };
-      }
-      return {
-        found:         true,
-        alreadyLinked: true,
-        wp_product_id: wooProduct.id,
-        productName:   wooProduct.name,
-        sku:           wooProduct.sku,
-        matchedBy:     gtin === idStr ? 'gtin' : (skuPrefix === idStr ? 'sku' : 'wordpress_id'),
-        matchedVia:    'metafield',
-        scanned:       0,
-        scannedAll:    true,
-        wpEditUrl:     `${wcBaseUrl(env)}/wp-admin/post.php?post=${wooProduct.id}&action=edit`,
-        productTitle:  linked.productTitle,
-      };
-    }
-  }
-
-  // منتج لسه مش مربوط (أو ميتافيلد بيشاور على منتج متمسوح) — البحث العادي، لكن
-  // **من غير المسح الاحتياطي** (v2.10.0): المسار الجماعي بيشتغل على منتجات
-  // مربوطة، فالمسح هنا 30 نداء لكل منتج على الفاضي، وهو سبب الخنق المؤكَّد.
-  const result = await findWcProductByShopifyId(env, idStr, { skipScan: true });
-  return { ...result, alreadyLinked: linked.linked, productTitle: linked.productTitle };
-}
-
 // ─── §SYNC::BrandNotFoundError — v2.6.0 ───
 // حارس إلزامي جديد قبل أي كتابة في syncProduct: لازم يكون فيه براند على
 // ووردبريس (تاكسونومي product_brand) بنفس اسم الـ Vendor على شوبيفاي. لو
@@ -1488,8 +1429,9 @@ async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId
   // ⚠️ v2.15.0 — إضافة "⭐ " لبداية العنوان **اتشالت بالكامل** بطلب صريح من
   // صاحب الأداة (13-09-2026): "مش هنستعملها تاني أبدًا". `productUpdate`
   // مابقاش بيبعت `title` خالص في أي حالة — العنوان على شوبيفاي مابيتلمسش
-  // من مسار الربط نهائيًا. (حذف النجم من العناوين الموجودة فعلاً = أكشن
-  // منفصل تمامًا لمرة واحدة — راجع §STAR::removeStarBatch.)
+  // من مسار الربط نهائيًا. (حذف النجمة من العناوين اللي كانت اتضافت عليها
+  // قبل كده اتعمل بأكشن منفصل لمرة واحدة — §STAR — واتشال v2.17.0 بعد ما
+  // نفّذ شغله، زي ما كان متفق وقت ما اتكتب.)
 
   // ── productUpdate — الحقل الوحيد المتبقي هو status، وهو نفسه اختياري ──
   //   shopifyStatus === 'KEEP' → الميوتيشن مبتتنفّذش خالص (مافيش حاجة تتغيّر)
@@ -2000,451 +1942,6 @@ async function syncProduct(env, wpProductId, opts = {}) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// §STAR — حذف النجمة "⭐" من عناوين كل المنتجات المربوطة (v2.15.0)
-//
-// ⚠️ **قسم مؤقّت بالتصميم — المفروض يتشال بالكامل بعد ما يتنفّذ مرة واحدة.**
-// بطلب صريح من صاحب الأداة (13-09-2026): النجمة مش هتتستعمل تاني أبدًا، فـ
-// (أ) إضافتها اتشالت من مسار الربط نفسه (راجع syncProductLevelFields)، و
-// (ب) القسم ده بيمسح النجمة من العناوين اللي اتضافت عليها قبل كده — على
-// شوبيفاي **وعلى ووردبريس** — لكل المنتجات المربوطة دفعة واحدة.
-//
-// "منتج مربوط" = منتج على شوبيفاي عليه قيمة في metafield `custom.wordpress_id`
-// (نفس الميتافيلد اللي `syncProduct` بيكتبه) — ده تعريف الربط في الأداة دي،
-// ومنه بنعرف رقم منتج ووردبريس المقابل من غير أي بحث في ووكومرس.
-//
-// 🔴 **مفيش فلتر ميتافيلد في استعلام شوبيفاي — عن قصد.**
-// `metafields.custom.KEY:*` **بيتجاهل الفلتر بالكامل ويرجّع المتجر كله من غير
-// أي خطأ** (`shopify-graphql-helper` §3.3 — فشل صامت مقيس 10-09-2026). البديل
-// الوحيد الموثّق: نسحب الحقل مع كل منتج ونفلتر client-side — وده اللي
-// `scanLinkedProducts()` بتعمله بالظبط.
-//
-// أكشنان:
-//   GET  ?action=star_scan    — قراءة بس، مفيش كتابة ومفيش D1 log (زي find_product)
-//   POST ?action=remove_star  — الكتابة، دفعة واحدة لكل نداء (الواجهة بتقسّم)
-// ══════════════════════════════════════════════════════════════
-
-// ─── §STAR::caps — سلسلة السقوف التلاتة (worker-builder Step 5A ⑪) ───
-// ① الواجهة    STAR_CHUNK (في index.html) = 20  ← وقت: ~0.35 ث/منتج × 20 ≈ 7 ث
-// ② الـ Worker  STAR_MAX_BATCH            = 50  ← حارس لصق + سقف subrequests
-//                                                 (كل منتج = productUpdate واحد)
-// ③ شوبيفاي     STAR_SCAN_PAGE_SIZE       = 100 ← تكلفة الاستعلام بالنقط، مش عدد.
-//     products(first:100) + حقلين scalar + metafield واحد ≈ 100 × ~2 نقطة.
-//     الميزانية الآمنة 700 نقطة (ecommoda-constants §1: maximumAvailable=1000).
-//     التكلفة الحقيقية بترجع في رد star_scan (`cost`) — راجع ④ في نفس البند.
-const STAR_SCAN_PAGE_SIZE = 100;
-const STAR_SCAN_MAX_PAGES = 60;   // = 6000 منتج. لو المتجر عدّاهم، الرد بيقول scannedAll:false
-const STAR_MAX_BATCH      = 50;   // أقصى عدد منتجات في نداء remove_star الواحد
-const STAR_WC_CHUNK       = 50;   // أقصى عدد IDs في نداء ووكومرس الواحد (قراءة/كتابة)
-// ⚠️ (v2.16.0) نفَس إلزامي بين أي نداءين ووكومرس متتاليين جوّه القسم ده.
-// عطل 13-09-2026: الجلب رمى نداءاته ورا بعضها من غير أي وقفة، فالاستضافة
-// حجبتهم بـ429 (الحد ~30 نداء — راجع "مسائل مفتوحة"). `wcFetch` بيعيد
-// المحاولة 3 مرات بباكوف، لكن الباكوف بيشتغل **بعد** الرفض؛ النفَس ده
-// بيمنع الرفض من الأساس.
-const STAR_WC_PACE_MS     = 1500;
-
-// ─── §STAR::strip — قاعدة التنضيف الوحيدة، للمنصتين ───
-// بنشيل **بادئة** النجمة بس (U+2B50، مع Variation Selector الاختياري ومسافاتها)
-// — نفس الشكل اللي الأداة كانت بتضيفه بالظبط (`⭐ ${title}`). أي نجمة في نص
-// العنوان أو في آخره **مابتتلمسش**: ممكن تكون جزء أصلي من اسم المنتج، ومسحها
-// تعديل مالحدش طلبه.
-const LEADING_STAR_RE = /^(?:\s*⭐️?)+\s*/;
-
-function stripLeadingStar(rawTitle) {
-  const before = String(rawTitle ?? '');
-  if (!LEADING_STAR_RE.test(before)) return { had: false, before, after: before };
-  const after = before.replace(LEADING_STAR_RE, '');
-  // عنوان نجمة وبس → التنضيف بيطلّع عنوان فاضي، وده مرفوض على المنصتين.
-  // بنعتبره "مفيش حاجة نعملها" بدل ما نكتب عنوان فاضي على منتج حقيقي.
-  if (!after.trim()) return { had: false, before, after: before, emptyResult: true };
-  return { had: true, before, after };
-}
-
-// ─── §STAR::queries ───
-// ⚠️ pageInfo إلزامية مع أي first:N (shopify-graphql-helper Step 4) — من غيرها
-// القصّ الصامت بيخلّي "كل المنتجات المربوطة" تساوي أول صفحة بس.
-const LINKED_PRODUCTS_QUERY = `
-  query linkedProducts($n: Int!, $cursor: String) {
-    products(first: $n, after: $cursor) {
-      pageInfo { hasNextPage endCursor }
-      nodes {
-        id
-        title
-        metafield(namespace: "custom", key: "wordpress_id") { value }
-      }
-    }
-  }
-`;
-
-// قراءة العناوين الحيّة قبل الكتابة مباشرةً — نداء واحد للدفعة كلها.
-// ⚠️ العنوان اللي الواجهة شافته في المسح ممكن يكون اتغيّر بعده؛ التنضيف لازم
-// يتحسب من العنوان **الحالي**، وإلا ممكن نكتب عنوان قديم فوق تعديل حصل بعده.
-const PRODUCTS_TITLES_QUERY = `
-  query productTitles($ids: [ID!]!) {
-    nodes(ids: $ids) {
-      ... on Product { id title }
-    }
-  }
-`;
-
-// ─── §STAR::wc — قراءة/كتابة عناوين ووكومرس ───
-// ⚠️ بتعدّي من wcFetch زي أي نداء ووردبريس تاني (فخ v2.10.0 في CLAUDE.md):
-// retry + باكوف + احترام Retry-After في مكان واحد. وبتستخدم مفاتيح WC REST
-// (المصادقة الافتراضية) مش SYNC_SECRET — زي find_product بالظبط، فمفيش أي
-// تعديل مطلوب على الـ WPCode snippet عشان التاب دي تشتغل.
-// 🔴 (v2.16.0) **فشل دفعة مابيلغيش الدفعات اللي نجحت.** النسخة الأولى كانت
-// بترمي أول ما أي دفعة تفشل، فالعناوين اللي اتقرت فعلاً كانت بتتلغى ومعاها
-// كل المنتجات بتبقى "مش معروفة" — وده اللي حوّل خنق في نداء واحد لقائمة
-// تشغيل أربع أضعاف حجمها (عطل 13-09-2026). دلوقتي بترجّع اللي اتقرا +
-// قائمة صريحة بالـ IDs اللي مااتقرتش.
-async function wcGetProductTitles(env, ids) {
-  const titles    = new Map();
-  const failedIds = [];
-  let   error     = null;
-
-  for (let i = 0; i < ids.length; i += STAR_WC_CHUNK) {
-    const slice = ids.slice(i, i + STAR_WC_CHUNK);
-    if (i > 0) await new Promise(r => setTimeout(r, STAR_WC_PACE_MS));  // النفَس
-    const qs = new URLSearchParams({
-      include:  slice.join(','),
-      per_page: String(slice.length),
-      _fields:  'id,name',
-      status:   'any',
-    }).toString();
-    try {
-      const rows = await wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products?${qs}`, {
-        label: 'WC get product titles',
-      });
-      for (const row of (Array.isArray(rows) ? rows : [])) titles.set(String(row.id), row.name);
-    } catch (e) {
-      // نص الخطأ بيتحفظ بالحرف (فيه Retry-After لو الاستضافة بعتته) — الواجهة
-      // بتقراه عشان تعرف إن ده خنق مش عطل بيانات.
-      error = e.message;
-      for (const id of slice) failedIds.push(String(id));
-    }
-  }
-  return { titles, failedIds, error };
-}
-
-// POST /wc/v3/products/batch — الرد بيرجع 200 حتى لو صف فشل، والفشل بييجي جوه
-// عنصر الصف نفسه (`{id, error:{code,message}}`). فلازم كل عنصر يتقرا على حدة —
-// قراءة الـ HTTP status لوحده = نجاح كاذب لكل الصفوف (نفس قاعدة batch المقاسات).
-async function wcBatchUpdateProductTitles(env, updates) {
-  const byId = new Map();
-  for (let i = 0; i < updates.length; i += STAR_WC_CHUNK) {
-    const slice = updates.slice(i, i + STAR_WC_CHUNK);
-    const resp = await wcFetch(env, `${wcBaseUrl(env)}/wp-json/wc/v3/products/batch`, {
-      label:   'WC batch update product titles',
-      method:  'POST',
-      payload: { update: slice.map(u => ({ id: u.id, name: u.name })) },
-    });
-    for (const row of (resp?.update || [])) byId.set(String(row.id), row);
-  }
-  return byId;
-}
-
-// ─── §STAR::scan — كل المنتجات المربوطة، مع حالة النجمة على المنصتين ───
-// قراءة بس: مفيش أي كتابة ومفيش D1 log (نفس عقد find_product/find_product_relink).
-async function scanLinkedProducts(env) {
-  assertEnv(env, 'shopify', 'woocommerce');
-  const token = await getAccessToken(env);
-
-  const linked  = [];
-  let cursor    = null;
-  let pages     = 0;
-  let totalSeen = 0;
-  let cost      = null;
-
-  while (pages < STAR_SCAN_MAX_PAGES) {
-    const resp = await shopifyGQL(env, token, LINKED_PRODUCTS_QUERY,
-      { n: STAR_SCAN_PAGE_SIZE, cursor }, 'linkedProducts');
-    const conn = resp?.data?.products;
-    if (!conn) throw new Error('star_scan: شوبيفاي ما رجّعتش قائمة المنتجات — العملية غير مؤكَّدة');
-    pages++;
-    // التكلفة بترجع مع كل رد — بنحتفظ بآخر واحدة عشان تبان في الرد (⑪ ④)
-    cost = resp?.extensions?.cost?.throttleStatus || cost;
-
-    for (const node of (conn.nodes || [])) {
-      totalSeen++;
-      const wpId = String(node?.metafield?.value ?? '').trim();
-      if (!wpId) continue;   // ← الفلترة client-side (§3.3 — الـ wildcard مابيفلترش)
-      const shopifyStar = stripLeadingStar(node.title);
-      linked.push({
-        shopifyProductId: String(node.id).split('/').pop(),
-        shopifyGid:       node.id,
-        wpProductId:      wpId,
-        shopifyTitle:     node.title,
-        shopifyHasStar:   shopifyStar.had,
-        shopifyTitleClean: shopifyStar.after,
-      });
-    }
-
-    if (!conn.pageInfo?.hasNextPage) { cursor = null; break; }
-    cursor = conn.pageInfo.endCursor;
-  }
-  const scannedAll = cursor === null;
-
-  // ── عناوين ووكومرس للمنتجات المربوطة — نداء لكل 50 منتج، بنفَس بينهم ──
-  // فشل القراءة دي **مابيوقفش المسح**: الجزء الخاص بشوبيفاي لسه صحيح.
-  // ⚠️ (v2.16.0) والفشل بقى **جزئي**: كل منتج اتقرا عنوانه بيتقفل على حالة
-  // مؤكَّدة، واللي مااتقراش بس هو اللي بيفضل "مش معروف". قبل كده أي فشل كان
-  // بيرمي كل حاجة فالـ 218 منتج كلهم بقوا "مش معروف" — وده اللي خلّى الواجهة
-  // تحطهم كلهم في قائمة التنضيف (عطل 13-09-2026).
-  const wpIds = [...new Set(linked.map(p => p.wpProductId))];
-  const { titles, failedIds, error: wcError } = wpIds.length
-    ? await wcGetProductTitles(env, wpIds)
-    : { titles: new Map(), failedIds: [], error: null };
-  const unread = new Set(failedIds);
-
-  for (const p of linked) {
-    const key  = String(p.wpProductId);
-    const name = titles.get(key);
-    if (name !== undefined) {
-      const wcStar = stripLeadingStar(name);
-      p.wcTitle      = name;
-      p.wcHasStar    = wcStar.had;
-      p.wcTitleClean = wcStar.after;
-      p.wcMissing    = false;
-    } else if (unread.has(key)) {
-      p.wcTitle   = null;
-      p.wcHasStar = null;        // null = مش معروف، مش "مفيش نجمة"
-      p.wcMissing = false;
-    } else {
-      // القراءة نجحت والمنتج مارجعش = اتمسح من ووردبريس (مش خنق)
-      p.wcTitle   = null;
-      p.wcHasStar = null;
-      p.wcMissing = true;
-    }
-  }
-
-  return {
-    products:      linked,
-    totalScanned:  totalSeen,
-    linkedCount:   linked.length,
-    needsCleanup:  linked.filter(p => p.shopifyHasStar || p.wcHasStar === true).length,
-    unknownWc:     linked.filter(p => p.wcHasStar === null && !p.wcMissing).length,
-    missingWc:     linked.filter(p => p.wcMissing).length,
-    scannedAll,
-    pages,
-    wcError,
-    cost,
-  };
-}
-
-// ─── §STAR::removeStarBatch — الكتابة ───
-// العقد: نتيجة واحدة لكل عنصر في `items`، **بنفس الترتيب**، في كل الفروع
-// (worker-builder Step 5A ⑬). الواجهة بتطابق بالـ shopifyProductId مش بالفهرس،
-// والاتنين صح هنا لأن الحارس تحت بيشيل المكرّر قبل أي حلقة.
-//
-// ⚠️ حارس التكرار (⑫) بالكيان اللي بنكتب عليه (منتج شوبيفاي) — نفس المنتج
-// مرتين في نفس الدفعة = صفّين في D1 لكتابة واحدة، وproductUpdate تاني على
-// عنوان اتنضّف خلاص.
-//
-// 🔴 أربع حالات نتيجة (⑭ + constants §12):
-//   already  = مفيش نجمة على أي منصة → **محايد**، ومفيش صف D1 (شوف تحت)
-//   success  = كل منصة كان عليها نجمة اتنضّفت و**اتأكدت** من رد المنصة نفسها
-//   warning  = منصة اتنضّفت والتانية لأ (أو منتج ووردبريس مش موجود)
-//   error    = كل منصة كان عليها نجمة فشلت
-//   rejected = المنتج نفسه مش موجود على شوبيفاي → مفيش أي محاولة كتابة
-//
-// ⚠️ صفوف `already` **مابتتسجّلش في D1 عن قصد**: دي عملية لمرة واحدة على كل
-// المنتجات المربوطة، وتسجيل صف لكل منتج مالوش نجمة بيضيف مئات الصفوف بلا أي
-// أثر خارجي على جدول `logs` **المشترك بين الستاك كله**. العدّاد بيرجع للواجهة
-// في كل رد (`alreadyCount`) وبيتعرض هناك — يعني `already` مش متبلّعة ولا
-// متحسبة فشل، هي بس مش متسجّلة.
-async function removeStarBatch(env, items, employee) {
-  assertEnv(env, 'shopify', 'woocommerce');
-  const token = await getAccessToken(env);
-
-  // (1) حارس التكرار — بالكيان (منتج شوبيفاي)
-  const seen = new Set();
-  const clean = [];
-  for (const it of items) {
-    const sid = String(it?.shopify_product_id ?? '').trim();
-    if (!/^\d+$/.test(sid) || seen.has(sid)) continue;
-    seen.add(sid);
-    clean.push({
-      shopifyProductId: sid,
-      wpProductId:      String(it?.wp_product_id ?? '').trim() || null,
-      // ⚠️ (v2.16.0) `wp_check:false` = الجلب أكّد إن عنوان ووردبريس نضيف،
-      // فمفيش داعي نقراه تاني. **آمن لأنه اتجاه واحد:** أسوأ حالة إن نجمة
-      // اتضافت بعد الجلب تفضل مكانها لحد الجلب اللي بعده — مستحيل يخلّينا
-      // نكتب عنوان غلط، لأن كل كتابة لسه بتتحسب من العنوان الحي اللي بنقراه
-      // تحت. والمكسب إن الدفعة اللي كل منتجاتها نضيفة على ووردبريس بتعدّي
-      // **بصفر نداء ووكومرس** — ده الفرق بين قائمة بتخلص وقائمة بتتحجب.
-      wpCheck:          it?.wp_check !== false,
-    });
-  }
-  // كل المدخلات كانت غير صالحة/مكرّرة — رجوع بدري قبل أي نداء خارجي، عشان
-  // ماننداش شوبيفاي بـ ids فاضية ونرجّع "نجاح" على دفعة مافيهاش حاجة أصلاً.
-  if (!clean.length) return { results: [], alreadyCount: 0, wcReadError: null, logged: true };
-
-  // (2) العناوين الحيّة من المنصتين — نداء واحد لكل منصة للدفعة كلها
-  const gqlResp = await shopifyGQL(env, token, PRODUCTS_TITLES_QUERY,
-    { ids: clean.map(c => `gid://shopify/Product/${c.shopifyProductId}`) }, 'productTitles');
-  const shopifyTitles = new Map();
-  for (const node of (gqlResp?.data?.nodes || [])) {
-    if (node?.id) shopifyTitles.set(String(node.id).split('/').pop(), node.title);
-  }
-
-  const wpIds = clean.filter(c => c.wpProductId && c.wpCheck).map(c => c.wpProductId);
-  const { titles: wcTitles, failedIds: wcUnreadIds, error: wcReadError } = wpIds.length
-    ? await wcGetProductTitles(env, wpIds)
-    : { titles: new Map(), failedIds: [], error: null };
-  const wcUnread = new Set(wcUnreadIds);
-
-  // (3) شوبيفاي أولاً — منتج ورا التاني (مفيش ميوتيشن جماعية للعنوان)
-  const rows = clean.map(c => ({
-    shopifyProductId: c.shopifyProductId,
-    wpProductId:      c.wpProductId,
-    wpCheck:          c.wpCheck,
-    shopify: { had: false, done: false, error: null, before: null, after: null },
-    wc:      { had: false, done: false, error: null, skipped: false, before: null, after: null },
-    missingOnShopify: false,
-    status: null,
-  }));
-
-  for (const row of rows) {
-    const currentTitle = shopifyTitles.get(row.shopifyProductId);
-    if (currentTitle === undefined) { row.missingOnShopify = true; continue; }
-    row.shopify.before = currentTitle;
-    const strip = stripLeadingStar(currentTitle);
-    if (!strip.had) continue;
-    row.shopify.had = true;
-    try {
-      const resp = await shopifyGQL(env, token, PRODUCT_UPDATE_MUTATION, {
-        input: { id: `gid://shopify/Product/${row.shopifyProductId}`, title: strip.after },
-      }, 'productUpdate(removeStar)');
-      const result = resp?.data?.productUpdate;
-      const errs   = result?.userErrors || [];
-      if (errs.length) throw new Error(errs.map(e => e.message).join(' | '));
-      // userErrors فاضية مش كفاية — لازم تأكيد من الـ payload نفسه (Step 5A ②③)
-      const returned = result?.product;
-      if (!returned) throw new Error('شوبيفاي ما رجّعتش المنتج المحدَّث — العملية غير مؤكَّدة');
-      if (returned.title !== strip.after) {
-        throw new Error(`العنوان الراجع مختلف عن المتوقع ("${returned.title}") — العملية غير مؤكَّدة`);
-      }
-      row.shopify.done  = true;
-      row.shopify.after = returned.title;
-    } catch (e) {
-      row.shopify.error = e.message;
-    }
-  }
-
-  // (4) ووكومرس — نداء batch واحد لكل اللي محتاج تنضيف فعلاً
-  const wcUpdates = [];
-  for (const row of rows) {
-    if (!row.wpProductId) continue;
-    // الجلب أكّد إنه نضيف على ووردبريس → مفيش قراءة ومفيش كتابة (v2.16.0)
-    if (!row.wpCheck) { row.wc.skipped = true; continue; }
-    const key  = String(row.wpProductId);
-    const name = wcTitles.get(key);
-    // ⚠️ الخطأ بقى **لكل منتج على حدة**: المنتجات اللي دفعة قراءتها فشلت بس هي
-    // اللي بتاخد التحذير، مش كل الدفعة (v2.16.0 — نفس درس الفشل الجزئي فوق).
-    if (name === undefined && wcUnread.has(key)) {
-      row.wc.error = `تعذّرت قراءة عنوان ووردبريس: ${wcReadError}`;
-      continue;
-    }
-    if (name === undefined) { row.wc.error = 'المنتج مش موجود على ووردبريس'; continue; }
-    row.wc.before = name;
-    const strip = stripLeadingStar(name);
-    if (!strip.had) continue;
-    row.wc.had = true;
-    wcUpdates.push({ id: row.wpProductId, name: strip.after, row, expected: strip.after });
-  }
-
-  if (wcUpdates.length) {
-    try {
-      // نفَس بين آخر قراءة ووكومرس ونداء الكتابة — الاتنين على نفس المضيف
-      if (wpIds.length) await new Promise(r => setTimeout(r, STAR_WC_PACE_MS));
-      const byId = await wcBatchUpdateProductTitles(env, wcUpdates);
-      for (const u of wcUpdates) {
-        const res = byId.get(String(u.id));
-        if (!res)            { u.row.wc.error = 'ووكومرس ما رجّعتش نتيجة للمنتج ده — العملية غير مؤكَّدة'; continue; }
-        if (res.error)       { u.row.wc.error = `${res.error.code || 'error'}: ${res.error.message || ''}`.trim(); continue; }
-        // نفس قاعدة شوبيفاي: التأكيد من القيمة الراجعة، مش من HTTP 200
-        if (res.name !== u.expected) {
-          u.row.wc.error = `العنوان الراجع من ووكومرس مختلف عن المتوقع ("${res.name}") — العملية غير مؤكَّدة`;
-          continue;
-        }
-        u.row.wc.done  = true;
-        u.row.wc.after = res.name;
-      }
-    } catch (e) {
-      for (const u of wcUpdates) u.row.wc.error = e.message;
-    }
-  }
-
-  // (5) الحالة النهائية لكل صف + السجل
-  let loggedOk = true;
-  let alreadyCount = 0;
-  for (const row of rows) {
-    if (row.missingOnShopify) {
-      // اتوقف **قبل** أي محاولة كتابة على أي منصة → rejected مش error
-      row.status = RESULT.REJECTED;
-      row.detail = 'المنتج ده مش موجود على شوبيفاي (اتمسح؟) — مفيش أي تعديل حصل';
-      const ok = await safeWriteLog(env.DB, {
-        tool: TOOL_NAME, type: 'error', employee,
-        notes: `حذف النجمة اتوقف — المنتج ${row.shopifyProductId} مش موجود على شوبيفاي`,
-        extra: { result: RESULT.REJECTED, stage: 'lookup', operation: 'star_removal',
-                 shopifyProductId: row.shopifyProductId, wpProductId: row.wpProductId },
-      });
-      if (!ok) loggedOk = false;
-      continue;
-    }
-
-    const attempted = (row.shopify.had ? 1 : 0) + (row.wc.had ? 1 : 0);
-    const doneCount = (row.shopify.done ? 1 : 0) + (row.wc.done ? 1 : 0);
-    // خطأ قراءة/غياب على جهة ووكومرس من غير محاولة كتابة = نقص معلومة، مش فشل كتابة
-    const wcUnknown = !row.wc.had && !!row.wc.error;
-
-    if (!attempted) {
-      row.status = wcUnknown ? RESULT.WARNING : RESULT.ALREADY;
-      row.detail = wcUnknown
-        ? `مفيش نجمة على شوبيفاي، وجهة ووردبريس مش متأكّدة: ${row.wc.error}`
-        : 'مفيش نجمة على أي منصة — مفيش حاجة كانت مطلوبة';
-      if (row.status === RESULT.ALREADY) { alreadyCount++; continue; }  // ← مفيش صف D1، شوف التعليق فوق
-    } else if (doneCount === attempted) {
-      row.status = wcUnknown ? RESULT.WARNING : RESULT.SUCCESS;
-    } else if (doneCount === 0) {
-      row.status = RESULT.ERROR;
-    } else {
-      row.status = RESULT.WARNING;
-    }
-
-    if (!row.detail) {
-      const parts = [];
-      parts.push(row.shopify.had ? (row.shopify.done ? 'شوبيفاي: اتنضّف ✓' : `شوبيفاي: فشل — ${row.shopify.error}`)
-                                 : 'شوبيفاي: مكانش عليه نجمة');
-      if (row.wpProductId) {
-        parts.push(row.wc.had    ? (row.wc.done ? 'ووردبريس: اتنضّف ✓' : `ووردبريس: فشل — ${row.wc.error}`)
-                 : row.wc.error  ? `ووردبريس: ${row.wc.error}`
-                 : row.wc.skipped ? 'ووردبريس: نضيف (اتأكد في الجلب)'
-                 : 'ووردبريس: مكانش عليه نجمة');
-      }
-      row.detail = parts.join(' | ');
-    }
-
-    const ok = await safeWriteLog(env.DB, {
-      tool:         TOOL_NAME,
-      type:         row.status === RESULT.ERROR ? 'error' : 'product_meta_synced',
-      employee,
-      productTitle: row.shopify.after || row.shopify.before || null,
-      valueBefore:  row.shopify.before || row.wc.before || null,
-      valueAfter:   row.shopify.after  || row.wc.after  || null,
-      notes:        `حذف النجمة من العنوان — ${row.detail}`,
-      extra: {
-        result: row.status, stage: 'write', operation: 'star_removal',
-        shopifyProductId: row.shopifyProductId, wpProductId: row.wpProductId,
-        shopify: row.shopify, wc: row.wc,
-      },
-    });
-    if (!ok) loggedOk = false;
-  }
-
-  return { results: rows, alreadyCount, wcReadError, logged: loggedOk };
-}
-
-// ══════════════════════════════════════════════════════════════
 // §HANDLER
 // ══════════════════════════════════════════════════════════════
 export default {
@@ -2546,21 +2043,6 @@ export default {
       }
       // ──────────────────────────────────────────────────────────────
 
-      // ─── §BULK — find_product_relink (v2.9.0): خطوة البحث في المسار الجماعي ──
-      // قراءة بس زي find_product بالظبط (مفيش كتابة، مفيش D1 log). الفرق:
-      // المنتج المربوط قبل كده هنا **هو الوضع المتوقع** مش سبب رفض — رقم
-      // ووردبريس بيتاخد من custom.wordpress_id نفسه. راجع findWcProductForRelink().
-      if (action === 'find_product_relink') {
-        const shopifyProductId = url.searchParams.get('shopify_product_id');
-        if (!shopifyProductId) return json({ error: 'shopify_product_id required' }, 400, request);
-        if (!/^\d+$/.test(shopifyProductId)) {
-          return json({ error: 'shopify_product_id لازم يكون رقم فقط' }, 400, request);
-        }
-        const result = await findWcProductForRelink(env, shopifyProductId);
-        return json({ ok: true, ...result }, 200, request);
-      }
-      // ──────────────────────────────────────────────────────────────
-
       // ─── §SYNC — manual-only, single product per call ─────────────
       if (action === 'sync_product') {
         if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
@@ -2598,34 +2080,6 @@ export default {
           employee: body.employee || null,
         });
         return json({ ok: true, wp_product_id: body.wp_product_id, results }, 200, request);
-      }
-      // ──────────────────────────────────────────────────────────────
-
-      // ─── §STAR — حذف النجمة من العناوين (v2.15.0، قسم مؤقّت) ───────
-      // ⚠️ الأكشنين دول مؤقتين زي القسم نفسه — المفروض يتشالوا مع تاب
-      // "حذف النجمة" في الواجهة بعد ما العملية تتنفّذ مرة واحدة.
-      if (action === 'star_scan') {
-        // قراءة بس — مفيش كتابة ومفيش D1 log (نفس عقد find_product)
-        const result = await scanLinkedProducts(env);
-        return json({ ok: true, ...result }, 200, request);
-      }
-
-      if (action === 'remove_star') {
-        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
-        const body = await request.json().catch(() => ({}));
-        const items = Array.isArray(body.items) ? body.items : null;
-        if (!items || !items.length) return json({ error: 'items[] مطلوبة' }, 400, request);
-        // حارس لصق + سقف subrequests (⑪ ②) — الواجهة الملتزمة عمرها ما هتعدّيه
-        if (items.length > STAR_MAX_BATCH) {
-          return json({
-            error: `الدفعة أكبر من الحد (${items.length} من ${STAR_MAX_BATCH}) — قسّمها`,
-          }, 400, request);
-        }
-        // ⚠️ الكتابة دي بتغيّر عناوين منتجات على منصتين — لازم موظف مسجّل دخول
-        // زي sync_product بالظبط (مفيش استثناء "تشغيل يدوي بدون تسجيل دخول")
-        if (!body.employee) return json({ error: 'employee مطلوب' }, 400, request);
-        const result = await removeStarBatch(env, items, body.employee);
-        return json({ ok: true, ...result }, 200, request);
       }
       // ──────────────────────────────────────────────────────────────
 
