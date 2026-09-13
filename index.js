@@ -361,9 +361,11 @@ const ENV_REQUIRED = {
   shopify:     ['SHOP_DOMAIN', 'CLIENT_ID', 'CLIENT_SECRET'],
   woocommerce: ['WC_BASE_URL', 'WC_CONSUMER_KEY', 'WC_CONSUMER_SECRET'],
   // v2.14.0 — syncProduct بقى بيستخدم ecommoda/v1/link-product بدل wc/v3/*،
-  // مصادقة مختلفة (X-EcomModa-Secret مش مفاتيح WC REST). find_product/
-  // find_product_relink لسه بيستخدموا 'woocommerce' زي ما هم بالظبط.
-  wc_link:     ['WC_BASE_URL', 'WC_LINK_SECRET'],
+  // مصادقة مختلفة (هيدر X-Sync-Header-Secret + سر SYNC_SECRET — نفس الاتفاق
+  // الموحّد المستخدم في snippet الـ price/stock الموجودين فعلاً على
+  // stylebox.online، مش مفاتيح WC REST). find_product/find_product_relink
+  // لسه بيستخدموا 'woocommerce' زي ما هم بالظبط.
+  wc_link:     ['WC_BASE_URL', 'SYNC_SECRET'],
 };
 function assertEnv(env, ...groups) {
   const missing = [];
@@ -809,7 +811,7 @@ function wcBackoffMs(attempt, retryAfterHeader) {
 
 // label = بادئة رسالة الخطأ زي ما كانت بالظبط ("WC get product 123")
 // ⚠️ headers (v2.14.0): لو اتبعتت، بتستخدَم بدل Authorization: Basic الافتراضي —
-// مطلوبة لـ ecommoda/v1/link-product (X-EcomModa-Secret، مش مفاتيح WC REST).
+// مطلوبة لـ ecommoda/v1/link-product (X-Sync-Header-Secret، مش مفاتيح WC REST).
 // نفس منطق retry/backoff/Retry-After بيفضل واحد لكل نداءات ووكومرس/ووردبريس،
 // زي ما هو مطلوب (راجع فخاخ v2.10.0 في CLAUDE.md).
 async function wcFetch(env, url, { label, method = 'GET', payload = null, cacheBust = true, maxAttempts = WC_MAX_ATTEMPTS, headers: headersOverride = null } = {}) {
@@ -924,10 +926,11 @@ function slugify(text) {
 
 // ══════════════════════════════════════════════════════════════
 // §WOOCOMMERCE::wcLinkProduct — v2.14.0 (البند 8 في WCRATELIMIT.md)
-// 2-3 نداءات لكل sync_product بدل 5-6 نداء لـ /wc/v3/* منفصلة — endpoint
-// مخصّص على ووردبريس (ecommoda/v1/link-product/{id} + ecommoda/v1/check-brand،
-// پلجن جوّه wordpress-plugin/ecommoda-stylebox-link-endpoint.php في الريبو ده،
-// لازم يتنصّب يدويًا على stylebox.online — راجع §8 في CLAUDE.md):
+// 2-3 نداءات لكل sync_product بدل 5-6 نداء لـ /wc/v3/* منفصلة — WPCode
+// snippet مخصّص على ووردبريس (ecommoda/v1/link-product/{id} +
+// ecommoda/v1/check-brand، كود الـ snippet جوّه wordpress-snippets/
+// ecommoda-stylebox-link-product-api.php في الريبو ده، لازم يُلصق يدويًا في
+// WPCode على stylebox.online — راجع §8 في CLAUDE.md):
 //   1) GET link-product  — قراءة المنتج + كل الـ variations في نداء واحد
 //   2) GET check-brand   — بس لو الـ Vendor مش فاضي (راجع wcCheckBrand فوق)
 //   3) POST link-product — كل الكتابة (publish + slug + meta + Brand + كل
@@ -937,10 +940,14 @@ function slugify(text) {
 // بينفّذ بس اللي الـ Worker جهّزه.
 //
 // ⚠️ المصادقة هنا مختلفة عن wc/v3/* — مش Basic Auth بمفاتيح REST، هيدر سري
-// منفصل X-EcomModa-Secret (نفس نمط ecommoda/v1/variation-stock الموجود في
-// الستاك — راجع woocommerce-sync-helper Step 3) — env.WC_LINK_SECRET.
+// X-Sync-Header-Secret + سر env.SYNC_SECRET — **نفس الاتفاق الموحّد** المستخدم
+// فعليًا في snippets الـ price/stock sync الموجودين على stylebox.online (راجع
+// docblock ecommoda-stylebox-link-product-api.php). ⚠️ رغم إن اسم الـ constant
+// على ووردبريس (`SYNC_SECRET`) بيتشارك بين كل الـ snippets، كل Cloudflare
+// Worker (ده منفصل عن price-sync/stock-sync) لازم يتحط له سر Cloudflare
+// مستقل بنفس القيمة — مفيش تشارك أسرار بين الـ Workers نفسها.
 function ecommodaLinkHeaders(env) {
-  return { 'X-EcomModa-Secret': env.WC_LINK_SECRET };
+  return { 'X-Sync-Header-Secret': env.SYNC_SECRET };
 }
 
 async function wcLinkProductGet(env, wpProductId) {
@@ -952,9 +959,10 @@ async function wcLinkProductGet(env, wpProductId) {
 
 // ⚠️ حارس البراند (لو vendor_name اتبعت) بيتنفّذ **جوّه** الـ endpoint ده
 // تاني (دفاع ثاني بعد wcCheckBrand — راجعه فوق) أول حاجة قبل أي كتابة — لو
-// مفيش تطابق، الـ endpoint بيرجّع 409 {code:'brand_missing', vendor} من غير
-// ما يلمس المنتج ولا أي variation. الكولر (syncProduct) لازم يفرّق بين الـ
-// 409 ده وأي فشل تاني (شبكة/429/5xx بعد كل المحاولات) — راجع syncProduct.
+// مفيش تطابق، الـ endpoint بيرجّع WP_Error بالكود `ec_brand_missing` وHTTP
+// 409 (والـ vendor جوّه `data.vendor`) من غير ما يلمس المنتج ولا أي variation.
+// الكولر (syncProduct) لازم يفرّق بين الـ 409 ده وأي فشل تاني (شبكة/429/5xx
+// بعد كل المحاولات) — راجع syncProduct.
 async function wcLinkProductPost(env, wpProductId, payload) {
   return wcFetch(env, `${wcBaseUrl(env)}/wp-json/ecommoda/v1/link-product/${wpProductId}`, {
     label:     `WC link-product write ${wpProductId}`,
@@ -2154,7 +2162,7 @@ export default {
         const envKeys = [
           'WORKER_SECRET', 'SHOP_DOMAIN', 'CLIENT_ID', 'CLIENT_SECRET',
           'WC_BASE_URL', 'WC_CONSUMER_KEY', 'WC_CONSUMER_SECRET',
-          'WC_LINK_SECRET', // v2.14.0 — ecommoda/v1/link-product + check-brand
+          'SYNC_SECRET', // v2.14.0 — ecommoda/v1/link-product + check-brand
         ];
         // ⚠️ أسماء وأطوال بس — ممنوع رجوع أي قيمة سر فعلية
         const envReport = envKeys.map(k => ({
@@ -2189,27 +2197,32 @@ export default {
         } catch (e) { wcError = e.message; }
 
         // ─── §DIAG::wcLink — v2.14.0 ───────────────────────────────────
-        // بيتحقق إن پلجن wordpress-plugin/ecommoda-stylebox-link-endpoint.php
-        // متنصّب ومفعّل على stylebox.online وإن WC_LINK_SECRET مضبوط صح على
-        // الطرفين — قبل ما حد يجرّب sync_product ويتفاجئ. product id=0 مش
-        // موجود عمدًا: بنستنى 404 {ok:false,error:'product_not_found'} (يعني
-        // الراوت شغّال والسر صح) مش خطأ rest_no_route (يعني الپلجن مش متنصّب)
-        // ولا 401 (يعني WC_LINK_SECRET مش متطابق). maxAttempts:1 زي بروب WC
-        // فوق — الهدف هنا الحالة الخام، مش إخفاء خنق بإعادة المحاولة.
+        // بيتحقق إن WPCode snippet (wordpress-snippets/
+        // ecommoda-stylebox-link-product-api.php) لاصق ومفعّل على
+        // stylebox.online وإن SYNC_SECRET مضبوط صح على الطرفين — قبل ما حد
+        // يجرّب sync_product ويتفاجئ. product id=0 مش موجود عمدًا: بنستنى
+        // WP_Error بالكود ec_not_found (يعني الراوت شغّال والسر صح) مش
+        // rest_no_route (يعني الـ snippet مش لاصق/مفعّل) ولا ec_unauthorized
+        // (يعني SYNC_SECRET مش متطابق). الفرق بينهم بيتقرا من `code` في جسم
+        // الرد نفسه — مش من الـ HTTP status بس، لأن rest_no_route وec_not_found
+        // الاتنين بيرجّعوا 404. maxAttempts:1 زي بروب WC فوق — الهدف هنا
+        // الحالة الخام، مش إخفاء خنق بإعادة المحاولة.
         let wcLinkOk = false, wcLinkError = null, wcLinkDetail = null;
         try {
           await wcFetch(env, `${wcBaseUrl(env)}/wp-json/ecommoda/v1/link-product/0`,
             { label: 'diag wcLink probe', maxAttempts: 1, headers: ecommodaLinkHeaders(env) });
           wcLinkOk = true; // مش متوقّع (منتج 0 مش موجود) — لو حصل برضه مش مشكلة
         } catch (e) {
-          if (e instanceof WcHttpError && e.status === 404 && /product_not_found/.test(e.wcBody || '')) {
-            wcLinkOk = true; // الراوت شغّال، السر صح، المنتج مش موجود (متوقّع)
+          let body = {};
+          try { body = JSON.parse((e instanceof WcHttpError && e.wcBody) || '{}'); } catch { /* رد مش JSON */ }
+          if (body.code === 'ec_not_found') {
+            wcLinkOk = true; // الراوت شغّال، السر صح، المنتج (0) مش موجود — متوقّع
           } else {
             wcLinkError  = e.message;
-            wcLinkDetail = (e instanceof WcHttpError && e.status === 401)
-              ? 'WC_LINK_SECRET مش متطابق بين Cloudflare وووردبريس'
-              : (e instanceof WcHttpError && e.status === 404)
-                ? 'الراوت ecommoda/v1/link-product مش مسجَّل — راجع تنصيب wordpress-plugin/ecommoda-stylebox-link-endpoint.php'
+            wcLinkDetail = body.code === 'ec_unauthorized'
+              ? 'SYNC_SECRET مش متطابق بين Cloudflare وووردبريس'
+              : body.code === 'rest_no_route'
+                ? 'الراوت ecommoda/v1/link-product مش مسجَّل — راجع تفعيل wordpress-snippets/ecommoda-stylebox-link-product-api.php في WPCode'
                 : null;
           }
         }

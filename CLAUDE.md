@@ -41,9 +41,16 @@ variant (بالحجم)، حساب السعر (`computeVariantPrices`)، وحسا
 
 ### الآلية: 2-3 نداءات لـ `ecommoda/v1/*` بدل 5-6 نداء لـ `wc/v3/*`
 
-پلجن جديد على ووردبريس (`wordpress-plugin/ecommoda-stylebox-link-endpoint.php`
-في الريبو ده — **لازم يتنصّب يدويًا على `stylebox.online`**، الريبو ده مالوش
-أي pipeline بينشر على ووردبريس) بيضيف تلات routes:
+⚠️ **مش پلجن مرفوع — WPCode snippet، زي كل الـ endpoints المخصّصة التانية في
+الستاك.** صاحب الأداة بعت (13-09-2026) سكرينشوت + كود الـ snippets الفعلية
+على `stylebox.online`: `variation-stock` (نداءات مخزون) و`variation-price`
+(نداءات سعر) الاتنين شغّالين فعلاً كـ **WPCode snippets** (Plugins → Code
+Snippets → WPCode)، مش پلجنات مرفوعة — والتصميم الأول لهذا البند (پلجن zip
+يترفع عبر FTP/Plugin Uploader) كان تصميم متوازي غير ضروري، اتصلّح فورًا لما
+اتأكد الاتفاق الموجود فعلاً. كود الـ snippet دلوقتي
+في `wordpress-snippets/ecommoda-stylebox-link-product-api.php` في الريبو ده —
+**لازم يُلصق يدويًا في WPCode على `stylebox.online`**، الريبو ده مالوش أي
+pipeline بينشر على ووردبريس — بيضيف تلات routes:
 
 | Route | الميثود | بتعمل إيه |
 |---|---|---|
@@ -80,30 +87,35 @@ wcLinkProduct` و`§SYNC::syncProduct` في `index.js` للتفاصيل.
 
 ### ⚠️ خطوات تنصيب لازمة قبل أي استخدام — الأداة **مش شغالة** من غيرها
 
-1. **ارفع `wordpress-plugin/ecommoda-stylebox-link-endpoint.php`** على
-   `stylebox.online` — إما بترفيعه لـ
-   `wp-content/plugins/ecommoda-stylebox-link-endpoint/ecommoda-stylebox-link-endpoint.php`
-   عبر FTP/File Manager، أو بعمل zip للفولدر ورفعه من Plugins → Add New →
-   Upload Plugin. **فعّل البلجن** بعدها من شاشة Plugins.
-2. **عرّف السر على ووردبريس** — ضيف السطر ده في `wp-config.php` فوق سطر
-   `/* That's all, stop editing! */`:
-   ```php
-   define( 'ECOMMODA_STYLEBOX_LINK_SECRET', 'REPLACE_WITH_A_LONG_RANDOM_STRING' );
-   ```
-3. **ضيف نفس القيمة بالحرف** كسر جديد `WC_LINK_SECRET` في Cloudflare Dashboard
-   → Worker → Settings → Variables and Secrets → علّم Secret، وبعدها
-   Deployments → Version History → ⋯ → **Promote version**.
+1. **الصق كود `wordpress-snippets/ecommoda-stylebox-link-product-api.php`**
+   snippet جديد في WPCode على `stylebox.online`: wp-admin → **Code Snippets**
+   (WPCode) → **+ Add Snippet** → الصق الكود كامل، Code Type = **PHP
+   Snippet**، Location = **Run Everywhere** (زي `variation-stock`/
+   `variation-price` بالظبط) → **Active** → **Update**.
+2. **عرّف/أكّد السر** — لو `SYNC_SECRET` **متعرّف بالفعل** بقيمة حقيقية (مش
+   النص الوصفي `'SYNC_SECRET'`) في snippet الـ price أو الـ stock الموجودين،
+   الـ snippet الجديد بيستخدم **نفس القيمة دي تلقائيًا** — مفيش حاجة تتعمل.
+   لو لسه مش متعرّف بقيمة حقيقية في أي مكان، غيّر القيمة في أول أي واحد من
+   التلات snippets (كلهم بيشتركوا في نفس الـ constant) لسر عشوائي طويل
+   (32+ حرف).
+3. **ضيف نفس القيمة بالحرف** كسر جديد `SYNC_SECRET` في Cloudflare Dashboard
+   → `stylebox-products-linking-worker` → Settings → Variables and Secrets →
+   علّم Secret، وبعدها Deployments → Version History → ⋯ → **Promote version**.
+   ⚠️ **Worker منفصل عن price-sync/stock-sync** — لازم يتحط له نفس القيمة
+   كسر مستقل، مفيش تشارك أسرار بين الـ Workers نفسها حتى لو الاسم واحد.
 4. **تأكّد قبل أي `sync_product` حقيقي** — نادي `action=diag` وشوف
    `wcLinkProduct.ok === true`. لو `false`، الحقل `detail` بيقول السبب
-   (السر مش متطابق، أو الراوت مش متسجّل يعني البلجن مش متفعّل).
+   (السر مش متطابق، أو الراوت مش متسجّل يعني الـ snippet مش لاصق/مفعّل).
 
-⚠️ **لسه محتاج اختبار حقيقي** (زي فلتر `global_unique_id`/`products/brands`
-قبل كده) — الكود اتكتب مقابل توثيق WooCommerce REST/CRUD الرسمي
-(`get_global_unique_id()`/`set_global_unique_id()` من WC 9.2+، `get_attributes()`
-على `WC_Product`/`WC_Product_Variation`) بس محدّش شغّله فعليًا على
-`stylebox.online` لحد دلوقتي. لو `wc_get_product()->get_global_unique_id()`
-رجع حاجة مختلفة عن رد `wc/v3/products/{id}` (مفروض يكونوا نفس القيمة — نفس
-الحقل CRUD بيغذّي الاتنين)، أو لو ظهر خطأ تاني، سجّله هنا.
+⚠️ **الجزء الأخطر لسه محتاج اختبار حقيقي، لكن أقل مما كان متوقّع.** كود
+snippets الـ price/stock اللي صاحب الأداة بعتها (13-09-2026) بتستخدم
+`get_global_unique_id()`/`set_global_unique_id()` (GTIN) على `WC_Product`/
+`WC_Product_Variation` بالفعل — يعني افتراض الملف ده عن الـ CRUD GTIN API
+**مش تخمين، ده كود شغّال فعليًا على نفس الموقع**. اللي لسه فعلاً غير مؤكَّد:
+**تاكسونومي `product_brand`** — `taxonomy_exists('product_brand')`/
+`get_terms()` (استخدام جديد، مفيش snippet تاني وصلني بيلمس البراندات). لو
+رجعت `false`/فاضية، يبقى المنصة مستخدمة اسم تاكسونومي مختلف، ويحتاج تعديل
+`$find_brand_term` في الـ snippet.
 
 ### اللي **ما اتغيّرش** عن قصد
 
@@ -975,9 +987,10 @@ searchProduct, …}` — إعادة الربط مسموحة بس مع `relinkAll
 
 > ⚠️ **(v2.14.0)** `sync_product` بقى بيكلّم WordPress كمان عبر endpoints مخصّصة
 > على `stylebox.online` نفسه (مش `?action=` على الـ Worker ده): `GET/POST
-> ecommoda/v1/link-product/{id}` و`GET ecommoda/v1/check-brand`، پلجن
-> `wordpress-plugin/ecommoda-stylebox-link-endpoint.php` في الريبو ده. راجع
-> القسم الأول في الملف ده لتفاصيل التنصيب والسبب.
+> ecommoda/v1/link-product/{id}` و`GET ecommoda/v1/check-brand`، WPCode
+> snippet كوده في `wordpress-snippets/ecommoda-stylebox-link-product-api.php`
+> في الريبو ده (زي `variation-stock`/`variation-price` الموجودين بالظبط).
+> راجع القسم الأول في الملف ده لتفاصيل التنصيب والسبب.
 
 ## D1
 
@@ -1007,16 +1020,17 @@ Bindings : DB → ecommoda-dev-logs
 Secrets  : WORKER_SECRET · CLIENT_ID · CLIENT_SECRET · WC_CONSUMER_KEY · WC_CONSUMER_SECRET
            ← الأربعة دول متأكَّدين فعليًا شغّالين (اختبار حقيقي 26-08-2026، راجع
            "مسائل مفتوحة" تحت). WC_CONSUMER_KEY/SECRET لسه مستخدمين في find_product/
-           find_product_relink بس (v2.14.0 — sync_product بقى بيستخدم WC_LINK_SECRET بدلهم).
+           find_product_relink بس (v2.14.0 — sync_product بقى بيستخدم SYNC_SECRET بدلهم).
 Vars     : SHOP_DOMAIN · WC_BASE_URL   ← من [vars] في wrangler.toml. مفيش LOCATION_ID (مش أداة مخزون)
 Build watch paths : * الافتراضي
 ```
 
-> 🔴 **(v2.14.0) `WC_LINK_SECRET` لسه *مش* مضبوط** — لازم يتضاف كسر جديد في
-> Cloudflare Dashboard (نفس القيمة بالحرف اللي هتتحط كـ
-> `ECOMMODA_STYLEBOX_LINK_SECRET` في `wp-config.php` على `stylebox.online`)
-> + Promote، وإلا `sync_product` هيفشل بالكامل (`assertEnv` بيوقفه بدري بدل
-> فشل صامت). راجع القسم الأول في الملف ده لخطوات التنصيب كاملة.
+> 🔴 **(v2.14.0) `SYNC_SECRET` لسه *مش* مضبوط على الـ Worker ده** — لازم
+> يتضاف كسر جديد في Cloudflare Dashboard (نفس القيمة بالحرف اللي معرّفة —
+> أو هتتعرّف — كـ constant `SYNC_SECRET` في WPCode على `stylebox.online`،
+> مشتركة مع snippets الـ price/stock) + Promote، وإلا `sync_product` هيفشل
+> بالكامل (`assertEnv` بيوقفه بدري بدل فشل صامت). راجع القسم الأول في الملف
+> ده لخطوات التنصيب كاملة.
 
 ## CORS
 
@@ -1128,8 +1142,8 @@ Build watch paths : * الافتراضي
   `fetch` مباشر (لـ`wc/v3/*` أو لـ`ecommoda/v1/*` من v2.14.0) في أي مكان جديد
   = رجوع للعطل اللي حصل 10-09-2026 (أول 429 = فشل نهائي، والقائمة كلها بتقع
   وراه). `wcFetch()` بقى بياخد `headers` اختياري (v2.14.0) عشان يقدر يبعت
-  `X-EcomModa-Secret` بدل `Authorization: Basic` الافتراضي — استخدمه، ماتكتبش
-  نداء `fetch` جديد بمنطق retry منفصل.
+  `X-Sync-Header-Secret` بدل `Authorization: Basic` الافتراضي — استخدمه،
+  ماتكتبش نداء `fetch` جديد بمنطق retry منفصل.
 - **(v2.10.0) الفرق بين 404 و429 مايتلغيش** — أي خطأ WC مش 404 لازم يترفع
   بنصّه للموظف. تحويله لـ"مفيش منتج" = رسالة بتشاور على البيانات والمشكلة في
   الاتصال، وده اللي ضيّع وقت في تشخيص العطل.
@@ -1164,10 +1178,11 @@ Build watch paths : * الافتراضي
   شوبيفاي** — مايتلغيش ومايترجعش يتدمج جوّه `POST link-product` (اللي بيحصل
   **بعد** كتابة شوبيفاي). لو اتدمج، هيبقى فيه سيناريو الحارس بيوقف بعد ما
   شوبيفاي اتكتب فعلاً — كسر لقاعدة v2.6.0 "لا شوبيفاي ولا ووكومرس اتلمسوا".
-- **(v2.14.0) `sync_product` مش هتشتغل من غير تنصيب يدوي على ووردبريس +
-  سر `WC_LINK_SECRET`** — دي مش حاجة الكود بيصلّحها لوحده. لو `sync_product`
-  بترجع خطأ غريب بعد v2.14.0، أول حاجة تتفحص: `action=diag` →
-  `wcLinkProduct.ok`. راجع "خطوات تنصيب لازمة" في القسم الأول.
+- **(v2.14.0) `sync_product` مش هتشتغل من غير لصق الـ WPCode snippet +
+  سر `SYNC_SECRET` مضبوط على الـ Worker ده تحديدًا** — دي مش حاجة الكود
+  بيصلّحها لوحده. لو `sync_product` بترجع خطأ غريب بعد v2.14.0، أول حاجة
+  تتفحص: `action=diag` → `wcLinkProduct.ok`. راجع "خطوات تنصيب لازمة" في
+  القسم الأول.
 
 ## استرجاع النسخ القديمة
 
@@ -1246,8 +1261,8 @@ git checkout 3234fb1 -- index.js index.html
   مش مؤكَّد فعليًا ضد `stylebox.online`.** قبل v2.14.0 كان الحارس بينادي
   `/wc/v3/products/brands` REST مباشرة؛ من v2.14.0 بقى بيتحقق **داخل ووردبريس
   نفسه** عبر `taxonomy_exists('product_brand')` + `get_terms()` (راجع
-  `ecommoda_stylebox_find_brand_term()` في `wordpress-plugin/
-  ecommoda-stylebox-link-endpoint.php`) — سؤال الـ REST endpoint بقى **مطروح
+  `$find_brand_term` في `wordpress-snippets/
+  ecommoda-stylebox-link-product-api.php`) — سؤال الـ REST endpoint بقى **مطروح
   الأثر**، لكن الافتراض الأساسي لسه هو هو: إن `product_brand` هو Product
   Brands الأصلي في ووكومرس (اتضاف رسميًا 9.4+، شاشة "All Brands" checkboxes +
   "+ Add New Brand"). **لسه محتاج اختبار حقيقي بعد التنصيب** — لو
