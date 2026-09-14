@@ -6,6 +6,33 @@
 // skills: worker-builder v3.0.0 · html-builder v7.0.0 · woocommerce-sync-helper v1.0.0
 //         · ecommoda-constants v2.0.0 · shopify-graphql-helper v2.1.0 — 10-09-2026
 //
+// ⚠️ v2.18.0 (14-09-2026) — تلات كاتيجوريز (product_cat) بتتضاف لكل منتج
+//   بيتربط، بطلب صريح من صاحب الأداة. **الحرّاس التلاتة إلزامية زي حارس
+//   البراند بالظبط — أي واحدة ناقصة = الربط بيتوقف بالكامل من غير أي كتابة
+//   على أي منصة (شوبيفاي كمان)**:
+//   1) كاتيجوري بنفس اسم البراند (الـ Vendor على شوبيفاي) — code
+//      `brand_category_missing`. Vendor فاضي = الحارسين (البراند وكاتيجوريته)
+//      بيتخطّوا مع بعض، نفس قاعدة v2.6.0 بالحرف.
+//   2) كاتيجوري الـ Type — من حقل `productType` على منتج شوبيفاي، بتتطابق مع
+//      **أولاد كاتيجوري Footwear المباشرين** بالاسم (code `type_category_missing`).
+//      ⚠️ القايمة **مش مكتوبة في الكود لا هنا ولا في الـ snippet** — بتتقرا
+//      من ووردبريس وقت النداء، فإضافة كاتيجوري فرعية جديدة بتشتغل من غير أي
+//      تعديل كود. Type فاضي على شوبيفاي = وقف برضه (مفيش "تخطّي" هنا، على
+//      عكس الـ Vendor الفاضي — كاتيجوري القسم مطلوبة على كل منتج).
+//   3) كاتيجوري `all-products` (بالـ slug مش بالاسم) — code
+//      `all_products_category_missing`.
+//   ⚠️ الإضافة **append** — wp_set_object_terms بـ$append=true: الكاتيجوريز
+//   اللي على المنتج أصلاً (زي فئة الشوز اليدوية) مابتتشالش. append=false كان
+//   هيمسحها كلها في صمت.
+//   ⚠️ **صفر نداءات ووكومرس إضافية** — الحرّاس بتتحقق جوّه نفس نداء
+//   check-brand الموجود (اتوسّع بباراميتر product_type ورد أكبر)، والكتابة
+//   جوّه نفس POST link-product. الفرق الوحيد: check-brand بقى بيتنادى **دايمًا**
+//   مش بس لما الـ Vendor يكون مليان (الـ Type وall-products مطلوبين في كل
+//   الحالات) — يعني نداء واحد ثابت بدل نداء مشروط، مش نداء زيادة.
+//   ⚠️ الـ snippet على ووردبريس **لازم يتعاد لصقه** (WPCode) — الحرّاس
+//   والكتابة الجديدة كلهم فيه. من غير كده كل ربط هيقع على
+//   `type_category_missing` (الـ snippet القديم مش بيرجّع typeCategory خالص).
+
 // ⚠️ v2.17.0 (13-09-2026) — تاب "إعادة ربط Bulk" وتاب "حذف النجمة" **اتشالوا
 //   بالكامل** من الأداة، بطلب صريح من صاحب الأداة. اللي اتشال من الـ Worker:
 //   • §STAR كله + أكشنَي star_scan/remove_star — ده كان **قسم مؤقّت بالتصميم**
@@ -135,7 +162,7 @@
 //   ووكومرس 9.4+).
 //   ⚠️ تحديث v2.14.0 (البند 8 في WCRATELIMIT.md): الحارس نفسه وترتيبه متغيّروش،
 //   لكن آلية التحقق بقت عبر ecommoda/v1/check-brand (نداء لـ endpoint مخصّص
-//   على ووردبريس، مش /wc/v3/products/brands) — راجع wcCheckBrand/BrandNotFoundError.
+//   على ووردبريس، مش /wc/v3/products/brands) — راجع wcCheckLinkTerms/BrandNotFoundError.
 //
 // ⚠️ RENAME — 25-08-2026: هذا الملف كان shopify-woo-sync-worker (tool =
 // shopify_woo_sync). اتعمل رينيم كامل + مراجعة شاملة مقابل ecommoda-worker-builder
@@ -264,7 +291,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.17.0';
+const WORKER_VERSION = 'v2.18.0';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -729,6 +756,7 @@ const VARIANTS_QUERY = `
     product(id: $id) {
       title
       vendor
+      productType
       variants(first: 100) {
         edges {
           node {
@@ -904,7 +932,7 @@ async function wcSearchProducts(env, params) {
 // ─── §WOOCOMMERCE::wcSearchBrands/wcFindBrandByName/brandCache — v2.6.0/v2.11.0،
 // اتشالوا v2.14.0 (البند 8 في WCRATELIMIT.md): مطابقة البراند بقت بتحصل جوّه
 // تاكسونومي product_brand على ووردبريس نفسه (نداء DB محلي، مجاني) عن طريق
-// ecommoda/v1/check-brand بدل /wc/v3/products/brands. راجع wcCheckBrand تحت.
+// ecommoda/v1/check-brand بدل /wc/v3/products/brands. راجع wcCheckLinkTerms تحت.
 //
 // ⚠️ ليه لسه نداء مستقل ومش مندمج جوّه GET /link-product أو POST نفسها:
 // حارس البراند **لازم يتنفّذ قبل أي كتابة على أي منصة — شوبيفاي كمان** (نفس
@@ -914,8 +942,19 @@ async function wcSearchProducts(env, params) {
 // على القاعدة دي: قراءة WC (1) ← شوبيفاي GraphQL (قراءة، مش كتابة) ← حارس
 // البراند (2) ← كتابة شوبيفاي ← كتابة WC (3). الحارس بيتكرّر تاني جوّه POST
 // نفسها كدفاع ثاني (race نادرة جدًا لو حد مسح البراند في نفس الثواني دي).
-async function wcCheckBrand(env, vendorName) {
-  const qs = new URLSearchParams({ vendor_name: vendorName }).toString();
+//
+// ⚠️ v2.18.0 — الدالة بقت بتجيب **البراند وتلات كاتيجوريز** في نفس النداء
+// (كاتيجوري باسم البراند · كاتيجوري الـ Type تحت Footwear · all-products)،
+// وبقت بتتنادى **دايمًا** مش بس لما الـ Vendor يكون مليان — لأن كاتيجوري
+// الـ Type وall-products مطلوبين على كل منتج مهما كان الـ Vendor. ده **مش
+// نداء زيادة**: نفس الراوت ونفس النداء الواحد، بس بقى غير مشروط بدل مشروط.
+// اسم الراوت على ووردبريس فضل `check-brand` زي ما هو (مش rename) — اللي
+// اتوسّع الباراميترات والرد بس.
+async function wcCheckLinkTerms(env, vendorName, productType) {
+  const qs = new URLSearchParams({
+    vendor_name:  vendorName || '',
+    product_type: productType || '',
+  }).toString();
   return wcFetch(env, `${wcBaseUrl(env)}/wp-json/ecommoda/v1/check-brand?${qs}`, {
     label:   'WC check-brand',
     headers: ecommodaLinkHeaders(env),
@@ -955,7 +994,8 @@ function slugify(text) {
 // ecommoda-stylebox-link-product-api.php في الريبو ده، لازم يُلصق يدويًا في
 // WPCode على stylebox.online — راجع §8 في CLAUDE.md):
 //   1) GET link-product  — قراءة المنتج + كل الـ variations في نداء واحد
-//   2) GET check-brand   — بس لو الـ Vendor مش فاضي (راجع wcCheckBrand فوق)
+//   2) GET check-brand   — دايمًا (v2.18.0): البراند + التلات كاتيجوريز
+//      في نداء واحد (راجع wcCheckLinkTerms فوق)
 //   3) POST link-product — كل الكتابة (publish + slug + meta + Brand + كل
 //      المقاسات) جوّه ووردبريس نفسه في نداء واحد
 // مطابقة المقاس بالحجم وحساب السعر وتصحيح الـ slug **لسه في الـ Worker
@@ -980,10 +1020,12 @@ async function wcLinkProductGet(env, wpProductId) {
   });
 }
 
-// ⚠️ حارس البراند (لو vendor_name اتبعت) بيتنفّذ **جوّه** الـ endpoint ده
-// تاني (دفاع ثاني بعد wcCheckBrand — راجعه فوق) أول حاجة قبل أي كتابة — لو
-// مفيش تطابق، الـ endpoint بيرجّع WP_Error بالكود `ec_brand_missing` وHTTP
-// 409 (والـ vendor جوّه `data.vendor`) من غير ما يلمس المنتج ولا أي variation.
+// ⚠️ حرّاس البراند والكاتيجوريز بيتنفّذوا **جوّه** الـ endpoint ده تاني (دفاع
+// ثاني بعد wcCheckLinkTerms — راجعه فوق) أول حاجة قبل أي كتابة — لو فيه نقص،
+// الـ endpoint بيرجّع WP_Error بالكود `ec_brand_missing` /
+// `ec_brand_category_missing` / `ec_type_category_missing` /
+// `ec_all_products_category_missing` وHTTP 409 من غير ما يلمس المنتج ولا أي
+// variation.
 // الكولر (syncProduct) لازم يفرّق بين الـ 409 ده وأي فشل تاني (شبكة/429/5xx
 // بعد كل المحاولات) — راجع syncProduct.
 async function wcLinkProductPost(env, wpProductId, payload) {
@@ -1417,6 +1459,23 @@ class BrandNotFoundError extends Error {
   }
 }
 
+// ─── §SYNC::LinkGuardError — v2.18.0 (حرّاس الكاتيجوريز) ───
+// نفس فلسفة BrandNotFoundError بالحرف: الربط بيتوقف **قبل** أي كتابة على أي
+// منصة، والرد بيرجع مُبنيَن (code/vendor/productType/options/fixUrl) عشان
+// الواجهة تعرض نافذة فيها زرار بيفتح صفحة الكاتيجوريز على ووردبريس مباشرة،
+// وتقول للموظف الـ Type المسموحة إيه بالظبط. راجع §HANDLER catch block.
+//
+// ⚠️ الكودات التلاتة مقصود إنها **منفصلة** مش كود واحد عام: كل واحدة ليها
+// إصلاح مختلف (أضف كاتيجوري باسم البراند · غيّر الـ Type على شوبيفاي ·
+// أنشئ كاتيجوري all-products)، ورسالة واحدة عامة كانت هتخلي الموظف يدوّر.
+class LinkGuardError extends Error {
+  constructor(code, message, data = {}) {
+    super(message);
+    this.code = code;
+    Object.assign(this, data);
+  }
+}
+
 // ══════════════════════════════════════════════════════════════
 // §SYNC::productLevelSync
 // Runs once per linked product, every sync_product call. Independent of
@@ -1512,15 +1571,18 @@ async function addStyleboxTag(env, token, shopifyProductGid) {
 // أقل مش خطوات أقل):
 //   1. GET link-product — قراءة منتج ووكومرس + كل الـ Variations في نداء واحد
 //   2. شوبيفاي GraphQL (قراءة الـ variants + العنوان + الـ Vendor)
-//   1.5. ⚠️ حارس البراند الإلزامي (v2.6.0) — لازم قبل أي كتابة على أي منصة
-//        (شوبيفاي كمان)، فلازم يحصل هنا (GET check-brand) قبل أي نداء كتابة —
-//        راجع wcCheckBrand فوق ليه الترتيب ده بالظبط.
+//   1.5. ⚠️ الحرّاس الإلزامية (v2.6.0 البراند · v2.18.0 التلات كاتيجوريز) —
+//        لازم قبل أي كتابة على أي منصة (شوبيفاي كمان)، فلازم تحصل هنا
+//        (GET check-brand، نداء واحد بيرجّعهم كلهم) قبل أي نداء كتابة —
+//        راجع wcCheckLinkTerms فوق ليه الترتيب ده بالظبط.
 //   3. Shopify product-level: status (حسب الخيار) + wordpress_id
 //      (⚠️ v2.15.0: العنوان اتشال من الخطوة دي بالكامل — مفيش ⭐ ومفيش أي
 //      كتابة على title خالص)
 //   4. POST link-product — كل كتابة ووردبريس في نداء واحد: status='publish' +
 //      meta _shopify_product_id + slug fix (إلزامي بدون خيار) + ربط الـ Brand
-//      (لو 1.5 لقى تطابق) + كل الـ Variations (SKU/مخزون/meta) مع بعض
+//      (لو 1.5 لقى تطابق) + **الكاتيجوريز التلاتة append** (v2.18.0: كاتيجوري
+//      البراند + كاتيجوري الـ Type + all-products — الموجود على المنتج
+//      مابيتشالش) + كل الـ Variations (SKU/مخزون/meta) مع بعض
 //   5. tagsAdd("stylebox") فورًا ← آخر خطوة، بعد كل اللي فوق (كان فيه انتظار
 //      TAG_DELAY_MS 10 ثواني قبلها لحد v2.3.0 — اتلغى بالكامل v2.4.0)
 // ══════════════════════════════════════════════════════════════
@@ -1570,30 +1632,103 @@ async function syncProduct(env, wpProductId, opts = {}) {
   const shopifyVariants = (gqlResp.data.product.variants?.edges || []).map(e => e.node);
   const shopifyTitle    = gqlResp.data.product.title || '';
   const shopifyVendor   = String(gqlResp.data.product.vendor || '').trim();
+  // (v2.18.0) حقل Type على منتج شوبيفاي — مصدر كاتيجوري القسم على ووردبريس
+  const shopifyType     = String(gqlResp.data.product.productType || '').trim();
 
-  // ── (1.5) حارس إلزامي (v2.6.0) — قبل أي كتابة على أي منصة (شوبيفاي كمان):
-  // لازم يكون فيه براند على ووردبريس بنفس اسم الـ Vendor على شوبيفاي. Vendor
-  // فاضي = تخطّي الحارس تمامًا (صفر نداء إضافي)، مش اعتبارها "براند موجود".
-  // راجع BrandNotFoundError وwcCheckBrand فوق.
+  // ── (1.5) الحرّاس الإلزامية — قبل أي كتابة على أي منصة (شوبيفاي كمان) ──
+  // نداء واحد (check-brand) بيرجّع البراند + التلات كاتيجوريز مع بعض:
+  //   (أ) براند product_brand باسم الـ Vendor           — v2.6.0
+  //   (ب) كاتيجوري product_cat باسم الـ Vendor نفسه      — v2.18.0
+  //   (ج) كاتيجوري الـ Type من أولاد Footwear           — v2.18.0
+  //   (د) كاتيجوري all-products (بالـ slug)             — v2.18.0
+  // ⚠️ (أ) و(ب) بيتخطّوا مع بعض لو الـ Vendor فاضي (مفيش اسم يتطابق أصلاً —
+  // نفس قاعدة v2.6.0 بالحرف)، لكن (ج) و(د) **مطلوبين في كل الحالات**.
+  // أي نقص = الربط بيقف هنا بالكامل، مفيش كتابة حصلت على أي منصة.
+  const brandsAdminUrl = `${wcBaseUrl(env)}/wp-admin/edit-tags.php?taxonomy=product_brand&post_type=product`;
+  const catsAdminUrl   = `${wcBaseUrl(env)}/wp-admin/edit-tags.php?taxonomy=product_cat&post_type=product`;
+
+  let linkTerms;
+  try {
+    linkTerms = await wcCheckLinkTerms(env, shopifyVendor, shopifyType);
+  } catch (e) {
+    throw new Error(`تعذّر التحقق من البراند والكاتيجوريز على ووردبريس: ${e.message}`);
+  }
+
+  // ⚠️ كشف snippet قديم — الـ snippet اللي قبل v2.18.0 بيرد على نفس الراوت
+  // بـ{brand} بس، من غير أي حقل كاتيجوريز. من غير الفحص ده كل ربط كان هيقع
+  // على "كاتيجوري Footwear مش موجودة" — تشخيص غلط بيوّدي الموظف يدوّر على
+  // حاجة موجودة فعلاً. وجود المفتاح (حتى لو قيمته null) هو الفارق.
+  if (!linkTerms || !('footwearCategory' in linkTerms)) {
+    throw new Error(
+      'الـ WPCode snippet على stylebox.online نسخة قديمة (رد check-brand مافيهوش حقول الكاتيجوريز) — ' +
+      'الصق النسخة الحالية من wordpress-snippets/ecommoda-stylebox-link-product-api.php وفعّلها، ' +
+      'وتأكد بـ action=diag'
+    );
+  }
+
+  // helper محلي: نفس صف اللوج لكل حالة رفض — الفعل اتوقف **قبل** أي محاولة
+  // كتابة، فالنتيجة REJECTED مش ERROR (ecommoda-constants §12).
+  const rejectLink = async (notes, extra, err) => {
+    await safeWriteLog(env.DB, {
+      tool: TOOL_NAME, type: 'error', employee,
+      productTitle: wooProduct.name,
+      notes,
+      extra: { result: RESULT.REJECTED, stage: 'lookup', wpProductId, shopifyProductId, ...extra },
+    });
+    throw err;
+  };
+
   if (shopifyVendor) {
-    let brandCheck;
-    try {
-      brandCheck = await wcCheckBrand(env, shopifyVendor);
-    } catch (e) {
-      throw new Error(`تعذّر التحقق من براند "${shopifyVendor}" على ووردبريس: ${e.message}`);
-    }
-    if (!brandCheck?.brand) {
-      await safeWriteLog(env.DB, {
-        tool: TOOL_NAME, type: 'error', employee,
-        productTitle: wooProduct.name,
-        notes: `الربط أُوقف — لا يوجد براند "${shopifyVendor}" (Vendor على شوبيفاي) على ووردبريس`,
-        extra: { result: RESULT.REJECTED, stage: 'lookup', wpProductId, shopifyProductId, vendor: shopifyVendor },
-      });
-      throw new BrandNotFoundError(
-        shopifyVendor,
-        `${wcBaseUrl(env)}/wp-admin/edit-tags.php?taxonomy=product_brand&post_type=product`
+    if (!linkTerms?.brand) {
+      await rejectLink(
+        `الربط أُوقف — لا يوجد براند "${shopifyVendor}" (Vendor على شوبيفاي) على ووردبريس`,
+        { vendor: shopifyVendor },
+        new BrandNotFoundError(shopifyVendor, brandsAdminUrl)
       );
     }
+    if (!linkTerms?.brandCategory) {
+      await rejectLink(
+        `الربط أُوقف — لا يوجد كاتيجوري باسم البراند "${shopifyVendor}" على ووردبريس`,
+        { vendor: shopifyVendor, guard: 'brand_category' },
+        new LinkGuardError(
+          'brand_category_missing',
+          `لا يوجد كاتيجوري بنفس اسم البراند "${shopifyVendor}" على ووردبريس — الربط تم إيقافه`,
+          { vendor: shopifyVendor, fixUrl: catsAdminUrl }
+        )
+      );
+    }
+  }
+
+  if (!linkTerms?.typeCategory) {
+    const options = Array.isArray(linkTerms?.typeOptions) ? linkTerms.typeOptions : [];
+    // تمييز مقصود بين تلات أسباب مختلفة تمامًا للفشل — كل واحد إصلاحه مختلف:
+    const reason = !linkTerms?.footwearCategory
+      ? `كاتيجوري "Footwear" نفسها مش موجودة على ووردبريس`
+      : !shopifyType
+        ? `حقل Type فاضي على منتج شوبيفاي`
+        : `حقل Type على شوبيفاي ("${shopifyType}") مش مطابق لأي كاتيجوري فرعية تحت Footwear`;
+    await rejectLink(
+      `الربط أُوقف — ${reason}`,
+      { productType: shopifyType, guard: 'type_category' },
+      new LinkGuardError('type_category_missing', `${reason} — الربط تم إيقافه`, {
+        productType: shopifyType,
+        options,
+        footwearFound: !!linkTerms?.footwearCategory,
+        fixUrl: catsAdminUrl,
+      })
+    );
+  }
+
+  if (!linkTerms?.allProductsCategory) {
+    await rejectLink(
+      `الربط أُوقف — كاتيجوري "all-products" مش موجودة على ووردبريس`,
+      { guard: 'all_products_category' },
+      new LinkGuardError(
+        'all_products_category_missing',
+        'كاتيجوري "all-products" مش موجودة على ووردبريس — الربط تم إيقافه',
+        { slug: 'all-products', fixUrl: catsAdminUrl }
+      )
+    );
   }
 
   // ── Shopify-side product-level fields (metafield + status) — العنوان مابقاش
@@ -1708,6 +1843,12 @@ async function syncProduct(env, wpProductId, opts = {}) {
   try {
     writeResp = await wcLinkProductPost(env, wpProductId, {
       vendor_name:      shopifyVendor || null,
+      // (v2.18.0) الـ snippet بيعيد حساب الكاتيجوريز التلاتة من الاسم/الـ slug
+      // بنفسه (دفاع ثاني) — **بنبعت الاسم مش الـ term_id** عن قصد: الـ id
+      // اللي الـ Worker شافه في check-brand ممكن يكون اتمسح في الثواني دي،
+      // وإعادة الحساب جوّه نفس نداء الكتابة هي الضمانة الوحيدة إن المكتوب
+      // موجود فعلاً وقت الكتابة.
+      product_type:      shopifyType || null,
       sku:               wcSkuForWrite,
       global_unique_id:  shopifyProductId,
       ...(slugNeedsFix ? { slug: expectedSlug } : {}),
@@ -1725,6 +1866,10 @@ async function syncProduct(env, wpProductId, opts = {}) {
     slugFixed = { before: wooProduct.slug, after: expectedSlug, confirmed: writeResp?.product?.slug === expectedSlug };
   }
   const wcBrandId = writeResp?.brand?.id || null;
+  // (v2.18.0) الكاتيجوريز اللي اتضافت — كل عنصر فيه confirmed من إعادة قراءة
+  // ووردبريس بعد الحفظ (HTTP 200 لوحده مش إثبات — نفس قاعدة publish/slug).
+  const wcCategories = Array.isArray(writeResp?.categories) ? writeResp.categories : [];
+  const catsUnconfirmed = wcCategories.filter(c => !c.confirmed);
 
   if (!wcProductMetaError) {
     // ⚠️ HTTP 200 لوحده مش إثبات — الـ endpoint بيرجّع حالة المنتج الفعلية
@@ -1752,8 +1897,15 @@ async function syncProduct(env, wpProductId, opts = {}) {
         tool: TOOL_NAME, type: 'product_meta_synced', employee,
         notes: `WC status→publish، meta _shopify_product_id refreshed = ${shopifyProductId}` +
                (slugFixed ? `، slug اتصلّح من "${slugFixed.before}" لـ "${slugFixed.after}"` : '') +
-               (wcBrandId ? `، Brand "${shopifyVendor}" اتربط بالمنتج` : ''),
-        extra: { result: RESULT.SUCCESS, wpProductId, shopifyProductId, wcStatus: 'publish', slugFixed, brandLinked: wcBrandId ? { id: wcBrandId, name: shopifyVendor } : null },
+               (wcBrandId ? `، Brand "${shopifyVendor}" اتربط بالمنتج` : '') +
+               (wcCategories.length ? `، الكاتيجوريز: ${wcCategories.map(c => `${c.name}${c.confirmed ? '' : ' (غير مؤكَّدة)'}`).join(' + ')}` : ''),
+        extra: {
+          result: catsUnconfirmed.length ? RESULT.WARNING : RESULT.SUCCESS,
+          ...(catsUnconfirmed.length ? { stage: 'write' } : {}),
+          wpProductId, shopifyProductId, wcStatus: 'publish', slugFixed,
+          brandLinked: wcBrandId ? { id: wcBrandId, name: shopifyVendor } : null,
+          categories: wcCategories,
+        },
       });
       if (!okLog) loggedOk = false;
     }
@@ -1911,6 +2063,9 @@ async function syncProduct(env, wpProductId, opts = {}) {
 
   // نتيجة العملية = 3 حالات مش اتنين (Step 5A ④ / ecommoda-html-builder Step 3C)
   const slugUnconfirmed = !!(slugFixed && !slugFixed.confirmed);
+  // (v2.18.0) كاتيجوري اتبعتت للكتابة وما ظهرتش على المنتج بعد إعادة القراءة
+  // = تحذير، مش نجاح صامت. (النقص الكامل بيوقف الربط قبل ما نوصل هنا أصلاً.)
+  const catsUnconfirmedFinal = catsUnconfirmed.length > 0;
   const anyVariantWarning = results.some(r => r.status === 'warning');
   const anyVariantSynced  = results.some(r => r.status === 'synced');
   // (v2.10.0) كل المقاسات اللي اتحاولت فشلت = فشل حقيقي، مش "تم جزئيًا" — قبل
@@ -1921,7 +2076,7 @@ async function syncProduct(env, wpProductId, opts = {}) {
     ? (anyVariantSynced ? 'warning' : 'error')
     : allAttemptedFailed
       ? 'error'
-      : (anyVariantWarning || wcProductMetaError || tagError || slugUnconfirmed ? 'warning' : 'success');
+      : (anyVariantWarning || wcProductMetaError || tagError || slugUnconfirmed || catsUnconfirmedFinal ? 'warning' : 'success');
 
   return {
     status: overallStatus,
@@ -1932,6 +2087,8 @@ async function syncProduct(env, wpProductId, opts = {}) {
     wcPublished,
     slugFixed,
     brand: wcBrandId ? { id: wcBrandId, name: shopifyVendor } : null,
+    categories: wcCategories, // v2.18.0 — [{id,name,slug,role,confirmed}]
+    shopifyType,
     tag:        tagAdded,
     tagError,
     priceApplied: priceDifference !== null,
@@ -2133,6 +2290,23 @@ export default {
         // الرد نفسه — مش من الـ HTTP status بس، لأن rest_no_route وec_not_found
         // الاتنين بيرجّعوا 404. maxAttempts:1 زي بروب WC فوق — الهدف هنا
         // الحالة الخام، مش إخفاء خنق بإعادة المحاولة.
+        // (v2.18.0) بروب تاني على check-brand — بيقول هل الـ snippet اللاصق
+        // نسخة بتعرف الكاتيجوريز، وهل كاتيجوري Footwear وall-products موجودين
+        // فعلاً (التلاتة دول حرّاس بيوقفوا الربط، فالأحسن يتكشفوا هنا قبل أول
+        // تشغيلة حقيقية). maxAttempts:1 زي باقي البروبات — الحالة الخام.
+        let wcTerms = { ok: false, snippetCurrent: null, footwear: null, allProducts: null, typeOptions: null, error: null };
+        try {
+          const probe = await wcFetch(env, `${wcBaseUrl(env)}/wp-json/ecommoda/v1/check-brand?vendor_name=&product_type=`,
+            { label: 'diag check-brand probe', maxAttempts: 1, headers: ecommodaLinkHeaders(env) });
+          wcTerms.ok             = true;
+          wcTerms.snippetCurrent = !!probe && ('footwearCategory' in probe);
+          wcTerms.footwear       = probe?.footwearCategory?.name || null;
+          wcTerms.allProducts    = probe?.allProductsCategory?.name || null;
+          wcTerms.typeOptions    = Array.isArray(probe?.typeOptions) ? probe.typeOptions : null;
+        } catch (e) {
+          wcTerms.error = e.message;
+        }
+
         let wcLinkOk = false, wcLinkError = null, wcLinkDetail = null;
         try {
           await wcFetch(env, `${wcBaseUrl(env)}/wp-json/ecommoda/v1/link-product/0`,
@@ -2166,6 +2340,7 @@ export default {
           shopify: { scopes: shopifyScopes, error: shopifyError },
           woocommerce: { ok: wcOk, error: wcError },
           wcLinkProduct: { ok: wcLinkOk, error: wcLinkError, detail: wcLinkDetail },
+          wcLinkTerms:   wcTerms, // v2.18.0 — حرّاس الكاتيجوريز + نسخة الـ snippet
           d1: { ok: d1Ok, error: d1Error },
           origin: { received: origin, allowed: ALLOWED_ORIGINS.includes(origin) },
         }, 200, request);
@@ -2227,6 +2402,21 @@ export default {
           code: 'brand_missing',
           vendor: err.vendor,
           addBrandUrl: err.addBrandUrl,
+        }, 409, request);
+      }
+      // ─── حرّاس الكاتيجوريز (v2.18.0) — نفس عقد brand_missing بالظبط:
+      // 409 + code + بيانات كافية للواجهة تعرض نافذة فيها زرار الإصلاح.
+      // الربط اتوقف **قبل** أي كتابة على أي منصة في الحالات دي كلها.
+      if (err instanceof LinkGuardError) {
+        return json({
+          ok: false,
+          error: err.message,
+          code: err.code,
+          vendor: err.vendor || null,
+          productType: err.productType || null,
+          options: err.options || null,
+          footwearFound: err.footwearFound !== undefined ? err.footwearFound : null,
+          fixUrl: err.fixUrl || null,
         }, 409, request);
       }
       return json({ error: err.message }, 500, request);
