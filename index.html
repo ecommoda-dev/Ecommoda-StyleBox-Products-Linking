@@ -587,6 +587,9 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
           <ul class="opt-readonly-list">
             <li>تغيير حالة المنتج على <code>stylebox.online</code> إلى: <strong>Published</strong></li>
             <li>إضافة البراند مثل الـ Vendor على شوبيفاي</li>
+            <li>إضافة <strong>كاتيجوري بنفس اسم البراند</strong></li>
+            <li>إضافة <strong>كاتيجوري القسم</strong> (تحت Footwear) حسب حقل <code>Type</code> على شوبيفاي</li>
+            <li>إضافة كاتيجوري <code>all-products</code></li>
             <li>مزامنة كمية المخزون لكل مقاس / SKU</li>
             <li>التأكد من ضبط رابط المنتج (URL/Slug) ليطابق عنوانه</li>
           </ul>
@@ -858,6 +861,19 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         <div class="cl-version-block">
           <div class="cl-version-row">
             <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+            <span class="cl-ver-date">14-09-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>تلات كاتيجوريز بقت بتتضاف للمنتج أوتوماتيك مع كل ربط</strong> (Worker v2.18.0): كاتيجوري <strong>بنفس اسم البراند</strong>، وكاتيجوري <strong>القسم</strong> (تحت <code>Footwear</code>) اللي بتتحدد من حقل <strong>Type</strong> على منتج شوبيفاي، وكاتيجوري <code>all-products</code>. <em>الكاتيجوريز الموجودة على المنتج قبل كده مابتتشالش — الإضافة فوقها.</em></span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>التلاتة دول حرّاس إلزامية زي حارس البراند بالظبط</strong> — أي واحدة فيهم ناقصة، الربط <strong>بيقف بالكامل قبل أي تعديل على أي منصة</strong> وبتظهر نافذة بتقول السبب بالظبط وفيها زرار بيفتح الصفحة المطلوبة على ستايل بوكس. ولو حقل <code>Type</code> على شوبيفاي فاضي أو مش مطابق لأي قسم، النافذة <strong>بتعرض قائمة الأقسام المسموحة</strong> (بتتقرا حيّة من ووردبريس) عشان الموظف ما يدوّرش.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>سؤال "تم اضافة كاتيجوري فئة الشوز + كاتيجوري البراند" اتشال من نافذة المراجعة</strong> — بقى بند واحد: <strong>"تم مراجعة جميع صور المنتج"</strong>. الكاتيجوريز بقت شغل الأداة، وسؤال الموظف عن حاجة بتحصل لوحدها بيعلّمه يأكد من غير ما يبص. <em>النافذة نفسها لسه إلزامية زي ما هي.</em></span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>شاشة النتيجة بقى فيها صف <strong>"الكاتيجوريز"</strong> بحالة كل واحدة، والتأكيد بيتقرا من ووردبريس بعد الكتابة مش من نجاح النداء. <strong>وصفر نداءات إضافية على ووردبريس</strong> — كل الشغل ده جوّه نفس النداءات الموجودة.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>⚠️ الميزة دي محتاجة <strong>إعادة لصق الـ WPCode snippet</strong> على ستايل بوكس قبل أي استخدام — من غيرها كل ربط هيقف عند حارس القسم.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.21.0</span>
             <span class="cl-ver-date">13-09-2026</span>
           </div>
           <ul class="cl-items">
@@ -1210,7 +1226,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <tr><td>عنوان المنتج على شوبيفاي <strong>(v2.15.0)</strong></td><td>مابيتلمسش خالص — سؤال النجمة اتشال، و<code>productUpdate</code> عمره ما بيبعت <code>title</code></td></tr>
               <tr><td>فرق السعر → <strong>رقم</strong></td><td>كل Variation على ووكومرس بياخد <code>regular_price</code>/<code>sale_price</code> = سعر شوبيفاي + الفرق ده (نفس معادلة أداة "مزامنة أسعار Stylebox")</td></tr>
               <tr><td>فرق السعر → <strong>فاضي</strong> (افتراضي)</td><td>تحديث السعر يتخطّى تمامًا — regular_price/sale_price متتلمسش</td></tr>
-              <tr><td>(في كل الحالات — بدون خيار، "تعديلات أخرى تحدث تلقائي عند الربط")</td><td>نشر المنتج على ووردبريس (<code>status=publish</code>) + metafield <code>wordpress_id</code> + تصحيح <code>slug</code> ليطابق العنوان (v2.6.0) + مزامنة كل الـ SKU/المخزون لكل Variation + Tag <code>stylebox</code> فورًا في آخر العملية</td></tr>
+              <tr><td>(في كل الحالات — بدون خيار، "تعديلات أخرى تحدث تلقائي عند الربط")</td><td>نشر المنتج على ووردبريس (<code>status=publish</code>) + metafield <code>wordpress_id</code> + تصحيح <code>slug</code> ليطابق العنوان (v2.6.0) + <strong>إضافة تلات كاتيجوريز: باسم البراند + القسم من حقل <code>Type</code> (تحت Footwear) + <code>all-products</code> (v2.18.0، إضافة مش استبدال)</strong> + مزامنة كل الـ SKU/المخزون لكل Variation + Tag <code>stylebox</code> فورًا في آخر العملية</td></tr>
               <tr><td>(حارس إلزامي قبل أي كتابة — v2.6.0)</td><td>لازم يكون فيه براند على ووردبريس بنفس اسم الـ Vendor على شوبيفاي — لو موجود بيتربط بالمنتج تلقائيًا، لو مفيش الربط بالكامل يتوقف (نافذة خطأ + زرار "إضافة البراند")</td></tr>
             </table>
 
@@ -1223,7 +1239,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <tr><td><code>log_logout</code></td><td>GET — تسجيل خروج</td></tr>
               <tr><td><code>get_employees</code></td><td>GET — قائمة الموظفين النشطين</td></tr>
               <tr><td><code>find_product</code></td><td>GET — أكشن قراءة بس (خطوة 1): بياخد <code>shopify_product_id</code>. <strong>(v2.7.0)</strong> أول حاجة بيتحقق من <code>custom.wordpress_id</code> على شوبيفاي. <strong>(v2.13.0)</strong> لو مش فاضية، مابيوقفش: <code>verifyExistingLink()</code> بيتأكد إن منتج ووكومرس ده بيحمل نفس رقم شوبيفاي (GTIN/بداية SKU) ويرجّع <code>{alreadyLinked:true, relinkAllowed, relinkStatus, linkedProduct, searchProduct}</code> — <code>relinkAllowed:true</code> معاها نفس حقول نتيجة البحث العادية، و<code>false</code> معاها سبب مسمّى (<code>meta_invalid</code>/<code>meta_missing</code>/<code>cross_linked</code>/<code>unverified</code>/<code>duplicate</code>) وتفاصيل الطرفين. لو فاضية، يدوّر على منتج ووكومرس المطابق (GTIN، أو بحث بالعنوان لتضييق النطاق + تأكيد قاطع بالـ SKU)، ويرجّع <code>{alreadyLinked:false, wp_product_id, wpEditUrl, ...}</code></td></tr>
-              <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code>، و<code>price_difference</code>: رقم اختياري لتحديث السعر في نفس التشغيلة — الاتنين اختياريين، الافتراضي <code>DRAFT</code> + بدون تحديث سعر). <strong>(v2.15.0)</strong> <code>add_star</code>/<code>skip_star</code> بيتجاهلوا بالكامل — العنوان مابيتكتبش خالص. <strong>(v2.6.0)</strong> ممكن يرجع HTTP 409 بـ <code>{code:'brand_missing', vendor, addBrandUrl}</code> لو مفيش براند مطابق على ووردبريس — الربط بيتوقف كامل من غير أي كتابة</td></tr>
+              <tr><td><code>sync_product</code></td><td>POST — يربط ويزامن منتج واحد بالـ <code>wp_product_id</code> (+ <code>shopify_status</code>: <code>ACTIVE</code>/<code>DRAFT</code>/<code>KEEP</code>، و<code>price_difference</code>: رقم اختياري لتحديث السعر في نفس التشغيلة — الاتنين اختياريين، الافتراضي <code>DRAFT</code> + بدون تحديث سعر). <strong>(v2.15.0)</strong> <code>add_star</code>/<code>skip_star</code> بيتجاهلوا بالكامل — العنوان مابيتكتبش خالص. <strong>(v2.6.0)</strong> ممكن يرجع HTTP 409 بـ <code>{code:'brand_missing', vendor, addBrandUrl}</code> لو مفيش براند مطابق على ووردبريس — الربط بيتوقف كامل من غير أي كتابة. <strong>(v2.18.0)</strong> وبنفس الشكل بـ <code>brand_category_missing</code> / <code>type_category_missing</code> (مع <code>productType</code> و<code>options</code>) / <code>all_products_category_missing</code></td></tr>
               <tr><td><code>diag</code></td><td>GET — فحص ذاتي كامل (env، صلاحيات شوبيفاي، اتصال WooCommerce، D1) بدون كتابة</td></tr>
               <tr><td><code>get_config</code></td><td>GET — يرجّع نسخة الـ Worker لمقارنتها بنسخة الواجهة</td></tr>
               <tr><td><code>get_logs</code></td><td>GET — سجل مُقسّم صفحات (حتى 100 لكل صفحة)</td></tr>
@@ -1244,13 +1260,13 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>§TOOL-JS::find</code> — خطوة ①: نموذج تشغيل <code>find_product</code> (بحث برقم أو رابط شوبيفاي — <code>extractShopifyProductId()</code> بيستخرج الرقم من الرابط لو اتحط، Enter أو زرار) + <code>resetFindStep()</code>/<code>startNewProduct()</code> لإعادة الضبط الكامل (بما فيها <code>productReviewed</code>)</li>
               <li><code>§FIND::checkShopifyAlreadyLinked</code> (Worker، v2.7.0) — أول فحص في <code>find_product</code>: بيقرا <code>custom.wordpress_id</code> على شوبيفاي قبل أي بحث في ووكومرس</li>
               <li><code>§FIND::findWcProductByShopifyId</code> (Worker) — منطق البحث لو المنتج لسه مش مربوط (فلتر GTIN مباشر + بحث بعنوان شوبيفاي لتضييق النطاق + تأكيد قاطع بالـ SKU/GTIN)</li>
-              <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (اتربط قبل كده / لقيته / مش لقيته) في خطوتها المستقلة + زرار "راجع صور + كاتيجوريز المنتج قبل الربط" كامل العرض (<code>.btn-block</code>)، إلزامي — بيفتح صفحة ووردبريس في تاب جديد ونادي <code>openReviewConfirmModal()</code></li>
-              <li><code>openReviewConfirmModal()</code>/<code>closeReviewConfirmModal()</code>/<code>toggleReviewCheck()</code>/<code>confirmProductReviewed()</code> (v2.10.0) — نافذة تأكيد إلزامية (<code>#reviewConfirmOverlay</code>) ببندين checkbox، زرار "تأكيد المراجعة" معطّل لحد ما الاتنين يتأكدوا؛ التأكيد بينادي <code>markProductReviewed()</code></li>
+              <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (اتربط قبل كده / لقيته / مش لقيته) في خطوتها المستقلة + زرار "راجع صور المنتج قبل الربط" كامل العرض (<code>.btn-block</code>)، إلزامي — بيفتح صفحة ووردبريس في تاب جديد ونادي <code>openReviewConfirmModal()</code></li>
+              <li><code>openReviewConfirmModal()</code>/<code>closeReviewConfirmModal()</code>/<code>toggleReviewCheck()</code>/<code>confirmProductReviewed()</code> (v2.10.0، بند واحد من v2.22.0) — نافذة تأكيد إلزامية (<code>#reviewConfirmOverlay</code>) ببند checkbox واحد (مراجعة الصور — بند الكاتيجوريز اتشال لأنها بقت أوتوماتيك)، زرار "تأكيد المراجعة" معطّل لحد ما يتأكد؛ التأكيد بينادي <code>markProductReviewed()</code></li>
               <li><code>markProductReviewed()</code> (v2.9.0، بيتنادى من <code>confirmProductReviewed()</code> بدل onclick مباشر من v2.10.0) — هو اللي بيفتح خطوة ③ لأول مرة (بدل ما تفتح تلقائيًا مع نجاح البحث زي قبل كده)</li>
               <li><code>§TOOL-JS::relink</code> (v2.18.0) — <code>relinkStatusInfo()</code>/<code>relinkCompareTable()</code>/<code>openRelinkModal()</code>/<code>confirmRelink()</code>: نافذة المنتج المربوط قبل كده (<code>#relinkOverlay</code>). إعادة الربط المسموحة محتاجة <code>confirmRelink()</code> الأول، وبعده بس بيظهر زرار المراجعة الإلزامي (<code>reviewActionsHTML()</code>). حالة الرفض بتفتح نفس النافذة بالسبب وجدول المقارنة ومن غير أي زرار ربط</li>
               <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر، كل واحد في صندوق <code>.opt-block</code> مستقل، من غير أي اختيار افتراضي جاهز من v2.11.0)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي، و<code>runSync()</code> بيرفض لو <code>productReviewed !== true</code> أو لو أي سؤال من التلاتة من غير إجابة/تأكيد (<code>readSyncOptions()</code>/<code>priceDiffConfirmed</code>)</li>
               <li><code>renderSyncResult()</code> — خطوة ④: تفاصيل بيانات المنتج + جدول "📦 المقاسات" (+ صفوف Brand/Slug من v2.6.0، عنوان الجدول اتغيّر v2.10.0) + جدول فرق السعر تحت الجدول لو <code>priceApplied</code> (اتنقل تحت v2.10.0، كان صف فوق الجدول)، وبعدهم بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + زرار "إبدأ ربط منتج جديد" كامل العرض في آخر الخطوة (<code>.btn-primary.btn-block</code> من v2.10.1 — كان <code>.btn-new-product</code> بتصميم منفصل أبيض/أزرق عند hover)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
-              <li><code>openBrandMissingModal()</code>/<code>closeBrandMissingModal()</code> (v2.6.0) — نافذة خطأ مخصصة (<code>#brandMissingOverlay</code>) لما <code>runSync()</code> يلقى <code>e.data.code === 'brand_missing'</code>؛ <code>apiRequest()</code> بقى يحط رد الـ Worker كامل على <code>err.data</code> مش بس <code>err.message</code> عشان الكود ده يتقرا</li>
+              <li><code>openLinkGuardModal()</code>/<code>closeLinkGuardModal()</code> (v2.6.0، اتعمّمت v2.22.0) — نافذة خطأ مخصصة (<code>#linkGuardOverlay</code>) لما <code>runSync()</code> يلقى أي كود حارس في <code>LINK_GUARD_CODES</code> (<code>brand_missing</code> · <code>brand_category_missing</code> · <code>type_category_missing</code> · <code>all_products_category_missing</code>)؛ <code>apiRequest()</code> بقى يحط رد الـ Worker كامل على <code>err.data</code> مش بس <code>err.message</code> عشان الكود ده يتقرا</li>
               <li><code>esc()</code> (v2.13.0) — تهريب أي نص جاي من الـ API قبل <code>innerHTML</code>، مستخدم في كل جدول بيعرض نص جاي من الـ API</li>
               <li><code>§LOG-JS</code> — تاب "سجل العمليات": القسم الموحّد (فلاتر Multi-select + ترتيب + جدول) بمعيار <code>data-table-standard.md</code></li>
               <li><code>§LOG-ENDPOINTS</code> — get_logs / get_logs_count / get_logs_export (v2، بدون تغيير في العقد)</li>
@@ -1260,13 +1276,13 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <ul>
               <li><code>currentEmployee</code> — { username, displayName } في الذاكرة فقط، مش localStorage</li>
               <li><code>foundWpProductId</code> — رقم منتج ووكومرس اللي رجعته خطوة 1 (<code>find_product</code>)، في الذاكرة فقط. <code>runSync()</code> بيستخدمه بدل حقل إدخال يدوي — <code>null</code> لحد ما بحث ينجح، و<code>resetFindStep()</code> بيصفّره</li>
-              <li><code>productReviewed</code> (v2.9.0) — بيبقى <code>true</code> بس بعد الضغط على زرار "راجع صور + كاتيجوريز المنتج قبل الربط" في خطوة ②. <code>runSync()</code> بيرفض لو مش <code>true</code>، و<code>resetFindStep()</code>/<code>startNewProduct()</code> بيصفّروه</li>
+              <li><code>productReviewed</code> (v2.9.0) — بيبقى <code>true</code> بس بعد الضغط على زرار "راجع صور المنتج قبل الربط" في خطوة ②. <code>runSync()</code> بيرفض لو مش <code>true</code>، و<code>resetFindStep()</code>/<code>startNewProduct()</code> بيصفّروه</li>
               <li><code>relinkMode</code>/<code>relinkConfirmed</code>/<code>relinkData</code> (v2.18.0) — <code>relinkMode</code> بيبقى <code>true</code> لما نتيجة البحث تكون "مربوط قبل كده وإعادة الربط مسموحة"، و<code>relinkConfirmed</code> بيبقى <code>true</code> بس بعد التأكيد من النافذة. <code>markProductReviewed()</code> و<code>runSync()</code> الاتنين بيرفضوا لو <code>relinkMode &amp;&amp; !relinkConfirmed</code>، و<code>resetFindStep()</code> بيصفّر التلاتة</li>
               <li><code>LS_SECRET = 'stylebox_link_worker_secret'</code> — <strong>المفتاح الوحيد</strong> في <code>localStorage</code> (v2.17.0). <code>LS_URL</code> و<code>LS_ADMIN_URL</code> اتشالوا: رابط الـ Worker بقى ثابت <code>WORKER_URL</code> في <code>§CONFIG</code>، والأدمن بانل ماكانش مستخدم في الأداة دي أصلاً. الأداة <strong>مش عضو في أي مجموعة سر</strong> فالمفتاح باسمها</li>
               <li><code>LS_PRICE_DIFF = 'stylebox_link_price_difference'</code> — آخر قيمة "فرق السعر" استُخدمت، للراحة بس (تعبئة تلقائية)، مش Settings حقيقي ومش مرسل تلقائيًا من غير ما المستخدم يضغط "تشغيل الربط"</li>
               <li><code>TOOL_NAME = 'stylebox_products_linking'</code> — قيمة <code>tool</code> في جدول <code>logs</code> (كانت <code>shopify_woo_sync</code> قبل الرينيم)</li>
               <li><code>ALLOWED_SIZE_ATTRIBUTE_NAMES = ['Shoe size','Size','size']</code> — مصدر الحقيقة لمطابقة المقاس بين المنصتين (في الـ Worker)</li>
-              <li><code>MIN_WORKER_VERSION</code> (v2.16.0) — <strong>أقل</strong> نسخة Worker الواجهة دي بتشتغل معاها، والمقارنة رقمية بـ<code>cmpVersion()</code>. التحذير يولّع <strong>بس</strong> لو الـ Worker <strong>أقدم</strong> منها (rollback أو Promote ناقص) — Worker أحدث وضع طبيعي مش تحذير. منفصلة تمامًا عن <code>TOOL_VERSION</code> (نسخة الواجهة). تترفع مع أي حقل جديد الواجهة تبقى بتقراه من الـ Worker — دلوقتي <code>v2.16.0</code> بسبب <code>relinkAllowed</code>/<code>relinkStatus</code>/<code>linkedProduct</code>/<code>searchProduct</code> في <code>find_product</code> (وقبلها <code>cap</code>/<code>total</code>/<code>truncated</code> في <code>get_logs_export</code>)</li>
+              <li><code>MIN_WORKER_VERSION</code> (v2.16.0) — <strong>أقل</strong> نسخة Worker الواجهة دي بتشتغل معاها، والمقارنة رقمية بـ<code>cmpVersion()</code>. التحذير يولّع <strong>بس</strong> لو الـ Worker <strong>أقدم</strong> منها (rollback أو Promote ناقص) — Worker أحدث وضع طبيعي مش تحذير. منفصلة تمامًا عن <code>TOOL_VERSION</code> (نسخة الواجهة). تترفع مع أي حقل جديد الواجهة تبقى بتقراه من الـ Worker — دلوقتي <code>v2.18.0</code> بسبب <code>categories</code> في رد <code>sync_product</code> وأكواد حرّاس الكاتيجوريز الجديدة (وقبلها <code>relinkAllowed</code>/<code>relinkStatus</code>/<code>linkedProduct</code>/<code>searchProduct</code> في <code>find_product</code>، و<code>cap</code>/<code>total</code>/<code>truncated</code> في <code>get_logs_export</code>)</li>
             </ul>
 
             <h4>NOTES</h4>
@@ -1336,25 +1352,25 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
     </div>
   </div>
 
-  <!-- ══ Brand Missing Modal (v2.6.0) — نافذة خطأ إلزامية توقف الربط ═══ -->
-  <div class="eco-overlay" id="brandMissingOverlay" onclick="if(event.target===this)closeBrandMissingModal()">
-    <div class="eco-modal" style="max-width:480px;">
+  <!-- ══ Link Guard Modal (v2.6.0 البراند · اتعمّم v2.22.0 للكاتيجوريز) —
+       نافذة خطأ إلزامية بتتفتح لما الـ Worker يرجّع 409 بأي كود حارس:
+       brand_missing · brand_category_missing · type_category_missing ·
+       all_products_category_missing. في كل الحالات **مفيش أي كتابة حصلت**
+       لا على شوبيفاي ولا على ووكومرس. ═══ -->
+  <div class="eco-overlay" id="linkGuardOverlay" onclick="if(event.target===this)closeLinkGuardModal()">
+    <div class="eco-modal" style="max-width:520px;">
       <div class="eco-modal-hdr">
-        <span>⚠️ الربط تم إيقافه — البراند غير موجود</span>
-        <button class="modal-close-x" onclick="closeBrandMissingModal()">✕</button>
+        <span id="linkGuardTitle">⚠️ الربط تم إيقافه</span>
+        <button class="modal-close-x" onclick="closeLinkGuardModal()">✕</button>
       </div>
       <div class="eco-modal-body">
-        <p style="margin:0 0 14px;line-height:1.9;">
-          لا يوجد براند بنفس اسم <strong style="color:var(--accent);" id="brandMissingVendor">—</strong>
-          على ووردبريس. الربط بين المنتجين تم إيقافه بالكامل —
-          مفيش أي تعديل حصل لا على شوبيفاي ولا على ووكومرس.
-        </p>
-        <p style="margin:0 0 18px;line-height:1.9;color:var(--text-secondary);font-size:13px;">
-          أضِف البراند على ستايل بوكس بنفس الاسم بالظبط، ثم أعد المحاولة.
-        </p>
-        <a class="btn-primary btn-block" id="brandMissingAddBtn" target="_blank" rel="noopener" href="#">
-          ➕ إضافة البراند على StyleBox
-        </a>
+        <p style="margin:0 0 14px;line-height:1.9;" id="linkGuardMsg">—</p>
+        <div id="linkGuardOptions" style="display:none;margin:0 0 14px;"></div>
+        <p style="margin:0 0 18px;line-height:1.9;color:var(--text-secondary);font-size:13px;" id="linkGuardHint">—</p>
+        <div class="result-note warn" style="margin:0 0 14px;">
+          ⚠️ مفيش أي تعديل حصل — لا على شوبيفاي ولا على ووردبريس. صلّح السبب فوق وأعد المحاولة.
+        </div>
+        <a class="btn-primary btn-block" id="linkGuardFixBtn" target="_blank" rel="noopener" href="#">➕ افتح الصفحة على StyleBox</a>
       </div>
     </div>
   </div>
@@ -1368,15 +1384,15 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         <button class="modal-close-x" onclick="closeReviewConfirmModal()">✕</button>
       </div>
       <div class="eco-modal-body">
+        <!-- ⚠️ (v2.22.0) بند "كاتيجوري فئة الشوز + كاتيجوري البراند" **اتشال** —
+             الكاتيجوريز التلاتة بقت بتتضاف أوتوماتيك في الربط (Worker v2.18.0)،
+             وسؤال الموظف عن حاجة الأداة بتعملها بنفسها بيعلّمه يأكد من غير ما
+             يبص. الباقي: مراجعة الصور — ودي لسه شغل يدوي فعلاً. -->
         <label class="confirm-check-row" id="reviewCheckRow1">
           <input type="checkbox" id="reviewChk1" onchange="toggleReviewCheck(this)">
           <span>تم مراجعة جميع صور المنتج</span>
         </label>
-        <label class="confirm-check-row" id="reviewCheckRow2">
-          <input type="checkbox" id="reviewChk2" onchange="toggleReviewCheck(this)">
-          <span>تم اضافة كاتيجوري فئة الشوز + كاتيجوري البراند</span>
-        </label>
-        <div class="result-note warn" style="margin-top:6px;">⚠️ لازم تأكيد البندين فوق قبل ما يتفعّل زرار "تأكيد المراجعة" — خطوة الربط مش هتظهر غير بعده.</div>
+        <div class="result-note warn" style="margin-top:6px;">⚠️ لازم تأكيد البند فوق قبل ما يتفعّل زرار "تأكيد المراجعة" — خطوة الربط مش هتظهر غير بعده.</div>
         <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn-primary success" id="reviewConfirmBtn" style="flex:1;margin-top:0;" disabled onclick="confirmProductReviewed()">✅ تأكيد المراجعة</button>
           <button class="btn-outline" onclick="closeReviewConfirmModal()">إلغاء</button>
@@ -1465,7 +1481,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.21.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.22.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة — منفصلة تمامًا عن
 // TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
@@ -1474,7 +1490,7 @@ const TOOL_VERSION = 'v2.21.0'; // نسخة الواجهة (UI) — بتزيد �
 // ⚠️ الواجهة دي بتقرا `cap`/`total`/`truncated` من get_logs_export، وهم اتضافوا
 //    في الـ Worker v2.12.0 — فالحد الأدنى لازم يبقى v2.12.0، وإلا الحارس نفسه
 //    بيبقى معطّل ويعدّي Worker مش قادر يخدم الصفحة (Standards #29).
-const MIN_WORKER_VERSION = 'v2.16.0';
+const MIN_WORKER_VERSION = 'v2.18.0';
 // رابط الـ Worker **ثابت** مش حقل إعدادات (html-builder v2.2.0 · Standards #28):
 // اسم الـ Worker بيتحدد وقت الإنشاء ومايتغيّرش، والرابط مش سر أصلاً.
 // لو اتعمل rename أو custom domain، السطر ده هو المكان الوحيد اللي يتغيّر.
@@ -2210,7 +2226,7 @@ function renderFindResult(data) {
 // (v2.18.0): إعادة الربط بتضيف تأكيدًا **قبله**، ومابتلغيش ولا حارس منهم.
 function reviewActionsHTML(data) {
   return `
-      <a class="btn-primary btn-block" id="reviewProductBtn" href="${esc(data.wpEditUrl)}" target="_blank" rel="noopener" onclick="openReviewConfirmModal()">🔗 راجع صور + كاتيجوريز المنتج قبل الربط</a>
+      <a class="btn-primary btn-block" id="reviewProductBtn" href="${esc(data.wpEditUrl)}" target="_blank" rel="noopener" onclick="openReviewConfirmModal()">🔗 راجع صور المنتج قبل الربط</a>
       <div class="result-note warn" id="reviewRequiredNote" style="margin-top:10px;">⚠️ الزرار ده إلزامي — لازم تضغطه وتراجع المنتج على ووردبريس قبل ما تقدر تكمل لخطوة الربط.</div>`;
 }
 
@@ -2411,15 +2427,15 @@ function markProductReviewed() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// §TOOL-JS::reviewConfirmModal — v2.10.0
-// نافذة تأكيد إلزامية (checkbox واحد لكل بند) بعد الضغط على زرار المراجعة —
-// markProductReviewed() ما بتتنفّذش إلا لو الاتنين اتأكدوا هنا.
+// §TOOL-JS::reviewConfirmModal — v2.10.0 (اتقلّصت لبند واحد v2.22.0)
+// نافذة تأكيد إلزامية بعد الضغط على زرار المراجعة — markProductReviewed()
+// ما بتتنفّذش إلا لو البند اتأكد هنا.
+// ⚠️ النافذة نفسها **لسه إلزامية زي ما هي** — اللي اتشال بند الكاتيجوريز بس
+// (بقت أوتوماتيك في الـ Worker v2.18.0)، مش النافذة.
 // ══════════════════════════════════════════════════════════════
 function openReviewConfirmModal() {
   document.getElementById('reviewChk1').checked = false;
-  document.getElementById('reviewChk2').checked = false;
   document.getElementById('reviewCheckRow1').classList.remove('checked');
-  document.getElementById('reviewCheckRow2').classList.remove('checked');
   updateReviewConfirmBtn();
   document.getElementById('reviewConfirmOverlay').classList.add('open');
 }
@@ -2431,8 +2447,8 @@ function toggleReviewCheck(el) {
   updateReviewConfirmBtn();
 }
 function updateReviewConfirmBtn() {
-  const ok = document.getElementById('reviewChk1').checked && document.getElementById('reviewChk2').checked;
-  document.getElementById('reviewConfirmBtn').disabled = !ok;
+  // (v2.22.0) بند واحد بس — بند الكاتيجوريز اتشال لأنها بقت أوتوماتيك
+  document.getElementById('reviewConfirmBtn').disabled = !document.getElementById('reviewChk1').checked;
 }
 function confirmProductReviewed() {
   if (document.getElementById('reviewConfirmBtn').disabled) return;
@@ -2544,7 +2560,7 @@ async function runSync() {
   if (!currentEmployee) { showToast('سجّل دخولك أولاً', 'warning'); return; }
   if (!foundWpProductId) { showToast('ابحث عن المنتج الأول (الخطوة 1)', 'warning'); return; }
   if (relinkMode && !relinkConfirmed) { showToast('المنتج ده مربوط قبل كده — أكّد إعادة الربط من نافذة التفاصيل الأول', 'warning'); return; }
-  if (!productReviewed) { showToast('راجع صور وكاتيجوريز المنتج الأول (زرار المراجعة في نتيجة البحث)', 'warning'); return; }
+  if (!productReviewed) { showToast('راجع صور المنتج الأول (زرار المراجعة في نتيجة البحث)', 'warning'); return; }
   const { shopifyStatus } = readSyncOptions();
   if (shopifyStatus === null || !priceDiffConfirmed) {
     showToast('لازم تختار إجابة للسؤالين (حالة المنتج على شوبيفاي / تأكيد فرق السعر) قبل الربط', 'warning');
@@ -2572,9 +2588,10 @@ async function runSync() {
     const st = data.results ? data.results.status : 'error';
     showToast(st === 'success' ? 'تم الربط ✓' : st === 'warning' ? 'تم الربط جزئيًا ⚠' : 'فشل الربط ✗', st === 'error' ? 'error' : 'success');
   } catch (e) {
-    // brand_missing (v2.6.0) — نافذة خطأ مخصصة بزرار "إضافة البراند" بدل toast عادي
-    if (e.data && e.data.code === 'brand_missing') {
-      openBrandMissingModal(e.data);
+    // (v2.6.0 البراند · v2.22.0 الكاتيجوريز) — نافذة خطأ مخصصة بزرار الإصلاح
+    // بدل toast عادي. كل الأكواد دي = الربط اتوقف قبل أي كتابة على أي منصة.
+    if (e.data && LINK_GUARD_CODES.includes(e.data.code)) {
+      openLinkGuardModal(e.data);
     } else {
       showToast('خطأ: ' + e.message, 'error');
     }
@@ -2584,20 +2601,75 @@ async function runSync() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// §TOOL-JS::brandMissingModal — v2.6.0
-// نافذة خطأ إلزامية لما الـ Worker يرجّع code:'brand_missing' (الحارس
-// الجديد في syncProduct — الربط بيتوقف بالكامل من غير أي كتابة لو الـ
-// Vendor على شوبيفاي معندوش براند مطابق بنفس الاسم على ووردبريس).
+// §TOOL-JS::linkGuardModal — v2.6.0 (البراند) · اتعمّم v2.22.0 (الكاتيجوريز)
+// نافذة خطأ إلزامية لما الـ Worker يرجّع 409 بأي كود حارس. الأربعة بيشتركوا
+// في حاجة واحدة مهمة: **الربط اتوقف قبل أي كتابة على أي منصة** — مفيش نص
+// عملية ومفيش حاجة محتاجة تراجع. اللي بيختلف هو السبب ورابط الإصلاح، وده
+// اللي الجدول تحت بيحطّه.
 // ══════════════════════════════════════════════════════════════
-function openBrandMissingModal(data) {
-  document.getElementById('brandMissingVendor').textContent = data.vendor || '—';
-  const btn = document.getElementById('brandMissingAddBtn');
-  if (data.addBrandUrl) { btn.href = data.addBrandUrl; btn.style.display = ''; }
+const LINK_GUARD_CODES = ['brand_missing', 'brand_category_missing', 'type_category_missing', 'all_products_category_missing'];
+
+function openLinkGuardModal(data) {
+  const code   = data.code;
+  const vendor = data.vendor || '—';
+  const type   = data.productType || '';
+  let title, msg, hint, btnLabel;
+
+  if (code === 'brand_missing') {
+    title    = '⚠️ الربط تم إيقافه — البراند غير موجود';
+    msg      = `لا يوجد <strong>براند</strong> بنفس اسم <strong style="color:var(--accent);">${esc(vendor)}</strong> على ووردبريس.`;
+    hint     = 'أضِف البراند على ستايل بوكس بنفس الاسم بالظبط، ثم أعد المحاولة.';
+    btnLabel = '➕ إضافة البراند على StyleBox';
+  } else if (code === 'brand_category_missing') {
+    title    = '⚠️ الربط تم إيقافه — كاتيجوري البراند غير موجودة';
+    msg      = `البراند <strong style="color:var(--accent);">${esc(vendor)}</strong> موجود، لكن مفيش <strong>كاتيجوري</strong> بنفس الاسم على ووردبريس.`;
+    hint     = 'أضِف كاتيجوري بنفس اسم البراند بالظبط (تحت Brands)، ثم أعد المحاولة.';
+    btnLabel = '➕ إضافة الكاتيجوري على StyleBox';
+  } else if (code === 'type_category_missing') {
+    title = '⚠️ الربط تم إيقافه — كاتيجوري القسم غير محددة';
+    if (data.footwearFound === false) {
+      msg  = 'كاتيجوري <strong>Footwear</strong> نفسها مش موجودة على ووردبريس — مفيش أي كاتيجوري قسم نقدر نطابق عليها.';
+      hint = 'أنشئ كاتيجوري Footwear (slug: footwear) وتحتها كاتيجوريز الأقسام، ثم أعد المحاولة.';
+    } else if (!type) {
+      msg  = 'حقل <strong>Type</strong> فاضي على منتج شوبيفاي — الأداة بتحدد كاتيجوري القسم منه.';
+      hint = 'افتح المنتج على شوبيفاي وحدد Type من القائمة المسموحة تحت، ثم أعد المحاولة.';
+    } else {
+      msg  = `حقل <strong>Type</strong> على شوبيفاي (<strong style="color:var(--accent);">${esc(type)}</strong>) مش مطابق لأي كاتيجوري فرعية تحت <strong>Footwear</strong>.`;
+      hint = 'غيّر الـ Type على شوبيفاي لواحد من المسموح تحت (أو أضِف الكاتيجوري تحت Footwear بنفس الاسم)، ثم أعد المحاولة.';
+    }
+    btnLabel = '🗂️ افتح الكاتيجوريز على StyleBox';
+  } else {
+    title    = '⚠️ الربط تم إيقافه — كاتيجوري all-products غير موجودة';
+    msg      = 'مفيش كاتيجوري بالـ slug <code>all-products</code> على ووردبريس، وهي بتتضاف لكل منتج بيتربط.';
+    hint     = 'أنشئ الكاتيجوري بالـ slug ده بالظبط، ثم أعد المحاولة.';
+    btnLabel = '➕ إضافة الكاتيجوري على StyleBox';
+  }
+
+  document.getElementById('linkGuardTitle').textContent = title;
+  document.getElementById('linkGuardMsg').innerHTML     = msg;
+  document.getElementById('linkGuardHint').textContent  = hint;
+
+  // قائمة الـ Type المسموحة — بتيجي حيّة من ووردبريس (أولاد Footwear)، عشان
+  // الموظف ما يدوّرش على "المسموح إيه" في شاشة تانية.
+  const optWrap = document.getElementById('linkGuardOptions');
+  const options = Array.isArray(data.options) ? data.options : [];
+  if (options.length) {
+    optWrap.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">الأقسام المسموحة (كاتيجوريز تحت Footwear):</div>' +
+      options.map(o => `<span class="badge-skip" style="margin:0 0 6px 6px;display:inline-block;">${esc(o)}</span>`).join('');
+    optWrap.style.display = '';
+  } else {
+    optWrap.style.display = 'none';
+  }
+
+  const btn = document.getElementById('linkGuardFixBtn');
+  const url = data.addBrandUrl || data.fixUrl; // addBrandUrl = العقد القديم لـ brand_missing
+  if (url) { btn.href = url; btn.textContent = btnLabel; btn.style.display = ''; }
   else { btn.style.display = 'none'; }
-  document.getElementById('brandMissingOverlay').classList.add('open');
+
+  document.getElementById('linkGuardOverlay').classList.add('open');
 }
-function closeBrandMissingModal() {
-  document.getElementById('brandMissingOverlay').classList.remove('open');
+function closeLinkGuardModal() {
+  document.getElementById('linkGuardOverlay').classList.remove('open');
 }
 
 // عرض 3 حالات (نجاح / تحذير / فشل) — Step 3C إلزامي
@@ -2663,6 +2735,18 @@ function renderSyncResult(data) {
   const slugRow = r.slugFixed
     ? `<div class="result-row"><span>Slug (WooCommerce)</span><span><span class="badge-${r.slugFixed.confirmed ? 'ok' : 'warn'}" style="font-family:var(--font-mono);direction:ltr;">${r.slugFixed.before || '—'} → ${r.slugFixed.after}${r.slugFixed.confirmed ? ' ✓' : ' ⚠'}</span></span></div>`
     : '';
+  // (v2.22.0) الكاتيجوريز التلاتة — كل واحدة بحالتها المؤكَّدة من إعادة قراءة
+  // ووردبريس بعد الحفظ (مش من نجاح النداء). role بيقول دي جت منين.
+  const catRoleLabel = { brand: 'البراند', type: 'القسم (Type)', allProducts: 'عام' };
+  const cats = Array.isArray(r.categories) ? r.categories : [];
+  const catsRow = cats.length
+    ? `<div class="result-row"><span>الكاتيجوريز (WooCommerce — إضافة)</span><span>${
+        cats.map(c => `<span class="badge-${c.confirmed ? 'ok' : 'warn'}" style="margin-right:4px;">${esc(c.name)}${c.confirmed ? ' ✓' : ' ⚠'}</span>`).join('')
+      }</span></div>` +
+      (cats.some(c => !c.confirmed)
+        ? `<div class="result-note warn">⚠️ كاتيجوري اتبعتت للكتابة وما ظهرتش على المنتج بعد إعادة القراءة: ${esc(cats.filter(c => !c.confirmed).map(c => c.name).join('، '))} — افتح المنتج على ووردبريس وتأكد.</div>`
+        : '')
+    : '';
 
   let plHtml;
   if (pl) {
@@ -2678,6 +2762,7 @@ function renderSyncResult(data) {
       ${pl.title ? `<div class="result-row"><span>العنوان على شوبيفاي (ما اتلمسش)</span><span style="font-family:var(--font-body);text-align:right;">${esc(pl.title)}</span></div>` : ''}
       ${wcPublishRow}
       ${brandRow}
+      ${catsRow}
       ${slugRow}
       ${tagRow}
       ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce (status=publish / _shopify_product_id): ${r.wcProductMetaError}</div>` : ''}
@@ -2690,6 +2775,7 @@ function renderSyncResult(data) {
       <div class="result-note err">${r.productLevelError || 'راجع تاب "سجل العمليات" لتفاصيل الخطأ'} — باقي الخطوات أدناه استمرت رغم ذلك.</div>
       ${wcPublishRow}
       ${brandRow}
+      ${catsRow}
       ${slugRow}
       ${tagRow}
       ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce (status=publish / _shopify_product_id): ${r.wcProductMetaError}</div>` : ''}
