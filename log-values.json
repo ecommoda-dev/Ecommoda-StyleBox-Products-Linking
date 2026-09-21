@@ -1,0 +1,46 @@
+{
+  "tool": "stylebox_products_linking",
+  "since": null,
+  "types": {
+    "login": {
+      "result": null,
+      "stage": null,
+      "desc": "دخول موظف"
+    },
+    "logout": {
+      "result": null,
+      "stage": null,
+      "desc": "خروج موظف"
+    },
+    "error": {
+      "result": [
+        "error",
+        "rejected"
+      ],
+      "stage": [
+        "lookup",
+        "write"
+      ],
+      "desc": "فشل مزامنة على مستوى المنتج (ميتافيلد أو حالة)"
+    },
+    "product_meta_synced": {
+      "result": [
+        "success",
+        "warning"
+      ],
+      "stage": [
+        "write",
+        null
+      ],
+      "desc": "wordpress_id اتكتب على المنتج"
+    },
+    "synced": {
+      "result": [
+        "success",
+        "warning"
+      ],
+      "stage": "write",
+      "desc": "المقاس اتزامن بين شوبيفاي وووكومرس"
+    }
+  }
+}
