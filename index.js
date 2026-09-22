@@ -6,6 +6,21 @@
 // skills: worker-builder v3.7.1 · html-builder v7.0.0 · woocommerce-sync-helper v1.0.0
 //         · ecommoda-constants v3.1.0 · shopify-graphql-helper v2.1.0 — 22-09-2026
 //
+// ⚠️ v2.19.0 (22-09-2026) — بطلب صريح من صاحب الأداة، تعديلان في نفس الجولة:
+//   1) find_product بقى بيرجّع `images` (الغلاف + الجاليري) لكل منتج — صفر
+//      نداءات إضافية (extractWcImages() بتقرا حقل `images` الموجود أصلاً في
+//      رد wc/v3/products، مافيش `_fields` هنا يقصّه). الواجهة بتعرضها جوّه
+//      نتيجة البحث وجوّه نافذة تأكيد المراجعة، عشان الموظف يراجع من غير ما
+//      يفتح صفحة المنتج على ووردبريس في تاب خارجي.
+//   2) أكشن جديد `set_shopify_type`: لما الربط يقف على `type_category_missing`،
+//      الموظف بيختار القسم الصحيح من نفس الأقسام المسموحة (typeOptions) اللي
+//      الحارس رجّعها، والأكشن ده بيكتبها على حقل Type بمنتج شوبيفاي مباشرة
+//      (setShopifyProductType()) — بإعادة تأكيد إن القيمة لسه مسموحة قبل
+//      الكتابة (نفس فلسفة إعادة الحساب في POST link-product v2.18.0). الواجهة
+//      بعدها بتعيد نداء sync_product تلقائيًا، من غير ما الموظف يفتح صفحة
+//      الكاتيجوريز على ستايل بوكس خالص.
+//   ⚠️ MIN_WORKER_VERSION في الواجهة اترفعت لـ v2.19.0 (الحقلين الجديدين دول).
+//
 // ⚠️ v2.18.1 (22-09-2026) — check-log-values.mjs بدّل بالنسخة المصلَّحة
 //   (كانت بتدوّر على `type:` بنقطتين بس، فـ object shorthand كان يعدّي في
 //   صمت) + تنفيذ الحارس الديناميكي لقيم اللوج (الطبقة ٥ — worker-builder
@@ -300,7 +315,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.18.1';
+const WORKER_VERSION = 'v2.19.0';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -1360,6 +1375,11 @@ async function findWcProductByShopifyId(env, shopifyProductId, { skipScan = fals
     sku: match.sku,
     matchedBy: String(match.global_unique_id || '').trim() === idStr ? 'gtin' : 'sku',
     matchedVia,
+    // (v2.19.0) صور المنتج (الغلاف + الجاليري) — صفر نداءات إضافية، راجع
+    // extractWcImages() فوق. مصفوفة فاضية لو match جاي من المسح الاحتياطي
+    // (_fields مقصوصة هناك عمدًا) — الواجهة بتتعامل مع ده بعرض تنبيه "افتح
+    // ووردبريس للمراجعة" بدل صور، مش خطأ.
+    images: extractWcImages(match),
     wpEditUrl: `${wcBaseUrl(env)}/wp-admin/post.php?post=${match.id}&action=edit`,
   };
 }
@@ -1398,6 +1418,23 @@ function wcProductLinkMarks(product) {
   return { gtin, skuPrefix };
 }
 
+// ─── §FIND::extractWcImages — v2.19.0 ───
+// بطلب صريح من صاحب الأداة: بدل ما الموظف يفتح صفحة المنتج على ووردبريس في
+// تاب خارجي عشان يراجع الصور، الصور بترجع جوّه رد find_product نفسه —
+// **صفر نداءات إضافية**: كل الاستعلامات اللي findWcProductByShopifyId/
+// verifyExistingLink أصلاً بتعملها (search/get) بترجّع الكائن الكامل لمنتج
+// ووكومرس، وحقل `images` (الغلاف أول عنصر + الجاليري بعده) موجود فيه من
+// غير أي `_fields` بيقصّه — الاستثناء الوحيد هو مسح الـ SKU الاحتياطي
+// (wcScanProductsBySkuPrefix) اللي بيقصّ الحقول عمدًا لتخفيف حجم الرد، فمفيش
+// صور هناك أصلاً (match مش جاي منه إلا نادرًا، وبرضه بيوصل هنا كـ undefined
+// فالنتيجة بتبقى مصفوفة فاضية، مش خطأ).
+function extractWcImages(product) {
+  const imgs = Array.isArray(product?.images) ? product.images : [];
+  return imgs
+    .map(img => ({ src: String(img?.src || '').trim(), alt: String(img?.alt || img?.name || '').trim() }))
+    .filter(img => img.src);
+}
+
 function wcProductSummary(env, product) {
   if (!product || !product.id) return null;
   const { gtin, skuPrefix } = wcProductLinkMarks(product);
@@ -1408,6 +1445,7 @@ function wcProductSummary(env, product) {
     gtin:      gtin || null,
     skuPrefix: skuPrefix || null,
     status:    product.status || null,
+    images:    extractWcImages(product),
     wpEditUrl: `${wcBaseUrl(env)}/wp-admin/post.php?post=${product.id}&action=edit`,
   };
 }
@@ -1422,6 +1460,7 @@ function foundProductSummary(result) {
     sku:        result.sku || null,
     matchedBy:  result.matchedBy || null,
     matchedVia: result.matchedVia || null,
+    images:     result.images || [],
     wpEditUrl:  result.wpEditUrl || null,
   };
 }
@@ -1546,6 +1585,68 @@ class LinkGuardError extends Error {
     this.code = code;
     Object.assign(this, data);
   }
+}
+
+// ─── §SHOPIFY::SET_PRODUCT_TYPE_MUTATION — v2.19.0 ───
+const SET_PRODUCT_TYPE_MUTATION = `
+  mutation setProductType($input: ProductInput!) {
+    productUpdate(input: $input) {
+      product { id productType }
+      userErrors { field message }
+    }
+  }
+`;
+
+// ══════════════════════════════════════════════════════════════
+// §SYNC::setShopifyProductType — v2.19.0 — أكشن set_shopify_type
+// بطلب صريح من صاحب الأداة: بدل ما الموظف يفتح صفحة الكاتيجوريز على ستايل
+// بوكس عشان يغيّر حقل Type على منتج شوبيفاي بإيده لما الربط يقف على
+// type_category_missing، الواجهة بتعرض نفس القائمة (typeOptions) في نافذة
+// الحارس نفسها وبتنادي الأكشن ده يكتب الاختيار على شوبيفاي مباشرة — وبعدها
+// بتعيد محاولة sync_product تلقائيًا من غير أي فتح صفحة خارجية.
+//
+// ⚠️ إعادة تأكيد إن القيمة المختارة لسه من الأقسام المسموحة **هنا تاني** —
+// نفس فلسفة إعادة الحساب جوّه POST link-product (v2.18.0): القايمة اللي
+// الواجهة عرضتها للموظف ممكن تتغيّر على ووردبريس (كاتيجوري اتمسحت/اتغيّر
+// اسمها) في الثواني اللي بين ما الحارس رجّعها وما الموظف يضغط الزرار — مفيش
+// اعتماد على قيمة الواجهة لوحدها لكتابة حقل على شوبيفاي.
+// ══════════════════════════════════════════════════════════════
+async function setShopifyProductType(env, shopifyProductId, productType) {
+  assertEnv(env, 'shopify', 'wc_link');
+
+  // Vendor فاضي هنا مقصود — مش محتاجين حارس البراند، بس typeOptions/typeCategory
+  const linkTerms = await wcCheckLinkTerms(env, '', productType);
+  if (!linkTerms || !('footwearCategory' in linkTerms)) {
+    throw new Error(
+      'الـ WPCode snippet على stylebox.online نسخة قديمة (رد check-brand مافيهوش حقول الكاتيجوريز) — ' +
+      'الصق النسخة الحالية من wordpress-snippets/ecommoda-stylebox-link-product-api.php وفعّلها'
+    );
+  }
+
+  const options = Array.isArray(linkTerms.typeOptions) ? linkTerms.typeOptions : [];
+  const target  = String(productType || '').trim().toLowerCase();
+  const matchedOption = options.find(o => String(o).trim().toLowerCase() === target);
+  if (!matchedOption) {
+    throw new LinkGuardError(
+      'type_category_missing',
+      `"${productType}" مش من الأقسام المسموحة تحت Footwear دلوقتي — الأقسام تغيّرت على ووردبريس، حدّث القائمة وأعد الاختيار`,
+      { productType, options, footwearFound: !!linkTerms.footwearCategory }
+    );
+  }
+
+  const token = await getAccessToken(env);
+  const gid   = `gid://shopify/Product/${shopifyProductId}`;
+  const resp  = await shopifyGQL(env, token, SET_PRODUCT_TYPE_MUTATION,
+    { input: { id: gid, productType: matchedOption } }, 'productUpdate(productType)');
+  const result = resp?.data?.productUpdate;
+  const errors = result?.userErrors || [];
+  if (errors.length) throw new Error('productUpdate(productType) failed: ' + errors.map(e => e.message).join(' | '));
+  const returned = result?.product || null;
+  if (!returned) throw new Error('productUpdate(productType): شوبيفاي ما رجّعتش المنتج المحدَّث — العملية غير مؤكَّدة');
+  if (String(returned.productType || '').trim().toLowerCase() !== target) {
+    throw new Error(`productUpdate(productType): القيمة الراجعة "${returned.productType}" مش "${matchedOption}" — العملية غير مؤكَّدة`);
+  }
+  return { productType: returned.productType };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2309,6 +2410,44 @@ export default {
           employee: body.employee || null,
         });
         return json({ ok: true, wp_product_id: body.wp_product_id, results }, 200, request);
+      }
+      // ──────────────────────────────────────────────────────────────
+
+      // ─── §SYNC::set_shopify_type — v2.19.0 ─────────────────────────
+      // بطلب صريح من صاحب الأداة: بدل ما الموظف يفتح صفحة الكاتيجوريز على
+      // ستايل بوكس لما الربط يقف على type_category_missing، يختار من نافذة
+      // الحارس نفسها من الأقسام المسموحة (typeOptions اللي الحارس رجّعها)،
+      // والأكشن ده بيكتب اختياره على حقل Type بمنتج شوبيفاي مباشرة —
+      // setShopifyProductType() بتعيد تأكيد إن القيمة لسه مسموحة قبل الكتابة.
+      // الواجهة هي اللي بتعيد نداء sync_product تلقائيًا بعد الرد ده.
+      if (action === 'set_shopify_type') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        const body = await request.json().catch(() => ({}));
+        const shopifyProductId = String(body.shopify_product_id || '').trim();
+        const productType      = String(body.product_type || '').trim();
+        const employee         = body.employee || null;
+        if (!/^\d+$/.test(shopifyProductId)) return json({ error: 'shopify_product_id لازم يكون رقم فقط' }, 400, request);
+        if (!productType) return json({ error: 'product_type مطلوب' }, 400, request);
+        try {
+          const result = await setShopifyProductType(env, shopifyProductId, productType);
+          await safeWriteLog(env.DB, {
+            tool: TOOL_NAME, type: 'product_meta_synced', employee,
+            notes: `Type على شوبيفاي #${shopifyProductId} اتحدّث لـ "${result.productType}"`,
+            extra: { result: RESULT.SUCCESS, shopifyProductId, operation: 'type_category_fix', productType: result.productType },
+          });
+          return json({ ok: true, shopify_product_id: shopifyProductId, ...result }, 200, request);
+        } catch (e) {
+          // LinkGuardError (القيمة بقت غير مسموحة بين التحميل والاختيار) بيتحوّل
+          // 409 مُبنيَن في catch العام تحت — هنا بس بنسجّل فشل الكتابة الحقيقي.
+          if (!(e instanceof LinkGuardError)) {
+            await safeWriteLog(env.DB, {
+              tool: TOOL_NAME, type: 'error', employee,
+              notes: `Type على شوبيفاي #${shopifyProductId} فشل: ${e.message}`,
+              extra: { result: RESULT.ERROR, stage: 'write', shopifyProductId, operation: 'type_category_fix' },
+            });
+          }
+          throw e;
+        }
       }
       // ──────────────────────────────────────────────────────────────
 

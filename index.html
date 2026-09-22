@@ -319,6 +319,16 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .price-diff-table { font-size: 16px; }
 .price-diff-table th { font-size: 14.5px; font-weight: 800; color: var(--text-primary); }
 .price-diff-table td { font-weight: 800; color: var(--text-primary); padding: 13px 10px; }
+/* صور المنتج (v2.23.0) — عرض معاينة (الصورة الأساسية + الجاليري) جوّه الأداة نفسها،
+   عشان الموظف يقدر يراجع من غير ما يفتح صفحة المنتج على ووردبريس في تاب خارجي. */
+.review-images-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.review-image-thumb { display: block; width: 76px; height: 76px; border-radius: var(--radius-sm); overflow: hidden; border: 1.5px solid var(--border); flex-shrink: 0; }
+.review-image-thumb.main { border-color: var(--accent); border-width: 2px; }
+.review-image-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.review-image-thumb:hover { border-color: var(--accent); }
+/* اختيار قسم Type المسموح (v2.23.0) — جوّه نافذة type_category_missing */
+.type-fix-row { display: flex; gap: 10px; align-items: center; margin: 4px 0 14px; flex-wrap: wrap; }
+.type-fix-row select { flex: 1; min-width: 160px; padding: 10px 12px; border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 14px; font-family: inherit; background: var(--surface); color: var(--text-primary); }
 /* ══════════════════════════════════════════════════════════════
    §DATA-TABLE-CSS — القسم الموحّد (فلاتر + جدول) — تاب سجل العمليات
    data-table-standard.md + multi-select-filter.md — نسخة حرفية
@@ -1366,6 +1376,19 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
       <div class="eco-modal-body">
         <p style="margin:0 0 14px;line-height:1.9;" id="linkGuardMsg">—</p>
         <div id="linkGuardOptions" style="display:none;margin:0 0 14px;"></div>
+        <!-- (v2.23.0) اختيار مباشر من الأقسام المسموحة — بطلب صاحب الأداة: بدل
+             ما الموظف يفتح صفحة الكاتيجوريز على ستايل بوكس ويغيّر الـ Type يدوي
+             على شوبيفاي، يختار من هنا والأداة نفسها بتحدّث الـ Type على شوبيفاي
+             وتكمّل الربط تلقائيًا. ظاهر بس لما code === 'type_category_missing'
+             وفيه أقسام مسموحة (typeOptions) — راجع openLinkGuardModal()/
+             applyTypeFix() في §TOOL-JS::linkGuardModal. -->
+        <div id="linkGuardTypeFix" style="display:none;margin:0 0 14px;">
+          <div class="type-fix-row">
+            <select id="linkGuardTypeSelect"><option value="">— اختر القسم الصحيح —</option></select>
+            <button class="btn-primary" id="linkGuardTypeApplyBtn" onclick="applyTypeFix()">✅ حدّث الـ Type وأعد الربط</button>
+          </div>
+          <div class="result-note" style="margin:0;">هيتم تحديث حقل <strong>Type</strong> على المنتج على شوبيفاي بالقيمة المختارة، وبعدها الأداة هتعيد محاولة الربط تلقائيًا — من غير ما تحتاج تفتح ستايل بوكس.</div>
+        </div>
         <p style="margin:0 0 18px;line-height:1.9;color:var(--text-secondary);font-size:13px;" id="linkGuardHint">—</p>
         <div class="result-note warn" style="margin:0 0 14px;">
           ⚠️ مفيش أي تعديل حصل — لا على شوبيفاي ولا على ووردبريس. صلّح السبب فوق وأعد المحاولة.
@@ -1388,6 +1411,11 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
              الكاتيجوريز التلاتة بقت بتتضاف أوتوماتيك في الربط (Worker v2.18.0)،
              وسؤال الموظف عن حاجة الأداة بتعملها بنفسها بيعلّمه يأكد من غير ما
              يبص. الباقي: مراجعة الصور — ودي لسه شغل يدوي فعلاً. -->
+        <!-- (v2.23.0) معاينة الصور (الأساسية + الجاليري) هنا مباشرة — بطلب صاحب
+             الأداة، عشان المراجعة تتم من غير فتح صفحة المنتج على ووردبريس في
+             تاب خارجي. زرار "راجع صور المنتج على ووردبريس" فوق لسه موجود لمين
+             عايز يفتح الصفحة نفسها (تعديل صورة/كاتيجوري مثلاً)، مش إلزامي. -->
+        <div id="reviewImagesWrap"></div>
         <label class="confirm-check-row" id="reviewCheckRow1">
           <input type="checkbox" id="reviewChk1" onchange="toggleReviewCheck(this)">
           <span>تم مراجعة جميع صور المنتج</span>
@@ -1481,7 +1509,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.22.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.23.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة — منفصلة تمامًا عن
 // TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
@@ -1490,7 +1518,10 @@ const TOOL_VERSION = 'v2.22.0'; // نسخة الواجهة (UI) — بتزيد �
 // ⚠️ الواجهة دي بتقرا `cap`/`total`/`truncated` من get_logs_export، وهم اتضافوا
 //    في الـ Worker v2.12.0 — فالحد الأدنى لازم يبقى v2.12.0، وإلا الحارس نفسه
 //    بيبقى معطّل ويعدّي Worker مش قادر يخدم الصفحة (Standards #29).
-const MIN_WORKER_VERSION = 'v2.18.0';
+// (v2.23.0) رفعت لـ v2.19.0: الواجهة بقت بتقرا حقل `images` جديد من رد
+// find_product، وبتنادي أكشن جديد `set_shopify_type` — الاتنين مش موجودين في
+// أي Worker أقدم من v2.19.0.
+const MIN_WORKER_VERSION = 'v2.19.0';
 // رابط الـ Worker **ثابت** مش حقل إعدادات (html-builder v2.2.0 · Standards #28):
 // اسم الـ Worker بيتحدد وقت الإنشاء ومايتغيّرش، والرابط مش سر أصلاً.
 // لو اتعمل rename أو custom domain، السطر ده هو المكان الوحيد اللي يتغيّر.
@@ -2057,6 +2088,8 @@ function toggleHint(id, toggleEl) {
 // §TOOL-JS::find — تاب "ربط منتج": خطوة 1 (v2.4.0) — البحث برقم أو رابط منتج شوبيفاي
 // ══════════════════════════════════════════════════════════════
 let foundWpProductId = null; // بيتملى بعد نجاح runFindProduct() — ده اللي runSync() بيستخدمه
+let lastShopifyProductId = null; // (v2.23.0) رقم منتج شوبيفاي من خطوة البحث — مستخدم في applyTypeFix()
+let foundProductImages   = []; // (v2.23.0) صور المنتج (الأساسية + الجاليري) من find_product — للمعاينة جوّه الأداة
 
 function setFindBusy(active) {
   const btn = document.getElementById('findBtn');
@@ -2082,11 +2115,13 @@ async function runFindProduct() {
   if (!raw) { showToast('من فضلك أدخل رقم أو رابط منتج شوبيفاي', 'warning'); return; }
   const productId = extractShopifyProductId(raw);
   if (!productId) { showToast('تعذّر استخراج رقم منتج شوبيفاي من القيمة دي — تأكد من الرقم أو الرابط', 'warning'); return; }
+  lastShopifyProductId = productId; // (v2.23.0) — applyTypeFix() محتاجه لو الربط وقف على type_category_missing
 
   // بحث جديد = نصفّر أي نتيجة سابقة (بحث أو ربط) كانت ظاهرة (رجوع لمنتج تاني من غير Refresh)
-  relinkMode      = false;   // v2.18.0
-  relinkConfirmed = false;
-  relinkData      = null;
+  relinkMode        = false;   // v2.18.0
+  relinkConfirmed   = false;
+  relinkData        = null;
+  foundProductImages = [];
   document.getElementById('stepFoundCard').style.display = 'none';
   document.getElementById('stepSyncCard').style.display = 'none';
   document.getElementById('resultSection').style.display = 'none';
@@ -2106,6 +2141,7 @@ async function runFindProduct() {
       relinkMode       = true;
       relinkConfirmed  = false;
       productReviewed  = false;
+      foundProductImages = (data.linkedProduct && data.linkedProduct.images) || [];
       const label = `#${data.wp_product_id}${data.productName ? ' — ' + data.productName : ''}`;
       document.getElementById('foundProductLabel').textContent = label;
       document.getElementById('stepSyncSubtitle').textContent = `المنتج: ${label} (إعادة ربط)`;
@@ -2140,6 +2176,7 @@ async function runFindProduct() {
     } else if (data.found) {
       foundWpProductId = data.wp_product_id;
       productReviewed   = false; // خطوة ② (v2.9.0) — لازم يراجع المنتج الأول قبل ما خطوة ③ تظهر
+      foundProductImages = data.images || [];
       const label = `#${data.wp_product_id}${data.productName ? ' — ' + data.productName : ''}`;
       document.getElementById('foundProductLabel').textContent = label;
       document.getElementById('stepFoundBadge').className = 'step-badge ok';
@@ -2219,7 +2256,24 @@ function renderFindResult(data) {
   wrap.innerHTML = `
     <div class="result-row"><span>رقم المنتج على ووردبريس</span><span class="mono">${esc(data.wp_product_id)}</span></div>
     ${data.productName ? `<div class="result-row"><span>اسم المنتج</span><span>${esc(data.productName)}</span></div>` : ''}
+    <div style="margin-top:14px;">${reviewImagesHTML(data.images || [])}</div>
     <div style="margin-top:18px;">${reviewActionsHTML(data)}</div>`;
+}
+
+// (v2.23.0) معاينة صور المنتج (الأساسية + الجاليري) — بطلب صاحب الأداة: بدل
+// ما المراجعة تتطلب فتح صفحة المنتج على ووردبريس، الصور دي جايه من نفس رد
+// find_product (WC REST بيرجّعها أصلاً — صفر نداءات إضافية) وبتتعرض هنا وجوّه
+// نافذة تأكيد المراجعة. أول صورة (images[0]) هي صورة الغلاف على ووكومرس، والباقي
+// جاليري — نفس ترتيبهم على شاشة تعديل المنتج بالظبط.
+function reviewImagesHTML(images) {
+  if (!Array.isArray(images) || !images.length) {
+    return '<div class="result-note warn">⚠️ الأداة ما لقتش صور للمنتج من ووكومرس — افتح صفحة المنتج على ووردبريس للمراجعة بالزرار تحت.</div>';
+  }
+  return `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">صور المنتج على ووردبريس (الأولى = صورة الغلاف):</div>
+    <div class="review-images-grid">${images.map((img, i) => `
+      <a href="${esc(img.src)}" target="_blank" rel="noopener" class="review-image-thumb${i === 0 ? ' main' : ''}" title="${esc(img.alt || '')}">
+        <img src="${esc(img.src)}" alt="${esc(img.alt || '')}" loading="lazy">
+      </a>`).join('')}</div>`;
 }
 
 // زرار المراجعة الإلزامي + تنبيهه — مشترك بين المنتج الجديد وإعادة الربط
@@ -2227,7 +2281,7 @@ function renderFindResult(data) {
 function reviewActionsHTML(data) {
   return `
       <a class="btn-primary btn-block" id="reviewProductBtn" href="${esc(data.wpEditUrl)}" target="_blank" rel="noopener" onclick="openReviewConfirmModal()">🔗 راجع صور المنتج قبل الربط</a>
-      <div class="result-note warn" id="reviewRequiredNote" style="margin-top:10px;">⚠️ الزرار ده إلزامي — لازم تضغطه وتراجع المنتج على ووردبريس قبل ما تقدر تكمل لخطوة الربط.</div>`;
+      <div class="result-note warn" id="reviewRequiredNote" style="margin-top:10px;">⚠️ الزرار ده إلزامي — لازم تضغطه (الصور فوق كافية للمراجعة، مش لازم تفتح ووردبريس فعليًا) قبل ما تقدر تكمل لخطوة الربط.</div>`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2407,7 +2461,7 @@ function confirmRelink() {
     btn.textContent = '🔁 مراجعة تفاصيل الربط الحالي مرة تانية';
   }
   const wrap = document.getElementById('relinkReviewWrap');
-  if (wrap) wrap.innerHTML = `<div style="margin-top:12px;">${reviewActionsHTML(relinkData)}</div>`;
+  if (wrap) wrap.innerHTML = `<div style="margin-top:12px;">${reviewImagesHTML(foundProductImages)}</div><div style="margin-top:12px;">${reviewActionsHTML(relinkData)}</div>`;
   showToast('تم تأكيد إعادة الربط — لسه لازم تراجع المنتج قبل خطوة الربط', 'warning');
 }
 
@@ -2437,6 +2491,8 @@ function openReviewConfirmModal() {
   document.getElementById('reviewChk1').checked = false;
   document.getElementById('reviewCheckRow1').classList.remove('checked');
   updateReviewConfirmBtn();
+  // (v2.23.0) معاينة الصور جوّه النافذة نفسها — من غير ما يحتاج يبص على تاب ووردبريس
+  document.getElementById('reviewImagesWrap').innerHTML = reviewImagesHTML(foundProductImages);
   document.getElementById('reviewConfirmOverlay').classList.add('open');
 }
 function closeReviewConfirmModal() {
@@ -2458,11 +2514,13 @@ function confirmProductReviewed() {
 
 // تصفير كامل لخطوة البحث — بتترجع الأداة لأول مرحلة بصريًا (خطوة 1 مفتوحة، 2 و3 و4 مخفيين)
 function resetFindStep() {
-  foundWpProductId = null;
-  productReviewed  = false;
-  relinkMode       = false; // v2.18.0
-  relinkConfirmed  = false;
-  relinkData       = null;
+  foundWpProductId    = null;
+  productReviewed     = false;
+  relinkMode          = false; // v2.18.0
+  relinkConfirmed      = false;
+  relinkData           = null;
+  lastShopifyProductId = null; // (v2.23.0)
+  foundProductImages   = [];   // (v2.23.0)
   closeRelinkModal();
   document.getElementById('shopifyProductIdInput').value = '';
   document.getElementById('stepFoundCard').style.display = 'none';
@@ -2653,23 +2711,82 @@ function openLinkGuardModal(data) {
   // الموظف ما يدوّرش على "المسموح إيه" في شاشة تانية.
   const optWrap = document.getElementById('linkGuardOptions');
   const options = Array.isArray(data.options) ? data.options : [];
-  if (options.length) {
-    optWrap.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">الأقسام المسموحة (كاتيجوريز تحت Footwear):</div>' +
-      options.map(o => `<span class="badge-skip" style="margin:0 0 6px 6px;display:inline-block;">${esc(o)}</span>`).join('');
-    optWrap.style.display = '';
+
+  // (v2.23.0) type_category_missing + فيه أقسام مسموحة + معانا رقم شوبيفاي —
+  // نعرض اختيار مباشر (select + زرار) بدل ما نتّكل على badges عرض بس + فتح
+  // ستايل بوكس يدوي. applyTypeFix() هي اللي بتكتب الاختيار على شوبيفاي وتعيد
+  // محاولة الربط. بدونهم (مفيش أقسام أو مفيش lastShopifyProductId) بيرجع
+  // للسلوك القديم: badges + زرار فتح صفحة الكاتيجوريز.
+  const typeFixWrap = document.getElementById('linkGuardTypeFix');
+  const canFixType = code === 'type_category_missing' && options.length > 0 && !!lastShopifyProductId;
+  if (canFixType) {
+    const select = document.getElementById('linkGuardTypeSelect');
+    select.innerHTML = '<option value="">— اختر القسم الصحيح —</option>' +
+      options.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('');
+    const applyBtn = document.getElementById('linkGuardTypeApplyBtn');
+    applyBtn.disabled = false;
+    applyBtn.textContent = '✅ حدّث الـ Type وأعد الربط';
+    typeFixWrap.style.display = '';
+    optWrap.style.display = 'none'; // القائمة بقت جوّه select، مفيش داعي تتكرر كـ badges
   } else {
-    optWrap.style.display = 'none';
+    typeFixWrap.style.display = 'none';
+    if (options.length) {
+      optWrap.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">الأقسام المسموحة (كاتيجوريز تحت Footwear):</div>' +
+        options.map(o => `<span class="badge-skip" style="margin:0 0 6px 6px;display:inline-block;">${esc(o)}</span>`).join('');
+      optWrap.style.display = '';
+    } else {
+      optWrap.style.display = 'none';
+    }
   }
 
   const btn = document.getElementById('linkGuardFixBtn');
   const url = data.addBrandUrl || data.fixUrl; // addBrandUrl = العقد القديم لـ brand_missing
-  if (url) { btn.href = url; btn.textContent = btnLabel; btn.style.display = ''; }
-  else { btn.style.display = 'none'; }
+  if (url) {
+    btn.href = url;
+    // لو زرار الاختيار المباشر ظاهر، ده بقى فرعي (حل يدوي احتياطي) — نص أوضح
+    btn.textContent = canFixType ? '🗂️ أو افتح الكاتيجوريز على StyleBox يدويًا' : btnLabel;
+    btn.style.display = '';
+  } else {
+    btn.style.display = 'none';
+  }
 
   document.getElementById('linkGuardOverlay').classList.add('open');
 }
 function closeLinkGuardModal() {
   document.getElementById('linkGuardOverlay').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════════════════
+// §TOOL-JS::applyTypeFix — v2.23.0
+// بطلب صريح من صاحب الأداة: بدل ما الموظف يفتح صفحة الكاتيجوريز على ستايل
+// بوكس ويقفل النافذة ويعيد المحاولة يدويًا، يختار القسم الصحيح من هنا والأداة
+// بتكتبه على حقل Type بمنتج شوبيفاي مباشرة (action=set_shopify_type — الـ
+// Worker بيعيد تأكيد إن القيمة لسه من الأقسام المسموحة قبل الكتابة) وبعدين
+// بتعيد نداء runSync() تلقائيًا من غير أي تدخل تاني.
+// ══════════════════════════════════════════════════════════════
+async function applyTypeFix() {
+  const select = document.getElementById('linkGuardTypeSelect');
+  const productType = select.value;
+  if (!productType) { showToast('اختر القسم الصحيح الأول', 'warning'); return; }
+  if (!lastShopifyProductId) { showToast('مفيش رقم منتج شوبيفاي محفوظ — أعد البحث من خطوة ①', 'error'); return; }
+
+  const btn = document.getElementById('linkGuardTypeApplyBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="mini-spinner"></span> جاري التحديث...';
+  try {
+    await apiPost('set_shopify_type', {
+      shopify_product_id: lastShopifyProductId,
+      product_type:        productType,
+      employee:             currentEmployee ? currentEmployee.username : null,
+    });
+    closeLinkGuardModal();
+    showToast(`تم تحديث Type على شوبيفاي لـ "${productType}" ✓ — جاري إعادة محاولة الربط...`, 'success');
+    await runSync();
+  } catch (e) {
+    showToast('فشل تحديث Type: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '✅ حدّث الـ Type وأعد الربط';
+  }
 }
 
 // عرض 3 حالات (نجاح / تحذير / فشل) — Step 3C إلزامي
