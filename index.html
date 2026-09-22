@@ -96,6 +96,9 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .btn-modal-save:hover { background: var(--accent-dark); }
 .btn-outline { padding: 9px 16px; background: var(--surface); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+/* زرار إلغاء أحمر (v2.25.0) — راجع reviewActionsHTML() في §TOOL-JS::find */
+.btn-outline.danger { border-color: var(--red-border); color: var(--red); background: var(--red-light); }
+.btn-outline.danger:hover { border-color: var(--red); color: #fff; background: var(--red); }
 .btn-sm { padding: 8px 14px; font-size: 12.5px; }
 
 /* ══ Modal Shell — About / Changelog ══════════════════════════ */
@@ -875,6 +878,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>صور المنتج (الرئيسية + الجاليري) بقت معروضة مباشرة في نتيجة البحث</strong> — جايه من نفس رد <code>find_product</code> (صفر نداءات إضافية على ووكومرس). الصورة الرئيسية في صف مستقل بحجم أكبر، وباقي الصور تحتها في صف منفصل. <em>مفيش داعي تفتح صفحة المنتج على ووردبريس عشان تراجع الصور.</em></span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>زرار "راجع صور المنتج" ونافذة تأكيد المراجعة الوسيطة اتشالوا</strong> — بدالهم زرارين مباشرين تحت الصور: <strong>"✅ تأكيد المنتج واستكمال الخطوات"</strong> (بيفتح خطوة الربط على طول) و<strong>"إلغاء"</strong> (بيرجّع للبحث من الأول).</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>نافذة حارس "كاتيجوري القسم غير محددة" بقى فيها اختيار مباشر</strong> — قائمة منسدلة بالأقسام المسموحة (تحت <code>Footwear</code>) + زرار "✅ حدّث الـ Type وأعد الربط": بيكتب اختيارك على حقل <strong>Type</strong> بمنتج شوبيفاي مباشرة (بعد إعادة تأكيده مقابل ووردبريس) وبيكمّل الربط تلقائيًا. <em>مفيش داعي تفتح صفحة الكاتيجوريز على ستايل بوكس لما القسم يكون موجود في القائمة.</em></span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>بعد الضغط على "✅ تأكيد المنتج واستكمال الخطوات"، خطوة ② ("نتيجة البحث") بقت <strong>بتتطوى تلقائيًا</strong> (نفس سلوك خطوة ①)، وزرار "إلغاء" بقى <strong>بلون أحمر</strong> عشان يفرّق بصريًا عن زرار التأكيد الأخضر.</span></li>
           </ul>
         </div>
         <div class="cl-version-block">
@@ -1486,7 +1490,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.24.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.25.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة — منفصلة تمامًا عن
 // TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
@@ -2270,7 +2274,7 @@ function reviewActionsHTML(data) {
   return `
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn-primary success" style="flex:2;min-width:220px;" onclick="markProductReviewed()">✅ تأكيد المنتج واستكمال الخطوات</button>
-        <button class="btn-outline" style="flex:1;min-width:120px;" onclick="resetFindStep()">إلغاء</button>
+        <button class="btn-outline danger" style="flex:1;min-width:120px;" onclick="resetFindStep()">إلغاء</button>
       </div>`;
 }
 
@@ -2467,6 +2471,7 @@ function markProductReviewed() {
   // الربط، والحارس ده دفاع تاني (زي كل حارس في الأداة).
   if (relinkMode && !relinkConfirmed) return;
   productReviewed = true;
+  setStepCollapsed('Found', true); // (v2.25.0) اطوي خطوة ② بعد التأكيد — نفس سلوك خطوة ① بعد نجاح البحث
   document.getElementById('stepSyncCard').style.display = 'block';
   setStepCollapsed('Sync', false);
 }
