@@ -256,14 +256,6 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .opt-readonly-title:first-of-type { margin-top: 2px; }
 .opt-readonly-list { padding-inline-start: 20px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
 
-/* نافذة تأكيد المراجعة الإلزامية (v2.10.0) — checkbox واحد لكل بند لازم يتأكد قبل
-   فتح خطوة الربط، راجع openReviewConfirmModal()/confirmProductReviewed() */
-.confirm-check-row { display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 12px; cursor: pointer; transition: border-color .15s, background .15s; }
-.confirm-check-row:hover { border-color: var(--accent); }
-.confirm-check-row.checked { border-color: var(--accent); background: var(--accent-light); }
-.confirm-check-row input[type="checkbox"] { width: 19px; height: 19px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; margin: 0; }
-.confirm-check-row span { font-size: 14px; font-weight: 700; color: var(--text-primary); }
-
 /* تفاصيل إضافية اختيارية — بديل الفقرات الطويلة الظاهرة دايمًا (ملحوظة المستخدم: "مليانة placeholders") */
 .info-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-light); border: 1px solid #bfdbfe; border-radius: 20px; padding: 4px 12px; margin-top: 9px; cursor: pointer; user-select: none; transition: background .15s; }
 .info-toggle:hover { background: #dbeafe; }
@@ -319,11 +311,17 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .price-diff-table { font-size: 16px; }
 .price-diff-table th { font-size: 14.5px; font-weight: 800; color: var(--text-primary); }
 .price-diff-table td { font-weight: 800; color: var(--text-primary); padding: 13px 10px; }
-/* صور المنتج (v2.23.0) — عرض معاينة (الصورة الأساسية + الجاليري) جوّه الأداة نفسها،
-   عشان الموظف يقدر يراجع من غير ما يفتح صفحة المنتج على ووردبريس في تاب خارجي. */
-.review-images-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-.review-image-thumb { display: block; width: 76px; height: 76px; border-radius: var(--radius-sm); overflow: hidden; border: 1.5px solid var(--border); flex-shrink: 0; }
-.review-image-thumb.main { border-color: var(--accent); border-width: 2px; }
+/* صور المنتج (v2.23.0 · تكبير + فصل الصورة الرئيسية v2.24.0) — عرض معاينة
+   (الصورة الرئيسية + الجاليري) جوّه الأداة نفسها، عشان الموظف يقدر يراجع من
+   غير ما يفتح صفحة المنتج على ووردبريس في تاب خارجي. الصورة الرئيسية في صف
+   لوحدها وأكبر بوضوح من صور الجاليري تحتها. */
+.review-main-image-row { margin: 10px 0 14px; }
+.review-main-image-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; }
+.review-image-thumb.main { display: block; width: 240px; max-width: 100%; height: 240px; border-radius: var(--radius-lg); overflow: hidden; border: 2.5px solid var(--accent); }
+.review-image-thumb.main img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.review-gallery-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; }
+.review-images-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 10px; }
+.review-image-thumb { display: block; width: 150px; height: 150px; border-radius: var(--radius); overflow: hidden; border: 1.5px solid var(--border); flex-shrink: 0; }
 .review-image-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .review-image-thumb:hover { border-color: var(--accent); }
 /* اختيار قسم Type المسموح (v2.23.0) — جوّه نافذة type_category_missing */
@@ -871,12 +869,23 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         <div class="cl-version-block">
           <div class="cl-version-row">
             <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+            <span class="cl-ver-date">22-09-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>صور المنتج (الرئيسية + الجاليري) بقت معروضة مباشرة في نتيجة البحث</strong> — جايه من نفس رد <code>find_product</code> (صفر نداءات إضافية على ووكومرس). الصورة الرئيسية في صف مستقل بحجم أكبر، وباقي الصور تحتها في صف منفصل. <em>مفيش داعي تفتح صفحة المنتج على ووردبريس عشان تراجع الصور.</em></span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>زرار "راجع صور المنتج" ونافذة تأكيد المراجعة الوسيطة اتشالوا</strong> — بدالهم زرارين مباشرين تحت الصور: <strong>"✅ تأكيد المنتج واستكمال الخطوات"</strong> (بيفتح خطوة الربط على طول) و<strong>"إلغاء"</strong> (بيرجّع للبحث من الأول).</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>نافذة حارس "كاتيجوري القسم غير محددة" بقى فيها اختيار مباشر</strong> — قائمة منسدلة بالأقسام المسموحة (تحت <code>Footwear</code>) + زرار "✅ حدّث الـ Type وأعد الربط": بيكتب اختيارك على حقل <strong>Type</strong> بمنتج شوبيفاي مباشرة (بعد إعادة تأكيده مقابل ووردبريس) وبيكمّل الربط تلقائيًا. <em>مفيش داعي تفتح صفحة الكاتيجوريز على ستايل بوكس لما القسم يكون موجود في القائمة.</em></span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.22.0</span>
             <span class="cl-ver-date">14-09-2026</span>
           </div>
           <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>تلات كاتيجوريز بقت بتتضاف للمنتج أوتوماتيك مع كل ربط</strong> (Worker v2.18.0): كاتيجوري <strong>بنفس اسم البراند</strong>، وكاتيجوري <strong>القسم</strong> (تحت <code>Footwear</code>) اللي بتتحدد من حقل <strong>Type</strong> على منتج شوبيفاي، وكاتيجوري <code>all-products</code>. <em>الكاتيجوريز الموجودة على المنتج قبل كده مابتتشالش — الإضافة فوقها.</em></span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>التلاتة دول حرّاس إلزامية زي حارس البراند بالظبط</strong> — أي واحدة فيهم ناقصة، الربط <strong>بيقف بالكامل قبل أي تعديل على أي منصة</strong> وبتظهر نافذة بتقول السبب بالظبط وفيها زرار بيفتح الصفحة المطلوبة على ستايل بوكس. ولو حقل <code>Type</code> على شوبيفاي فاضي أو مش مطابق لأي قسم، النافذة <strong>بتعرض قائمة الأقسام المسموحة</strong> (بتتقرا حيّة من ووردبريس) عشان الموظف ما يدوّرش.</span></li>
-            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>سؤال "تم اضافة كاتيجوري فئة الشوز + كاتيجوري البراند" اتشال من نافذة المراجعة</strong> — بقى بند واحد: <strong>"تم مراجعة جميع صور المنتج"</strong>. الكاتيجوريز بقت شغل الأداة، وسؤال الموظف عن حاجة بتحصل لوحدها بيعلّمه يأكد من غير ما يبص. <em>النافذة نفسها لسه إلزامية زي ما هي.</em></span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>سؤال "تم اضافة كاتيجوري فئة الشوز + كاتيجوري البراند" اتشال من نافذة المراجعة</strong> — بقى بند واحد: <strong>"تم مراجعة جميع صور المنتج"</strong>. الكاتيجوريز بقت شغل الأداة، وسؤال الموظف عن حاجة بتحصل لوحدها بيعلّمه يأكد من غير ما يبص. <em>(النافذة دي نفسها اتشالت بعد كده v2.24.0 — راجع أعلى.)</em></span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>شاشة النتيجة بقى فيها صف <strong>"الكاتيجوريز"</strong> بحالة كل واحدة، والتأكيد بيتقرا من ووردبريس بعد الكتابة مش من نجاح النداء. <strong>وصفر نداءات إضافية على ووردبريس</strong> — كل الشغل ده جوّه نفس النداءات الموجودة.</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>⚠️ الميزة دي محتاجة <strong>إعادة لصق الـ WPCode snippet</strong> على ستايل بوكس قبل أي استخدام — من غيرها كل ربط هيقف عند حارس القسم.</span></li>
           </ul>
@@ -1270,9 +1279,8 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>§TOOL-JS::find</code> — خطوة ①: نموذج تشغيل <code>find_product</code> (بحث برقم أو رابط شوبيفاي — <code>extractShopifyProductId()</code> بيستخرج الرقم من الرابط لو اتحط، Enter أو زرار) + <code>resetFindStep()</code>/<code>startNewProduct()</code> لإعادة الضبط الكامل (بما فيها <code>productReviewed</code>)</li>
               <li><code>§FIND::checkShopifyAlreadyLinked</code> (Worker، v2.7.0) — أول فحص في <code>find_product</code>: بيقرا <code>custom.wordpress_id</code> على شوبيفاي قبل أي بحث في ووكومرس</li>
               <li><code>§FIND::findWcProductByShopifyId</code> (Worker) — منطق البحث لو المنتج لسه مش مربوط (فلتر GTIN مباشر + بحث بعنوان شوبيفاي لتضييق النطاق + تأكيد قاطع بالـ SKU/GTIN)</li>
-              <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (اتربط قبل كده / لقيته / مش لقيته) في خطوتها المستقلة + زرار "راجع صور المنتج قبل الربط" كامل العرض (<code>.btn-block</code>)، إلزامي — بيفتح صفحة ووردبريس في تاب جديد ونادي <code>openReviewConfirmModal()</code></li>
-              <li><code>openReviewConfirmModal()</code>/<code>closeReviewConfirmModal()</code>/<code>toggleReviewCheck()</code>/<code>confirmProductReviewed()</code> (v2.10.0، بند واحد من v2.22.0) — نافذة تأكيد إلزامية (<code>#reviewConfirmOverlay</code>) ببند checkbox واحد (مراجعة الصور — بند الكاتيجوريز اتشال لأنها بقت أوتوماتيك)، زرار "تأكيد المراجعة" معطّل لحد ما يتأكد؛ التأكيد بينادي <code>markProductReviewed()</code></li>
-              <li><code>markProductReviewed()</code> (v2.9.0، بيتنادى من <code>confirmProductReviewed()</code> بدل onclick مباشر من v2.10.0) — هو اللي بيفتح خطوة ③ لأول مرة (بدل ما تفتح تلقائيًا مع نجاح البحث زي قبل كده)</li>
+              <li><code>renderFindResult()</code> — خطوة ②: عرض نتيجة البحث (اتربط قبل كده / لقيته / مش لقيته) في خطوتها المستقلة + <code>reviewImagesHTML()</code> (v2.24.0 — صور المنتج من ووكومرس معروضة مباشرة، الرئيسية في صف لوحدها وأكبر ثم الجاليري) + <code>reviewActionsHTML()</code> بزرارين: "✅ تأكيد المنتج واستكمال الخطوات" (<code>markProductReviewed()</code>) و"إلغاء" (<code>resetFindStep()</code>)</li>
+              <li><code>markProductReviewed()</code> (v2.9.0، بينادى مباشرة من الزرار من v2.24.0 — نافذة التأكيد الوسيطة اتشالت) — هو اللي بيفتح خطوة ③ لأول مرة (بدل ما تفتح تلقائيًا مع نجاح البحث زي قبل كده)</li>
               <li><code>§TOOL-JS::relink</code> (v2.18.0) — <code>relinkStatusInfo()</code>/<code>relinkCompareTable()</code>/<code>openRelinkModal()</code>/<code>confirmRelink()</code>: نافذة المنتج المربوط قبل كده (<code>#relinkOverlay</code>). إعادة الربط المسموحة محتاجة <code>confirmRelink()</code> الأول، وبعده بس بيظهر زرار المراجعة الإلزامي (<code>reviewActionsHTML()</code>). حالة الرفض بتفتح نفس النافذة بالسبب وجدول المقارنة ومن غير أي زرار ربط</li>
               <li><code>§TOOL-JS::sync</code> — خطوة ③: نموذج تشغيل <code>sync_product</code> (حالة + نجمة + فرق سعر، كل واحد في صندوق <code>.opt-block</code> مستقل، من غير أي اختيار افتراضي جاهز من v2.11.0)، بيستخدم <code>foundWpProductId</code> من خطوة ① بدل إدخال يدوي، و<code>runSync()</code> بيرفض لو <code>productReviewed !== true</code> أو لو أي سؤال من التلاتة من غير إجابة/تأكيد (<code>readSyncOptions()</code>/<code>priceDiffConfirmed</code>)</li>
               <li><code>renderSyncResult()</code> — خطوة ④: تفاصيل بيانات المنتج + جدول "📦 المقاسات" (+ صفوف Brand/Slug من v2.6.0، عنوان الجدول اتغيّر v2.10.0) + جدول فرق السعر تحت الجدول لو <code>priceApplied</code> (اتنقل تحت v2.10.0، كان صف فوق الجدول)، وبعدهم بانر حالة كبير (<code>#syncStatusBannerWrap</code>) + زرار "إبدأ ربط منتج جديد" كامل العرض في آخر الخطوة (<code>.btn-primary.btn-block</code> من v2.10.1 — كان <code>.btn-new-product</code> بتصميم منفصل أبيض/أزرق عند hover)، وبيتحكم في طي خطوتي ② و③ وتلوين شارات الخطوات كلها</li>
@@ -1398,37 +1406,6 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
     </div>
   </div>
 
-  <!-- ══ نافذة تأكيد المراجعة الإلزامية (v2.10.0) — بعد الضغط على زرار "راجع صور
-       + كاتيجوريز المنتج قبل الربط" — خطوة ③ ما بتفتحش إلا بعد تأكيد الاتنين هنا ═══ -->
-  <div class="eco-overlay" id="reviewConfirmOverlay" onclick="if(event.target===this)closeReviewConfirmModal()">
-    <div class="eco-modal" style="max-width:480px;">
-      <div class="eco-modal-hdr">
-        <span>✏️ تأكيد المراجعة قبل الربط</span>
-        <button class="modal-close-x" onclick="closeReviewConfirmModal()">✕</button>
-      </div>
-      <div class="eco-modal-body">
-        <!-- ⚠️ (v2.22.0) بند "كاتيجوري فئة الشوز + كاتيجوري البراند" **اتشال** —
-             الكاتيجوريز التلاتة بقت بتتضاف أوتوماتيك في الربط (Worker v2.18.0)،
-             وسؤال الموظف عن حاجة الأداة بتعملها بنفسها بيعلّمه يأكد من غير ما
-             يبص. الباقي: مراجعة الصور — ودي لسه شغل يدوي فعلاً. -->
-        <!-- (v2.23.0) معاينة الصور (الأساسية + الجاليري) هنا مباشرة — بطلب صاحب
-             الأداة، عشان المراجعة تتم من غير فتح صفحة المنتج على ووردبريس في
-             تاب خارجي. زرار "راجع صور المنتج على ووردبريس" فوق لسه موجود لمين
-             عايز يفتح الصفحة نفسها (تعديل صورة/كاتيجوري مثلاً)، مش إلزامي. -->
-        <div id="reviewImagesWrap"></div>
-        <label class="confirm-check-row" id="reviewCheckRow1">
-          <input type="checkbox" id="reviewChk1" onchange="toggleReviewCheck(this)">
-          <span>تم مراجعة جميع صور المنتج</span>
-        </label>
-        <div class="result-note warn" style="margin-top:6px;">⚠️ لازم تأكيد البند فوق قبل ما يتفعّل زرار "تأكيد المراجعة" — خطوة الربط مش هتظهر غير بعده.</div>
-        <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn-primary success" id="reviewConfirmBtn" style="flex:1;margin-top:0;" disabled onclick="confirmProductReviewed()">✅ تأكيد المراجعة</button>
-          <button class="btn-outline" onclick="closeReviewConfirmModal()">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ══ نافذة الربط السابق (v2.18.0) — بتفتح من نتيجة البحث لما المنتج يكون
        مربوط قبل كده. حالتان: (أ) نفس المنتج → تأكيد إعادة الربط من هنا وبس
        (relinkConfirmed)، وبعده بيظهر زرار المراجعة الإلزامي زي أي منتج.
@@ -1509,7 +1486,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.23.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.24.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة — منفصلة تمامًا عن
 // TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
@@ -2260,28 +2237,41 @@ function renderFindResult(data) {
     <div style="margin-top:18px;">${reviewActionsHTML(data)}</div>`;
 }
 
-// (v2.23.0) معاينة صور المنتج (الأساسية + الجاليري) — بطلب صاحب الأداة: بدل
-// ما المراجعة تتطلب فتح صفحة المنتج على ووردبريس، الصور دي جايه من نفس رد
-// find_product (WC REST بيرجّعها أصلاً — صفر نداءات إضافية) وبتتعرض هنا وجوّه
-// نافذة تأكيد المراجعة. أول صورة (images[0]) هي صورة الغلاف على ووكومرس، والباقي
-// جاليري — نفس ترتيبهم على شاشة تعديل المنتج بالظبط.
+// (v2.23.0، الصورة الرئيسية في صف لوحدها + تكبير الصور v2.24.0) معاينة صور
+// المنتج جوّه الأداة نفسها — بطلب صاحب الأداة: الصورة الرئيسية (images[0] —
+// صورة الغلاف على ووكومرس) في صف مستقل وأكبر وضوح، وصور الجاليري تحتها في
+// صف منفصل. الصور دي جايه من نفس رد find_product (صفر نداءات إضافية).
 function reviewImagesHTML(images) {
   if (!Array.isArray(images) || !images.length) {
-    return '<div class="result-note warn">⚠️ الأداة ما لقتش صور للمنتج من ووكومرس — افتح صفحة المنتج على ووردبريس للمراجعة بالزرار تحت.</div>';
+    return '<div class="result-note warn">⚠️ الأداة ما لقتش صور للمنتج من ووكومرس — افتح صفحة المنتج على ووردبريس للمراجعة.</div>';
   }
-  return `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">صور المنتج على ووردبريس (الأولى = صورة الغلاف):</div>
-    <div class="review-images-grid">${images.map((img, i) => `
-      <a href="${esc(img.src)}" target="_blank" rel="noopener" class="review-image-thumb${i === 0 ? ' main' : ''}" title="${esc(img.alt || '')}">
+  const [main, ...gallery] = images;
+  const mainHTML = `
+    <div class="review-main-image-row">
+      <div class="review-main-image-label">الصورة الرئيسية:</div>
+      <a href="${esc(main.src)}" target="_blank" rel="noopener" class="review-image-thumb main" title="${esc(main.alt || '')}">
+        <img src="${esc(main.src)}" alt="${esc(main.alt || '')}" loading="lazy">
+      </a>
+    </div>`;
+  const galleryHTML = gallery.length ? `
+    <div class="review-gallery-label">باقي الصور:</div>
+    <div class="review-images-grid">${gallery.map(img => `
+      <a href="${esc(img.src)}" target="_blank" rel="noopener" class="review-image-thumb" title="${esc(img.alt || '')}">
         <img src="${esc(img.src)}" alt="${esc(img.alt || '')}" loading="lazy">
-      </a>`).join('')}</div>`;
+      </a>`).join('')}</div>` : '';
+  return mainHTML + galleryHTML;
 }
 
-// زرار المراجعة الإلزامي + تنبيهه — مشترك بين المنتج الجديد وإعادة الربط
-// (v2.18.0): إعادة الربط بتضيف تأكيدًا **قبله**، ومابتلغيش ولا حارس منهم.
+// (v2.24.0) بدل زرار "راجع صور المنتج قبل الربط" الإلزامي + نافذة تأكيد
+// منفصلة — بطلب صاحب الأداة: الصور بقت معروضة مباشرة فوق (reviewImagesHTML)،
+// فمراجعتها بقت جزء من شاشة نتيجة البحث نفسها من غير خطوة وسيطة. زرارين بس:
+// تأكيد واستكمال (markProductReviewed()) أو إلغاء (resetFindStep()).
 function reviewActionsHTML(data) {
   return `
-      <a class="btn-primary btn-block" id="reviewProductBtn" href="${esc(data.wpEditUrl)}" target="_blank" rel="noopener" onclick="openReviewConfirmModal()">🔗 راجع صور المنتج قبل الربط</a>
-      <div class="result-note warn" id="reviewRequiredNote" style="margin-top:10px;">⚠️ الزرار ده إلزامي — لازم تضغطه (الصور فوق كافية للمراجعة، مش لازم تفتح ووردبريس فعليًا) قبل ما تقدر تكمل لخطوة الربط.</div>`;
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-primary success" style="flex:2;min-width:220px;" onclick="markProductReviewed()">✅ تأكيد المنتج واستكمال الخطوات</button>
+        <button class="btn-outline" style="flex:1;min-width:120px;" onclick="resetFindStep()">إلغاء</button>
+      </div>`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2465,51 +2455,20 @@ function confirmRelink() {
   showToast('تم تأكيد إعادة الربط — لسه لازم تراجع المنتج قبل خطوة الربط', 'warning');
 }
 
-// v2.9.0 — بيتنادى بعد تأكيد نافذة المراجعة (confirmProductReviewed()، v2.10.0):
-// بيفتح خطوة ③ للمرة الأولى (كانت بتتفتح تلقائيًا مع نجاح البحث قبل كده).
-// لو اتنادت تاني بعد ما فتحت الخطوة، مفيش أي أثر إضافي.
+// (v2.9.0، بلا نافذة وسيطة من v2.24.0) بيتنادى مباشرة من زرار "✅ تأكيد المنتج
+// واستكمال الخطوات" (reviewActionsHTML()) — الصور بقت معروضة فوق الزرار في
+// نفس الشاشة (reviewImagesHTML())، فمفيش داعي لنافذة تأكيد منفصلة ولا checkbox
+// إضافي؛ الضغطة نفسها هي التأكيد. بيفتح خطوة ③ للمرة الأولى (كانت بتتفتح
+// تلقائيًا مع نجاح البحث قبل كده). لو اتنادت تاني بعد ما فتحت الخطوة، مفيش أي
+// أثر إضافي.
 function markProductReviewed() {
   if (!foundWpProductId) return;
-  // v2.18.0 — منتج مربوط قبل كده: زرار المراجعة نفسه مابيظهرش قبل تأكيد إعادة
+  // v2.18.0 — منتج مربوط قبل كده: زرار التأكيد نفسه مابيظهرش قبل تأكيد إعادة
   // الربط، والحارس ده دفاع تاني (زي كل حارس في الأداة).
   if (relinkMode && !relinkConfirmed) return;
   productReviewed = true;
-  const note = document.getElementById('reviewRequiredNote');
-  if (note) note.style.display = 'none';
   document.getElementById('stepSyncCard').style.display = 'block';
   setStepCollapsed('Sync', false);
-}
-
-// ══════════════════════════════════════════════════════════════
-// §TOOL-JS::reviewConfirmModal — v2.10.0 (اتقلّصت لبند واحد v2.22.0)
-// نافذة تأكيد إلزامية بعد الضغط على زرار المراجعة — markProductReviewed()
-// ما بتتنفّذش إلا لو البند اتأكد هنا.
-// ⚠️ النافذة نفسها **لسه إلزامية زي ما هي** — اللي اتشال بند الكاتيجوريز بس
-// (بقت أوتوماتيك في الـ Worker v2.18.0)، مش النافذة.
-// ══════════════════════════════════════════════════════════════
-function openReviewConfirmModal() {
-  document.getElementById('reviewChk1').checked = false;
-  document.getElementById('reviewCheckRow1').classList.remove('checked');
-  updateReviewConfirmBtn();
-  // (v2.23.0) معاينة الصور جوّه النافذة نفسها — من غير ما يحتاج يبص على تاب ووردبريس
-  document.getElementById('reviewImagesWrap').innerHTML = reviewImagesHTML(foundProductImages);
-  document.getElementById('reviewConfirmOverlay').classList.add('open');
-}
-function closeReviewConfirmModal() {
-  document.getElementById('reviewConfirmOverlay').classList.remove('open');
-}
-function toggleReviewCheck(el) {
-  el.closest('.confirm-check-row').classList.toggle('checked', el.checked);
-  updateReviewConfirmBtn();
-}
-function updateReviewConfirmBtn() {
-  // (v2.22.0) بند واحد بس — بند الكاتيجوريز اتشال لأنها بقت أوتوماتيك
-  document.getElementById('reviewConfirmBtn').disabled = !document.getElementById('reviewChk1').checked;
-}
-function confirmProductReviewed() {
-  if (document.getElementById('reviewConfirmBtn').disabled) return;
-  closeReviewConfirmModal();
-  markProductReviewed();
 }
 
 // تصفير كامل لخطوة البحث — بتترجع الأداة لأول مرحلة بصريًا (خطوة 1 مفتوحة، 2 و3 و4 مخفيين)
@@ -2739,12 +2698,17 @@ function openLinkGuardModal(data) {
     }
   }
 
+  // (v2.24.0) لما الاختيار المباشر ظاهر (canFixType) — بطلب صاحب الأداة —
+  // زرار "افتح الصفحة على StyleBox" بيتشال تمامًا، مش بس بيتحوّل لفرعي.
+  // الاختيار من الـ select + "✅ حدّث الـ Type وأعد الربط" هو الطريق الوحيد
+  // هنا. باقي الحرّاس (brand_missing/brand_category_missing/
+  // all_products_category_missing، وtype_category_missing من غير أقسام
+  // مسموحة) لسه محتاجة فتح الصفحة يدويًا — الزرار ده لسه بيظهر ليهم زي ما هو.
   const btn = document.getElementById('linkGuardFixBtn');
   const url = data.addBrandUrl || data.fixUrl; // addBrandUrl = العقد القديم لـ brand_missing
-  if (url) {
+  if (url && !canFixType) {
     btn.href = url;
-    // لو زرار الاختيار المباشر ظاهر، ده بقى فرعي (حل يدوي احتياطي) — نص أوضح
-    btn.textContent = canFixType ? '🗂️ أو افتح الكاتيجوريز على StyleBox يدويًا' : btnLabel;
+    btn.textContent = btnLabel;
     btn.style.display = '';
   } else {
     btn.style.display = 'none';
