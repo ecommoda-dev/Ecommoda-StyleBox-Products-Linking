@@ -3,9 +3,18 @@
 // Worker: stylebox-products-linking-worker — EcomModa
 // Tool:   Ecommoda StyleBox Products Linking
 // Account: ecommoda-dev.workers.dev
-// skills: worker-builder v3.0.0 · html-builder v7.0.0 · woocommerce-sync-helper v1.0.0
-//         · ecommoda-constants v2.0.0 · shopify-graphql-helper v2.1.0 — 10-09-2026
+// skills: worker-builder v3.7.1 · html-builder v7.0.0 · woocommerce-sync-helper v1.0.0
+//         · ecommoda-constants v3.1.0 · shopify-graphql-helper v2.1.0 — 22-09-2026
 //
+// ⚠️ v2.18.1 (22-09-2026) — check-log-values.mjs بدّل بالنسخة المصلَّحة
+//   (كانت بتدوّر على `type:` بنقطتين بس، فـ object shorthand كان يعدّي في
+//   صمت) + تنفيذ الحارس الديناميكي لقيم اللوج (الطبقة ٥ — worker-builder
+//   Step 7-ج): §LOG-REG جوّه writeLog — قيمة (tool,type) مش مسجّلة بتتكتب
+//   عادي + extra._unregistered:true + UPSERT صامت في log_value_alerts، مفيش
+//   رفض كتابة أبدًا. التشيك المصلَّح رجّع exit 0 من غير أي قيمة ناقصة —
+//   الخمسة المسجّلة أصلاً (login/logout/error/product_meta_synced/synced)
+//   كل استخدامها في الكود صريح (type: '...') وبلا أي تفريع ديناميكي، فـ
+//   LOG_REGISTRY بُني منهم زي ما هم بلا أي تعديل على log-values.json.
 // ⚠️ v2.18.0 (14-09-2026) — تلات كاتيجوريز (product_cat) بتتضاف لكل منتج
 //   بيتربط، بطلب صريح من صاحب الأداة. **الحرّاس التلاتة إلزامية زي حارس
 //   البراند بالظبط — أي واحدة ناقصة = الربط بيتوقف بالكامل من غير أي كتابة
@@ -291,7 +300,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.18.0';
+const WORKER_VERSION = 'v2.18.1';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -485,7 +494,67 @@ async function registerPin(db, username, pin) {
   return true;
 }
 
+// ════════════════════════════════════════════════════════════
+// §LOG-REG — الحارس الديناميكي لقيم اللوج (الطبقة ٥ — worker-builder Step 7-ج)
+// ════════════════════════════════════════════════════════════
+// قطعة الأداة دي بس من log-values.json اللي جنبها — بتتحدّث معاه في نفس
+// الـ commit. ممنوع شحن سجل الـ٣٢ أداة كله هنا (نفس درس السكيل القديمة).
+const LOG_REGISTRY = {
+  stylebox_products_linking: new Set([
+    'login', 'logout', 'error', 'product_meta_synced', 'synced',
+  ]),
+};
+
+const isRegisteredLogValue = (tool, type) => !!LOG_REGISTRY[tool]?.has(type);
+
+// UPSERT على (source_tool, tool, type) — صف واحد لكل قيمة، hits بيعدّ.
+// الحدث الكامل مش بيضيع: الصف الأصلي موجود في logs وعليه _unregistered،
+// والجدول ده فهرس مش سجل تاني — عشان كده dedupe مش صف لكل حدث.
+const LOG_ALERT_SQL = `
+  INSERT INTO log_value_alerts
+    (source_tool, tool, type, first_seen, last_seen, hits,
+     worker_version, sample_order_name, sample_employee, sample_notes)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(source_tool, tool, type) DO UPDATE SET
+    last_seen         = excluded.last_seen,
+    hits              = log_value_alerts.hits + excluded.hits,
+    worker_version    = excluded.worker_version,
+    sample_order_name = excluded.sample_order_name,
+    sample_employee   = excluded.sample_employee,
+    sample_notes      = excluded.sample_notes,
+    status            = CASE WHEN log_value_alerts.status = 'ignored'
+                             THEN 'ignored' ELSE 'open' END
+`;
+
+// فشل التنبيه ممنوع يأثر على أي حاجة — try/catch صامت. بتجمّع التكرار جوّه
+// نفس الدفعة في صف واحد (hits) قبل ما تكتب.
+async function noteUnregisteredLogValues(db, entries) {
+  const byPair = new Map();
+  for (const e of entries) {
+    const key = `${e.tool}\u0000${e.type}`;
+    const acc = byPair.get(key);
+    if (acc) { acc.hits++; continue; }
+    byPair.set(key, { entry: e, hits: 1 });
+  }
+  const now = new Date().toISOString();
+  for (const { entry, hits } of byPair.values()) {
+    try {
+      await db.prepare(LOG_ALERT_SQL).bind(
+        TOOL_NAME, entry.tool ?? '(بدون tool)', entry.type ?? '(بدون type)',
+        now, now, hits, WORKER_VERSION ?? null,
+        entry.orderName ?? null, entry.employee ?? null,
+        entry.notes ? String(entry.notes).slice(0, 200) : null,
+      ).run();
+    } catch (e) { /* متعمّد: التنبيه فهرس، وفشله أهون من تعطيل الأداة */ }
+  }
+}
+
 async function writeLog(db, entry) {
+  const unregistered = !isRegisteredLogValue(entry.tool, entry.type);
+  const extra = unregistered
+    ? { ...(entry.extra || {}), _unregistered: true }
+    : entry.extra;
+
   await db.prepare(`
     INSERT INTO logs
       (timestamp, tool, type, employee, order_id, order_name,
@@ -504,8 +573,11 @@ async function writeLog(db, entry) {
     entry.valueBefore  ?? null,
     entry.valueAfter   ?? null,
     entry.notes        ?? null,
-    entry.extra ? JSON.stringify(entry.extra) : null
+    extra ? JSON.stringify(extra) : null
   ).run();
+
+  // 🔴 مفيش رفض كتابة أبدًا — الصف اتكتب فعلاً، والتنبيه بعده وبصمت.
+  if (unregistered) await noteUnregisteredLogValues(db, [entry]);
 }
 
 const LOG_EXPORT_MAX = 2000;   // سقف التصدير — بيرجع للواجهة كـ `cap`

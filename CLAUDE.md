@@ -1598,17 +1598,38 @@ git checkout 3234fb1 -- index.js index.html
 
 | المهارة | الإصدار وقت آخر تعديل |
 |---|---|
-| ecommoda-worker-builder | v3.0.0 |
+| ecommoda-worker-builder | v3.7.1 |
 | ecommoda-html-builder | v7.0.0 |
 | woocommerce-sync-helper | v1.0.0 |
-| ecommoda-constants | v2.0.0 |
+| ecommoda-constants | v3.1.0 |
 | shopify-graphql-helper | v2.1.0 |
 
 > ⚠️ الصفّين الأخيرين **ماكانوش في الجدول خالص** لحد 10-09-2026 رغم إن الأداة
 > بتستخدمهم فعليًا (رقم D1 · دومين المتجر · `API 2026-01` · عقد `shopifyGQL` ·
 > §12 · §13) — يعني الطبقة ① بتاعة `skills-sweep` كانت **عمياء عنهم**.
 
-آخر مطابقة: 14-09-2026 · `index.js` v2.18.0 · `index.html` v2.22.0 (تلات كاتيجوريز إلزامية مع كل ربط — راجع القسم الأول)
+## استبدال `check-log-values.mjs` + الحارس الديناميكي (الطبقة ٥) — Worker v2.18.1 (22-09-2026)
+
+> **بطلب صريح من صاحب الأداة — تنفيذ `ecommoda-worker-builder` Step 7-ج.**
+
+- **`check-log-values.mjs` استُبدل بالنسخة المصلَّحة.** النسخة القديمة كانت
+  بتدوّر على `type:` بنقطتين بس، فـ object shorthand (`{ tool, type }`) كان
+  بيعدّي في صمت وبيدّي `exit 0` وهو شايف جزء من القيم. التشيك المصلَّح شغّل
+  على الريبو ده ورجّع **`exit 0` من غير أي قيمة ناقصة** — الخمس قيم المسجّلة
+  أصلاً (`login` · `logout` · `error` · `product_meta_synced` · `synced`)
+  كل استخدامها في `index.js` صريح (`type: '...'`) وبلا أي shorthand وبلا أي
+  تفريع ديناميكي، فمفيش قيمة جديدة تتسجّل ومفيش `dynamicTypes` مطلوبة.
+- **الحارس الديناميكي (§LOG-REG) في `writeLog`** — `LOG_REGISTRY` مبني من
+  `log-values.json` (زوج `(tool, type)`). قيمة غير مسجّلة **بتتكتب عادي**
+  + `extra._unregistered = true` + UPSERT صامت في `log_value_alerts`
+  (`ecommoda-constants` §2) — **مفيش رفض كتابة أبدًا**. الأداة مالهاش
+  `writeLogsBatch` ولا أي أنكور تاني في `logAnchors`، و`safeWriteLog` بيغلّف
+  `writeLog` فالحارس مغطّي الاتنين تلقائيًا.
+- `WORKER_VERSION` اترفعت لـ`v2.18.1` (patch — مراقبة بس، صفر تغيير منطقي).
+
+آخر مطابقة: 22-09-2026 · `index.js` v2.18.1 · `index.html` v2.22.0 (الحارس الديناميكي لقيم اللوج — راجع القسم الأول)
+
+آخر مطابقة قبلها: 14-09-2026 · `index.js` v2.18.0 · `index.html` v2.22.0 (تلات كاتيجوريز إلزامية مع كل ربط — راجع القسم الأول)
 🔴 معلّقة: **تسجيل `rejected` كقيمة `type` للأداة دي في `ecommoda-constants` §7.**
 الجلسة اللي نفّذت جولة v2.12.0 **معندهاش وصول لريبو `ecommoda-constants`**، وجدول
 `logs` مشترك بين كل أدوات الستاك فقيمة `type` غير مسجّلة بتنتج **صفوف يتيمة**
