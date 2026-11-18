@@ -526,6 +526,18 @@ add_action('rest_api_init', function () {
                 $variation_results[] = $row;
             }
 
+            // 🔴 stylebox-mcp-access Step 6 / Step 3: بعد أي كتابة على variations لازم الأب يتزامن —
+            //    WC_Product_Variable::sync() بيحدّث مدى السعر/حالة المخزون المجمّعة، ومعاها مسح ترانزيينتس
+            //    الأب (اتعمل فوق لكل variation). من غير sync() سعر/مخزون الأب في الواجهة بيتأخر.
+            if ($variation_results && class_exists('WC_Product_Variable')) {
+                try {
+                    WC_Product_Variable::sync($id);
+                    wc_delete_product_transients($id);
+                } catch (\Throwable $e) {
+                    // مش بنوقف الرد — الكتابة نفسها تمّت، والتزامن هيتصلّح عند أول حفظ تاني
+                }
+            }
+
             return array(
                 'brand'         => $term_summary($brand_term),
                 'categories'    => $categories_applied,

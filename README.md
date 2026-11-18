@@ -2,7 +2,7 @@
 
 # Ecommoda StyleBox Products Linking
 
-![version](https://img.shields.io/badge/version-v1.1.0-blue)
+![version](https://img.shields.io/badge/version-v1.2.0-blue)
 
 أداة ربط ومزامنة منتجات WooCommerce ↔ Shopify (StyleBox) — EcomModa.
 
@@ -13,6 +13,6 @@
 راجع `CLAUDE.md` لكل التفاصيل: الروابط، الـ Endpoints، الأسرار المطلوبة، وقواعد
 الأداة الخاصة.
 
-آخر تحديث: 10-09-2026 — 18:40
+آخر تحديث: 18-11-2026 — 23:51
 
 </div>
