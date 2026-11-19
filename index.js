@@ -3,8 +3,22 @@
 // Worker: stylebox-products-linking-worker — EcomModa
 // Tool:   Ecommoda StyleBox Products Linking
 // Account: ecommoda-dev.workers.dev
-// skills: worker-builder v3.7.1 · html-builder v7.0.0 · woocommerce-sync-helper v1.0.0
-//         · ecommoda-constants v3.1.0 · shopify-graphql-helper v2.1.0 — 22-09-2026
+// skills: worker-builder v4.0.0 · html-builder v9.1.0 · woocommerce-sync-helper v2.1.0
+//         · ecommoda-constants v6.0.0 · shopify-graphql-helper v3.0.1 — 18-11-2026
+//
+// ⚠️ v2.20.0 (18-11-2026) — مواءمة مع المهارات الحالية (بدون تغيير سلوك وظيفي):
+//   1) Shopify API 2026-01 → 2026-10 بعد فحص كل وثيقة GraphQL في الملف على
+//      Shopify MCP. اتصلّح اتنين: `productUpdate(input: ProductInput!)` (مُهمَل
+//      في 2026-10) → `productUpdate(product: ProductUpdateInput!)` في الميوتيشنين
+//      (updateProduct · setProductType) — كل الحقول (id · status · title ·
+//      productType) موجودة في ProductUpdateInput.
+//   2) getAccessToken بـ retry/backoff (⑯ ②) · التقاط تكلفة الاستعلام (⑮) في
+//      diag · حارس WORKER_SECRET بـ typeof/trim.
+//   3) §CONFIG::time بقى بلوك constants §13 القانوني (cairoDayBoundsUTC كانت
+//      بتقيس الإزاحة عند ظهر اليوم = غلط ساعة في يومي تغيير التوقيت).
+//   4) ordering: `sortBy`/`sortDir` في get_logs — كانوا موجودين في الـ Worker من
+//      قبل؛ الواجهة بقت بتبعتهم (الترتيب الـ client-side على صفحة واحدة اتشال).
+//   MIN_WORKER_VERSION في الواجهة اترفعت لـ v2.20.0.
 //
 // ⚠️ v2.19.0 (22-09-2026) — بطلب صريح من صاحب الأداة، تعديلان في نفس الجولة:
 //   1) find_product بقى بيرجّع `images` (الغلاف + الجاليري) لكل منتج — صفر
@@ -315,7 +329,7 @@
 // **متغيّرش خالص**: GTIN حرفي أو SKU بيبدأ بالرقم، أبدًا مش بالعنوان.
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'stylebox_products_linking'; // ecommoda-constants §7 — renamed from shopify_woo_sync 25-08-2026
-const WORKER_VERSION = 'v2.19.0';
+const WORKER_VERSION = 'v2.20.0';
 
 // ─── §CONSTANTS::find — إعدادات البحث في find_product (v2.8.0) ───
 // عدد الكلمات اللي بتتبعت من عنوان شوبيفاي لـ search= بتاع ووكومرس. العنوان
@@ -352,7 +366,7 @@ const ALLOWED_SIZE_ATTRIBUTE_NAMES = ['Shoe size', 'Size', 'size'];
 // §CORS — Option B (write tool: مبدّل حالة/عنوان منتج + مخزون)
 // ══════════════════════════════════════════════════════════════
 const ALLOWED_ORIGINS = [
-  'https://ecommoda-dev.github.io', // ⚠️ كان ecommoda24.github.io (حساب مهجور) — اتصلّح 25-08-2026
+  'https://ecommoda-dev.github.io', // ⚠️ كان بيشاور على حساب GitHub القديم المهجور — اتصلّح 25-08-2026
 ];
 function getCORS(request) {
   const origin  = request.headers.get('Origin') || '';
@@ -413,17 +427,24 @@ function cairoOffsetMinutes(d) {             // ١٨٠ صيفًا · ١٢٠ شت
   return Math.round((Date.UTC(+p.year, +p.month - 1, +p.day,
                               +p.hour, +p.minute, +p.second) - d.getTime()) / 60000);
 }
-function cairoDateStr(iso) {                 // 'YYYY-MM-DD' بتوقيت القاهرة
-  const p = cairoParts(iso ? new Date(iso) : new Date());
-  return `${p.year}-${p.month}-${p.day}`;
+// YYYY-MM-DD بالقاهرة — من غير بارامتر = النهارده · cairoDateStr(new Date(iso)) = يوم الحدث
+function cairoDateStr(d = new Date()) { const p = cairoParts(d); return `${p.year}-${p.month}-${p.day}`; }
+// حساب أيام على تاريخ نصّي — آمن: منتصف ليل UTC، مفيش توقيت جوّاه
+function addDays(s, n) {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
-// حدود يوم تقويمي بالقاهرة → UTC — الإزاحة تتقاس عند **ظهر** اليوم
-// (أي تحويل توقيت بيحصل فجرًا، فالظهر بيدّي إزاحة اليوم الصحيحة)
-function cairoDayBoundsUTC(dateStr) {
-  const offMin = cairoOffsetMinutes(new Date(`${dateStr}T12:00:00.000Z`));
+// أول لحظة في يوم القاهرة بـ UTC — الإزاحة بتتقاس مرتين عشان يوم التحويل
+function cairoMidnightUTC(s) {
+  const t = Date.parse(`${s}T00:00:00.000Z`);
+  const guess = t - cairoOffsetMinutes(new Date(t)) * 60000;
+  return t - cairoOffsetMinutes(new Date(guess)) * 60000;
+}
+// حدود يوم تقويمي بالقاهرة → UTC (يوم ٢٥ ساعة أو ٢٣ ساعة بيطلع صح)
+function cairoDayBoundsUTC(s) {
   return {
-    start: new Date(Date.parse(`${dateStr}T00:00:00.000Z`) - offMin * 60000).toISOString(),
-    end:   new Date(Date.parse(`${dateStr}T23:59:59.999Z`) - offMin * 60000).toISOString(),
+    start: new Date(cairoMidnightUTC(s)).toISOString(),
+    end:   new Date(cairoMidnightUTC(addDays(s, 1)) - 1).toISOString(),
   };
 }
 
@@ -762,24 +783,48 @@ async function safeWriteLog(db, entry) {
 // ══════════════════════════════════════════════════════════════
 // §SHOPIFY
 // ══════════════════════════════════════════════════════════════
+// §SHOPIFY::getAccessToken — التوكن والـ throttle bucket مشتركين بين كل Workers الستاك
+// (نفس الـ Custom App) فالفشل العابر لازم يتعافى (worker-builder Step 5A ⑯ ②).
+// الاسم OAUTH_MAX_ATTEMPTS مقصود — وصفة الجرد بتدوّر عليه.
+const OAUTH_MAX_ATTEMPTS = 3;
+
 async function getAccessToken(env) {
-  const resp = await fetch(
-    `https://${env.SHOP_DOMAIN}/admin/oauth/access_token`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id:     env.CLIENT_ID,
-        client_secret: env.CLIENT_SECRET,
-        grant_type:    'client_credentials',
-      }),
+  let lastErr = null;
+  for (let attempt = 1; attempt <= OAUTH_MAX_ATTEMPTS; attempt++) {
+    try {
+      const resp = await fetch(
+        `https://${env.SHOP_DOMAIN}/admin/oauth/access_token`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id:     env.CLIENT_ID,
+            client_secret: env.CLIENT_SECRET,
+            grant_type:    'client_credentials',
+          }),
+        }
+      );
+      if (!resp.ok) {
+        const retriable = resp.status === 429 || resp.status >= 500;
+        lastErr = new Error(`OAuth failed: ${resp.status}`);
+        if (retriable && attempt < OAUTH_MAX_ATTEMPTS) { await new Promise(r => setTimeout(r, 700 * attempt)); continue; }
+        throw lastErr;
+      }
+      const data = await resp.json();
+      if (!data.access_token) throw new Error('No access_token in response');
+      return data.access_token;
+    } catch (e) {
+      lastErr = e;
+      if (attempt < OAUTH_MAX_ATTEMPTS) { await new Promise(r => setTimeout(r, 400 * attempt)); continue; }
+      throw lastErr;
     }
-  );
-  if (!resp.ok) throw new Error(`OAuth failed: ${resp.status}`);
-  const data = await resp.json();
-  if (!data.access_token) throw new Error('No access_token in response');
-  return data.access_token;
+  }
+  throw lastErr || new Error('OAuth: unknown failure');
 }
+
+// ⑮ تكلفة الاستعلام — للقياس بس (صفر اعتماد من الواجهة)
+let _lastThrottle  = null;
+let _lastQueryCost = null;
 
 // ─── §SHOPIFY::shopifyGQL — العقد الإلزامي (Step 5A ①) ───
 // أي فشل بيترمي. مفيش رد بيعدّي وهو فاشل:
@@ -794,7 +839,7 @@ async function shopifyGQL(env, token, query, variables = {}, opName = 'shopify')
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let resp, text;
     try {
-      resp = await fetch(`https://${env.SHOP_DOMAIN}/admin/api/2026-01/graphql.json`, {
+      resp = await fetch(`https://${env.SHOP_DOMAIN}/admin/api/2026-10/graphql.json`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': token },
         body:    JSON.stringify({ query, variables }),
@@ -830,6 +875,11 @@ async function shopifyGQL(env, token, query, variables = {}, opName = 'shopify')
     }
 
     if (!data.data) throw new Error(`${opName}: رد شوبيفاي بدون data — ${text.slice(0, 180)}`);
+    const cost = data.extensions?.cost;
+    if (cost) {
+      if (cost.throttleStatus) _lastThrottle = cost.throttleStatus;
+      _lastQueryCost = { op: opName, requested: cost.requestedQueryCost ?? null, actual: cost.actualQueryCost ?? null };
+    }
     return data;
   }
   throw lastErr || new Error(`${opName}: فشل غير معروف`);
@@ -892,8 +942,8 @@ const SET_PRODUCT_METAFIELD_MUTATION = `
 `;
 
 const PRODUCT_UPDATE_MUTATION = `
-  mutation updateProduct($input: ProductInput!) {
-    productUpdate(input: $input) {
+  mutation updateProduct($product: ProductUpdateInput!) {
+    productUpdate(product: $product) {
       product { id status title }
       userErrors { field message }
     }
@@ -1589,8 +1639,8 @@ class LinkGuardError extends Error {
 
 // ─── §SHOPIFY::SET_PRODUCT_TYPE_MUTATION — v2.19.0 ───
 const SET_PRODUCT_TYPE_MUTATION = `
-  mutation setProductType($input: ProductInput!) {
-    productUpdate(input: $input) {
+  mutation setProductType($product: ProductUpdateInput!) {
+    productUpdate(product: $product) {
       product { id productType }
       userErrors { field message }
     }
@@ -1637,7 +1687,7 @@ async function setShopifyProductType(env, shopifyProductId, productType) {
   const token = await getAccessToken(env);
   const gid   = `gid://shopify/Product/${shopifyProductId}`;
   const resp  = await shopifyGQL(env, token, SET_PRODUCT_TYPE_MUTATION,
-    { input: { id: gid, productType: matchedOption } }, 'productUpdate(productType)');
+    { product: { id: gid, productType: matchedOption } }, 'productUpdate(productType)');
   const result = resp?.data?.productUpdate;
   const errors = result?.userErrors || [];
   if (errors.length) throw new Error('productUpdate(productType) failed: ' + errors.map(e => e.message).join(' | '));
@@ -1674,7 +1724,7 @@ async function syncProductLevelFields(env, token, shopifyProductGid, wpProductId
   let statusApplied = false;
 
   if (wantsStatus) {
-    const productUpdateResp   = await shopifyGQL(env, token, PRODUCT_UPDATE_MUTATION, { input: productInput }, 'productUpdate');
+    const productUpdateResp   = await shopifyGQL(env, token, PRODUCT_UPDATE_MUTATION, { product: productInput }, 'productUpdate');
     const productUpdateResult = productUpdateResp?.data?.productUpdate;
     const productUpdateErrors = productUpdateResult?.userErrors || [];
     if (productUpdateErrors.length) {
@@ -2286,7 +2336,7 @@ export default {
     //    — يعني أي طلب معاه الهيدر ده **بيعدّي**، والحالة اللي المفروض تكون
     //    "كل حاجة 401" بتتحوّل لـ"الحماية اتشالت" على Worker بيغيّر حالة منتجات
     //    ومخزون. الحالة مش نظرية: سر اتمسح · إضافة من غير Promote · Worker شبح.
-    if (!env.WORKER_SECRET)
+    if (typeof env.WORKER_SECRET !== 'string' || !env.WORKER_SECRET.trim())
       return json({ error: 'Worker misconfigured: WORKER_SECRET غير مضبوط — ' +
         'ضِفه من Dashboard → Settings → Variables ثم Promote النسخة.' }, 500, request);
 
@@ -2465,7 +2515,7 @@ export default {
           length: env[k] ? String(env[k]).length : 0,
         }));
 
-        let shopifyScopes = null, shopifyError = null;
+        let shopifyScopes = null, shopifyError = null, shopifyReadAllOrders = null;
         try {
           const token = await getAccessToken(env);
           const scopeResp = await shopifyGQL(
@@ -2477,6 +2527,8 @@ export default {
           //    دليل إن الصلاحية المطلوبة موجودة. الواجهة بتعرضها كقايمة بنص
           //    "الصلاحيات الممنوحة" عشان ماتدّيش طمأنينة كاذبة.
           shopifyScopes = (scopeResp?.data?.currentAppInstallation?.accessScopes || []).map(s => s.handle);
+          // ℹ️ read_all_orders: الأداة دي مابتقراش أوردرات أصلاً (منتجات فقط) — معلومة مش شرط (shopify-graphql-helper §3.2)
+          shopifyReadAllOrders = shopifyScopes.includes('read_all_orders');
         } catch (e) { shopifyError = e.message; }
 
         // ⚠️ كل نداء ووكومرس بيعدّي من wcFetch() (قاعدة v2.10.0) — بما فيهم
@@ -2548,7 +2600,9 @@ export default {
           ok: true,
           version: WORKER_VERSION,
           env: envReport,
-          shopify: { scopes: shopifyScopes, error: shopifyError },
+          shopify: { scopes: shopifyScopes, error: shopifyError, readAllOrders: shopifyReadAllOrders,
+                     // ⑮ بندين منفصلين: الرصيد المتبقي · وآخر نداء كلّف قد إيه (للقياس بس)
+                     throttleStatus: _lastThrottle, actualQueryCost: _lastQueryCost },
           woocommerce: { ok: wcOk, error: wcError },
           wcLinkProduct: { ok: wcLinkOk, error: wcLinkError, detail: wcLinkDetail },
           wcLinkTerms:   wcTerms, // v2.18.0 — حرّاس الكاتيجوريز + نسخة الـ snippet

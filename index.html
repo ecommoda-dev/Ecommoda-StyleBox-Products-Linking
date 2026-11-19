@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ecommoda StyleBox Products Linking</title>
-<!-- skills: html-builder v1.0.0 · worker-builder v1.0.0 · woocommerce-sync-helper v1.0.0 — 27-08-2026 (البحث بقى محصّن ضد فروق العنوان: تنضيف المسافات + أول 4 كلمات + مسح احتياطي بالـ SKU — index.js v2.8.0؛ وتكبير جدول فرق السعر + توحيد صيغة ملخّص البانر — index.html v2.12.0) -->
+<!-- skills: html-builder v9.1.0 · worker-builder v4.0.0 · woocommerce-sync-helper v2.1.0 · constants v6.0.0 · shopify-graphql-helper v3.0.1 — 18-11-2026 -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
@@ -18,8 +18,9 @@
   --border:         #e5e7eb;
   --border-strong:  #d1d5db;
   --text-primary:   #111827;
-  --text-secondary: #6b7280;
-  --text-muted:     #6b7280;
+  --text-secondary: #4b5563;   /* 08-10-2026: اتغمّق (القيمة القديمة كانت باهتة) */
+  --text-muted:     #4b5563;
+  --text-mid:       #374151;
   --accent:         #2563eb;
   --accent-light:   #eff6ff;
   --accent-dark:    #1d4ed8;
@@ -33,6 +34,17 @@
   --amber-light:    #fffbeb;
   --amber-border:   #fde68a;
   --neutral-dark:   #1a1d27;
+  --surface-hover:      #f0f4f8;
+  --on-accent:          #ffffff;
+  --accent-border:      #bfdbfe;
+  --accent-hover:       #dbeafe;
+  --accent-hover-border:#93c5fd;
+  --green-dark:         #15803d;
+  --red-dark:           #b91c1c;
+  --amber-dark:         #92400e;
+  --purple-dark:        #4c1d95;
+  --th-size: 12px;  --th-weight: 700;  --th-color: var(--text-mid);
+  --td-size: 12.5px; --td-weight: 600;
   --purple:         #7c3aed;
   --purple-light:   #f5f3ff;
   --purple-border:  #c4b5fd;
@@ -55,7 +67,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .main-tabs-bar { display: flex; gap: 5px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px; margin-bottom: 18px; box-shadow: var(--shadow); }
 .main-tab-btn { flex: 1; padding: 13px 12px; border: 2px solid transparent; background: transparent; border-radius: var(--radius-sm); font-family: inherit; font-size: 14.5px; font-weight: 700; color: var(--text-secondary); cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; }
 .main-tab-btn:hover { background: var(--surface-2); color: var(--text-primary); }
-.main-tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(37,99,235,.25); }
+.main-tab-btn.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: 0 2px 8px rgba(37,99,235,.25); }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
@@ -71,8 +83,8 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .hbtn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 .hbtn:disabled { opacity: .5; cursor: not-allowed; }
 .hbtn.settings-configured { border-color: var(--green); color: var(--green); background: var(--green-light); }
-.hbtn.ver-btn { border-color: #bfdbfe; color: #1d4ed8; background: #eff6ff; font-family: var(--font-mono); font-weight: 700; }
-.hbtn.ver-btn:hover { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+.hbtn.ver-btn { border-color: var(--accent-border); color: var(--accent-dark); background: var(--accent-light); font-family: var(--font-mono); font-weight: 700; }
+.hbtn.ver-btn:hover { background: var(--accent-hover); border-color: var(--accent-hover-border); color: var(--accent-dark); }
 .hbtn.active-user { border-color: var(--green); color: var(--green); background: var(--green-light); }
 .hbtn.active-user:hover { border-color: var(--red); color: var(--red); background: var(--red-light); }
 
@@ -83,7 +95,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 @keyframes modalIn { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .settings-modal-hdr { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 16.5px; font-weight: 800; }
 .modal-close-x { background: var(--red-light); border: 1.5px solid var(--red-border); color: var(--red); font-size: 14px; font-weight: 700; line-height: 1; padding: 5px 12px; border-radius: var(--radius-sm); font-family: inherit; cursor: pointer; transition: all .15s; }
-.modal-close-x:hover { background: var(--red); color: #fff; border-color: var(--red); }
+.modal-close-x:hover { background: var(--red); color: var(--on-accent); border-color: var(--red); }
 .settings-modal-body { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
 .settings-field { display: flex; flex-direction: column; gap: 6px; }
 .settings-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px; }
@@ -92,13 +104,13 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .settings-modal-ftr { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
 .btn-modal-cancel { padding: 10px 16px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; cursor: pointer; }
 .btn-modal-cancel:hover { color: var(--text-primary); }
-.btn-modal-save { padding: 10px 20px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; }
+.btn-modal-save { padding: 10px 20px; background: var(--accent); color: var(--on-accent); border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; }
 .btn-modal-save:hover { background: var(--accent-dark); }
 .btn-outline { padding: 9px 16px; background: var(--surface); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 /* زرار إلغاء أحمر (v2.25.0) — راجع reviewActionsHTML() في §TOOL-JS::find */
 .btn-outline.danger { border-color: var(--red-border); color: var(--red); background: var(--red-light); }
-.btn-outline.danger:hover { border-color: var(--red); color: #fff; background: var(--red); }
+.btn-outline.danger:hover { border-color: var(--red); color: var(--on-accent); background: var(--red); }
 .btn-sm { padding: 8px 14px; font-size: 12.5px; }
 
 /* ══ Modal Shell — About / Changelog ══════════════════════════ */
@@ -111,16 +123,16 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 /* ── Changelog ── */
 .cl-version-block { margin-bottom: 4px; }
 .cl-version-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.cl-ver-badge { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; direction: ltr; }
+.cl-ver-badge { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 5px; background: var(--accent-light); color: var(--accent-dark); border: 1px solid var(--accent-border); direction: ltr; }
 .cl-ver-badge.old { background: var(--surface-2); color: var(--text-secondary); border-color: var(--border-strong); }
 .cl-ver-date { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); direction: ltr; }
 .cl-items { list-style: none; display: flex; flex-direction: column; gap: 5px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
 .cl-version-block:last-child .cl-items { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
 .cl-item { display: flex; gap: 8px; font-size: 13px; align-items: flex-start; }
 .cl-tag { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; align-self: flex-start; margin-top: 2px; }
-.cl-tag.new { background: #f0fdf4; color: #15803d; }
-.cl-tag.fix { background: #fef2f2; color: #dc2626; }
-.cl-tag.change { background: #fffbeb; color: #92400e; }
+.cl-tag.new { background: var(--green-light); color: var(--green-dark); }
+.cl-tag.fix { background: var(--red-light); color: var(--red); }
+.cl-tag.change { background: var(--amber-light); color: var(--amber-dark); }
 
 /* ── About ── */
 .about-sec { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; overflow: hidden; }
@@ -134,7 +146,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 
 /* ══ Toast ═══════════════════════════════════════════════════ */
 .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
-.toast { padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.2); animation: toastIn .3s ease; max-width: 320px; }
+.toast { padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; color: var(--on-accent); box-shadow: 0 4px 12px rgba(0,0,0,.2); animation: toastIn .3s ease; max-width: 320px; }
 @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
 .toast-success { background: var(--green); }
 .toast-error { background: var(--red); }
@@ -189,11 +201,11 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .pin-key:hover:not(:disabled) { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 .pin-key:active:not(:disabled) { transform: translateY(1px); }
 .pin-key.utility { color: var(--red); background: var(--red-light); border-color: var(--red-border); font-family: var(--font-body); font-size: 13px; font-weight: 900; }
-.pin-key.utility:hover:not(:disabled) { background: var(--red); color: #fff; border-color: var(--red); }
+.pin-key.utility:hover:not(:disabled) { background: var(--red); color: var(--on-accent); border-color: var(--red); }
 .pin-key:disabled { opacity: .55; cursor: not-allowed; }
 .login-alert { display: none; min-height: 38px; border-radius: 10px; border: 1px solid var(--red-border); background: var(--red-light); color: var(--red); padding: 9px 12px; font-size: 12px; font-weight: 800; text-align: center; line-height: 1.6; }
 .login-alert.visible { display: block; }
-.login-primary { display: none; align-items: center; justify-content: center; gap: 7px; width: 100%; min-height: 58px; margin-top: 1px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-family: var(--font-body); font-size: 15px; font-weight: 900; cursor: pointer; transition: background .15s, opacity .15s, transform .06s; }
+.login-primary { display: none; align-items: center; justify-content: center; gap: 7px; width: 100%; min-height: 58px; margin-top: 1px; border: none; border-radius: 10px; background: var(--accent); color: var(--on-accent); font-family: var(--font-body); font-size: 15px; font-weight: 900; cursor: pointer; transition: background .15s, opacity .15s, transform .06s; }
 .login-primary.visible { display: inline-flex; }
 .login-primary:hover:not(:disabled) { background: var(--accent-dark); }
 .login-primary:active:not(:disabled) { transform: translateY(1px); }
@@ -219,7 +231,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .step-card-hdr:hover { background: var(--surface-2); }
 .step-card-hdr.no-toggle { cursor: default; }
 .step-card-hdr.no-toggle:hover { background: none; }
-.step-badge { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 3px 8px rgba(37,99,235,.3); transition: background .2s; }
+.step-badge { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 3px 8px rgba(37,99,235,.3); transition: background .2s; }
 .step-card.done .step-badge, .step-badge.ok { background: var(--green); box-shadow: 0 3px 8px rgba(22,163,74,.3); }
 .step-badge.warn { background: var(--amber); box-shadow: 0 3px 8px rgba(217,119,6,.3); }
 .step-badge.err { background: var(--red); box-shadow: 0 3px 8px rgba(220,38,38,.3); }
@@ -227,7 +239,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .step-title { font-size: 17px; font-weight: 800; color: var(--text-primary); }
 .step-subtitle { font-size: 13.5px; color: var(--text-secondary); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .step-card.done .step-subtitle, .step-subtitle.ok { color: var(--green); font-weight: 600; }
-.step-subtitle.warn { color: #92400e; font-weight: 600; }
+.step-subtitle.warn { color: var(--amber-dark); font-weight: 600; }
 .step-subtitle.err { color: var(--red); font-weight: 600; }
 .step-chevron { flex-shrink: 0; font-size: 14px; color: var(--text-muted); transition: transform .2s; }
 .step-chevron.open { transform: rotate(180deg); }
@@ -249,7 +261,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .price-inline-input { width: 180px; text-align: center; }
 .price-confirm-btn { padding: 12px 20px; font-size: 14px; margin-top: 0; }
 .price-confirm-btn.confirmed { background: var(--green); box-shadow: 0 4px 12px rgba(22,163,74,.28); }
-.price-confirm-btn.confirmed:hover:not(:disabled) { background: #15803d; }
+.price-confirm-btn.confirmed:hover:not(:disabled) { background: var(--green-dark); }
 
 /* "تعديلات أخرى تحدث تلقائي عند الربط" — v2.9.0: بقت صندوق .opt-block زي باقي
    الأسئلة بالظبط (نفس الإطار والتصميم)، لكن عرض فقط بدون أي اختيار — راجع
@@ -260,22 +272,22 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .opt-readonly-list { padding-inline-start: 20px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
 
 /* تفاصيل إضافية اختيارية — بديل الفقرات الطويلة الظاهرة دايمًا (ملحوظة المستخدم: "مليانة placeholders") */
-.info-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-light); border: 1px solid #bfdbfe; border-radius: 20px; padding: 4px 12px; margin-top: 9px; cursor: pointer; user-select: none; transition: background .15s; }
-.info-toggle:hover { background: #dbeafe; }
+.info-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-light); border: 1px solid var(--accent-border); border-radius: 20px; padding: 4px 12px; margin-top: 9px; cursor: pointer; user-select: none; transition: background .15s; }
+.info-toggle:hover { background: var(--accent-hover); }
 .info-toggle .info-arrow { font-size: 9px; transition: transform .2s; }
 .info-toggle.open .info-arrow { transform: rotate(180deg); }
 .opt-hint { font-size: 12.5px; color: var(--text-muted); line-height: 1.75; margin-top: 9px; display: none; background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 13px; }
 .opt-hint.open { display: block; }
 
-.btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 30px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 15.5px; font-weight: 800; cursor: pointer; transition: background .15s, transform .1s, box-shadow .15s; margin-top: 6px; box-shadow: 0 4px 12px rgba(37,99,235,.28); text-decoration: none; }
+.btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 30px; background: var(--accent); color: var(--on-accent); border: none; border-radius: 10px; font-family: inherit; font-size: 15.5px; font-weight: 800; cursor: pointer; transition: background .15s, transform .1s, box-shadow .15s; margin-top: 6px; box-shadow: 0 4px 12px rgba(37,99,235,.28); text-decoration: none; }
 .btn-primary:hover:not(:disabled) { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,.34); }
 .btn-primary:active:not(:disabled) { transform: translateY(0); }
 .btn-primary:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
 .btn-primary.success { background: var(--green); box-shadow: 0 4px 12px rgba(22,163,74,.28); }
-.btn-primary.success:hover:not(:disabled) { background: #15803d; box-shadow: 0 6px 16px rgba(22,163,74,.34); }
+.btn-primary.success:hover:not(:disabled) { background: var(--green-dark); box-shadow: 0 6px 16px rgba(22,163,74,.34); }
 /* زرار كامل العرض بارز — لأهم فعل في كل خطوة (زي زرار "تحديث الكل" في أدوات تانية) 27-08-2026 (v2.7.0) */
 .btn-block { display: flex; width: 100%; align-items: center; justify-content: center; gap: 10px; padding: 18px 24px; font-size: 16.5px; margin-top: 0; }
-.mini-spinner { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+.mini-spinner { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.4); border-top-color: var(--on-accent); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── بانر الحالة الكبير — بديل شاشة الملخّص القديمة (ملهم من نمط "الحالة المستهدفة") ── */
@@ -283,9 +295,9 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .status-banner-icon { font-size: 40px; line-height: 1; flex-shrink: 0; }
 .status-banner-title { font-size: 20px; font-weight: 800; }
 .status-banner-sub { font-size: 14px; margin-top: 5px; opacity: .85; }
-.status-banner.ok { background: var(--green-light); border-color: var(--green-border); color: #14532d; }
-.status-banner.warn { background: var(--amber-light); border-color: #fde68a; color: #78350f; }
-.status-banner.err { background: var(--red-light); border-color: var(--red-border); color: #7f1d1d; }
+.status-banner.ok { background: var(--green-light); border-color: var(--green-border); color: var(--green-dark); }
+.status-banner.warn { background: var(--amber-light); border-color: var(--amber-border); color: var(--amber-dark); }
+.status-banner.err { background: var(--red-light); border-color: var(--red-border); color: var(--red-dark); }
 
 .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 22px; margin-bottom: 18px; }
 .result-card h4 { font-size: 15.5px; font-weight: 800; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -294,11 +306,11 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .result-row span:first-child { color: var(--text-secondary); flex-shrink: 0; }
 .result-row span:last-child { font-weight: 700; text-align: left; }
 .result-note { font-size: 13px; color: var(--text-secondary); line-height: 1.8; background: var(--surface-2); border-radius: var(--radius-sm); padding: 11px 14px; margin-top: 8px; }
-.result-note.warn { background: var(--amber-light); color: #92400e; }
+.result-note.warn { background: var(--amber-light); color: var(--amber-dark); }
 .result-note.err { background: var(--red-light); color: var(--red); }
 
 .badge-success { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); padding: 4px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
-.badge-warn { background: var(--amber-light); color: var(--amber); border: 1px solid #fde68a; padding: 4px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.badge-warn { background: var(--amber-light); color: var(--amber); border: 1px solid var(--amber-border); padding: 4px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .badge-danger { background: var(--red-light); color: var(--red); border: 1px solid var(--red-border); padding: 4px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .badge-ok { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); padding: 3px 10px; border-radius: 5px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .badge-skip { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); padding: 3px 10px; border-radius: 5px; font-size: 12px; font-weight: 700; white-space: nowrap; }
@@ -338,7 +350,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .section-divider { border-top: 1px solid var(--border); }
 
 .flt-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: var(--surface-2); cursor: pointer; user-select: none; transition: background .12s; border-radius: var(--radius) var(--radius) 0 0; }
-.flt-header:hover { background: #f0f4f8; }
+.flt-header:hover { background: var(--surface-hover); }
 .flt-header-right { display: flex; align-items: center; gap: 10px; }
 .flt-icon { width: 34px; height: 22.5px; color: var(--text-muted); transition: color .2s; flex-shrink: 0; }
 .flt-icon.active { color: var(--accent); }
@@ -351,7 +363,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .flt-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
 
 .clear-btn { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s; white-space: nowrap; height: 34px; border: 1px solid var(--red-border); color: var(--red); background: var(--red-light); }
-.clear-btn:hover { background: var(--red); color: #fff; border-color: var(--red); }
+.clear-btn:hover { background: var(--red); color: var(--on-accent); border-color: var(--red); }
 .clear-btn.inactive { border-color: var(--border); color: var(--text-muted); background: var(--surface-2); cursor: not-allowed; opacity: .6; }
 .clear-btn.inactive:hover { background: var(--surface-2); color: var(--text-muted); border-color: var(--border); }
 
@@ -366,7 +378,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .ms-btn:hover { border-color: var(--accent); }
 .ms-btn.has-selection { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-light); }
 .ms-btn.open { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
-.ms-btn .ms-count { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 20px; padding: 1px 7px; min-width: 18px; text-align: center; }
+.ms-btn .ms-count { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--on-accent); background: var(--accent); border-radius: 20px; padding: 1px 7px; min-width: 18px; text-align: center; }
 .ms-btn .ms-arrow { font-size: 9px; color: var(--text-muted); transition: transform .2s; flex-shrink: 0; }
 .ms-btn.open .ms-arrow { transform: rotate(180deg); }
 
@@ -385,7 +397,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .ms-search { width: 100%; height: 32px; border: 1px solid var(--border-strong); border-radius: 6px; padding: 0 10px; font-family: inherit; font-size: 12px; outline: none; background: var(--surface-2); }
 .ms-search:focus { border-color: var(--accent); background: var(--surface); }
 .ms-selectall-row { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 12px; font-weight: 700; cursor: pointer; user-select: none; }
-.ms-selectall-row:hover { background: #f0f4f8; }
+.ms-selectall-row:hover { background: var(--surface-hover); }
 .ms-list { max-height: 210px; overflow-y: auto; padding: 4px; }
 .ms-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; font-size: 12.5px; cursor: pointer; user-select: none; transition: background .1s; }
 .ms-item:hover { background: var(--surface-2); }
@@ -407,9 +419,9 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .ms-chips-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .ms-chips-row:empty { display: none; }
 .chips-label { font-size: 11.5px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; }
-.ms-chip { display: flex; align-items: center; gap: 5px; background: var(--accent-light); color: var(--accent-dark); border: 1px solid #bfdbfe; border-radius: 20px; padding: 3px 6px 3px 10px; font-size: 11.5px; font-weight: 600; }
+.ms-chip { display: flex; align-items: center; gap: 5px; background: var(--accent-light); color: var(--accent-dark); border: 1px solid var(--accent-border); border-radius: 20px; padding: 3px 6px 3px 10px; font-size: 11.5px; font-weight: 600; }
 .ms-chip button { border: none; background: rgba(37,99,235,.15); color: var(--accent-dark); width: 16px; height: 16px; border-radius: 50%; font-size: 11px; cursor: pointer; line-height: 1; }
-.ms-chip button:hover { background: var(--accent); color: #fff; }
+.ms-chip button:hover { background: var(--accent); color: var(--on-accent); }
 
 .range-preset-wrap { position: relative; }
 .range-preset-btn { display: flex; align-items: center; gap: 6px; height: 34px; padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
@@ -429,7 +441,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 
 .export-warn { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--amber-light); border: 1px solid var(--amber); color: var(--amber); font-size: 13px; font-weight: 600; line-height: 1.7; }
 .tbl-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; background: var(--surface-2); cursor: pointer; user-select: none; transition: background .12s; flex-wrap: wrap; }
-.tbl-bar:hover { background: #f0f4f8; }
+.tbl-bar:hover { background: var(--surface-hover); }
 .tbl-bar-right, .tbl-bar-left { display: flex; align-items: center; gap: 8px; }
 .results-wrap { display: flex; align-items: center; gap: 8px; }
 .results-label { font-size: 14px; font-weight: 800; color: var(--text-primary); white-space: nowrap; }
@@ -440,7 +452,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .act-btn.refresh { background: var(--surface); border: 1px solid var(--border-strong); color: var(--text-primary); }
 .act-btn.refresh:hover { border-color: var(--accent); color: var(--accent); }
 .act-btn.export { background: var(--green-light); border: 1px solid var(--green-border); color: var(--green); }
-.act-btn.export:hover { background: var(--green); color: #fff; }
+.act-btn.export:hover { background: var(--green); color: var(--on-accent); }
 .act-btn.export:disabled { opacity: .5; cursor: not-allowed; }
 
 .tbl-body-wrap { max-height: 2000px; overflow: hidden; transition: max-height .3s ease; border-radius: 0 0 var(--radius) var(--radius); }
@@ -464,6 +476,28 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 .log-type-meta { background: var(--purple-light); color: var(--purple); border: 1px solid var(--purple-border); }
 .log-type-synced { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); }
 .log-type-error { background: var(--red-light); color: var(--red); border: 1px solid var(--red-border); }
+/* ── Idle logout (§IDLE-JS) — banner + login notice ────────── */
+.idle-warn {
+  display: none; position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 9000;               /* فوق كل الـ modals (600) وتحت الـ toast — rule 17 */
+  width: min(92vw, 440px);
+  background: var(--amber-light); border: 1px solid var(--amber-border); color: var(--amber-dark);
+  border-radius: 12px; padding: 12px 14px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
+  text-align: center; line-height: 1.7; font-weight: 800; font-size: 13px;
+}
+.idle-warn.visible { display: block; }
+.idle-warn .idle-ask { font-weight: 900; font-size: 14px; }
+.idle-warn button {
+  margin-top: 8px; min-height: 44px; padding: 0 22px; border: none; border-radius: 10px;
+  background: var(--accent); color: var(--on-accent);
+  font-family: var(--font-body); font-size: 14px; font-weight: 900; cursor: pointer;
+}
+.login-notice {
+  display: none; border-radius: 10px; border: 1px solid var(--amber-border);
+  background: var(--amber-light); color: var(--amber-dark);
+  padding: 9px 12px; font-size: 12px; font-weight: 800; text-align: center; line-height: 1.6;
+}
+.login-notice.visible { display: block; }
 </style>
 </head>
 <body>
@@ -704,8 +738,8 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
                 <div class="ms-mode-panel" id="msPanel-count-range">
                   <div class="ms-range-body">
                     <div class="ms-range-row">
-                      <div class="ms-range-g"><span class="ms-range-lbl">من</span><input type="number" class="ms-range-input" id="msRangeFrom-count" oninput="msRangeChanged('count')" placeholder="0"></div>
-                      <div class="ms-range-g"><span class="ms-range-lbl">إلى</span><input type="number" class="ms-range-input" id="msRangeTo-count" oninput="msRangeChanged('count')" placeholder="∞"></div>
+                      <div class="ms-range-g"><span class="ms-range-lbl">من</span><input type="number" class="ms-range-input" id="msRangeFrom-count" oninput="msRangeChanged('count')"></div>
+                      <div class="ms-range-g"><span class="ms-range-lbl">إلى</span><input type="number" class="ms-range-input" id="msRangeTo-count" oninput="msRangeChanged('count')"></div>
                     </div>
                     <div class="ms-range-hint">النطاق يُلغي أي قيم مختارة من القائمة تلقائيًا.</div>
                     <button class="ms-range-clear" onclick="msRangeClear('count')">✕ مسح النطاق</button>
@@ -871,7 +905,19 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
       <div class="eco-modal-body">
         <div class="cl-version-block">
           <div class="cl-version-row">
-            <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+            <span class="cl-ver-badge" id="clLatestVerBadge">v2.26.0</span>
+            <span class="cl-ver-date">18-11-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>الخروج التلقائي بعد <b>60 دقيقة</b> من غير نشاط (بانر تحذير قبلها بدقيقة)، والخروج اليدوي بقى فوري بلا تأكيد.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🩺 فحص النظام بقى بيعرض كمان: مسار <code>link-product</code> وحالة الـ snippet على ووردبريس (<code>check-brand</code>) وتكلفة آخر استعلام شوبيفاي — وكل القيم بتعدّي على <code>esc()</code>.</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>الألوان: صفر <code>#hex</code> حرفي خارج <code>:root</code> (كان فيه ١٦ قيمة) + اتضافت التوكنز الناقصة. إرشاد اختيار الموظف بقى في مكان واحد (placeholder القائمة)، ومفيش <code>placeholder</code> على أي حقل.</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>الـ Worker (<code>v2.20.0</code>): شوبيفاي API <code>2026-10</code> · <code>productUpdate</code> بقت <code>product: ProductUpdateInput</code> (القديم <code>input</code> مُهمَل) · بلوك التوقيت بقى §13 القانوني. <code>MIN_WORKER_VERSION</code> اترفعت لـ <code>v2.20.0</code>.</span></li>
+          </ul>
+        </div>
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v2.25.0</span>
             <span class="cl-ver-date">22-09-2026</span>
           </div>
           <ul class="cl-items">
@@ -1279,6 +1325,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
             <h4>FEATURE MAP</h4>
             <ul>
               <li><code>§AUTH</code> — Universal D1 Auth كاملة (اتضافت 25-08-2026 — الأداة كانت استثناء بدون Login)</li>
+              <li><code>§IDLE-JS</code> — الخروج التلقائي لعدم النشاط (<code>IDLE_TIMEOUT_MIN = 60</code>) + <code>performLogout(reason)</code> (Standards #52)</li>
               <li><code>§TOOL-JS::steps</code> (UI فقط) — <code>toggleStep()</code>/<code>setStepCollapsed()</code> لطي وفتح البطاقات المرقّمة الأربعة، و<code>toggleHint()</code> لإظهار/إخفاء تفاصيل خطوة البحث (الشيبس التانية اتشالت v2.7.0)</li>
               <li><code>§TOOL-JS::find</code> — خطوة ①: نموذج تشغيل <code>find_product</code> (بحث برقم أو رابط شوبيفاي — <code>extractShopifyProductId()</code> بيستخرج الرقم من الرابط لو اتحط، Enter أو زرار) + <code>resetFindStep()</code>/<code>startNewProduct()</code> لإعادة الضبط الكامل (بما فيها <code>productReviewed</code>)</li>
               <li><code>§FIND::checkShopifyAlreadyLinked</code> (Worker، v2.7.0) — أول فحص في <code>find_product</code>: بيقرا <code>custom.wordpress_id</code> على شوبيفاي قبل أي بحث في ووكومرس</li>
@@ -1305,6 +1352,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
               <li><code>TOOL_NAME = 'stylebox_products_linking'</code> — قيمة <code>tool</code> في جدول <code>logs</code> (كانت <code>shopify_woo_sync</code> قبل الرينيم)</li>
               <li><code>ALLOWED_SIZE_ATTRIBUTE_NAMES = ['Shoe size','Size','size']</code> — مصدر الحقيقة لمطابقة المقاس بين المنصتين (في الـ Worker)</li>
               <li><code>MIN_WORKER_VERSION</code> (v2.16.0) — <strong>أقل</strong> نسخة Worker الواجهة دي بتشتغل معاها، والمقارنة رقمية بـ<code>cmpVersion()</code>. التحذير يولّع <strong>بس</strong> لو الـ Worker <strong>أقدم</strong> منها (rollback أو Promote ناقص) — Worker أحدث وضع طبيعي مش تحذير. منفصلة تمامًا عن <code>TOOL_VERSION</code> (نسخة الواجهة). تترفع مع أي حقل جديد الواجهة تبقى بتقراه من الـ Worker — دلوقتي <code>v2.18.0</code> بسبب <code>categories</code> في رد <code>sync_product</code> وأكواد حرّاس الكاتيجوريز الجديدة (وقبلها <code>relinkAllowed</code>/<code>relinkStatus</code>/<code>linkedProduct</code>/<code>searchProduct</code> في <code>find_product</code>، و<code>cap</code>/<code>total</code>/<code>truncated</code> في <code>get_logs_export</code>)</li>
+              <li><code>IDLE_TIMEOUT_MIN</code> — 60 دقيقة لكل الأدوات بلا استثناء (ممنوع تغييرها لأداة بعينها)</li>
             </ul>
 
             <h4>NOTES</h4>
@@ -1435,18 +1483,18 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
         <div class="login-icon">🔗</div>
         <div class="login-title">Ecommoda StyleBox Products Linking</div>
         <div class="login-desc">ربط ومزامنة منتج WooCommerce ↔ Shopify</div>
-        <div class="login-sub" id="loginSub">اختر اسمك للمتابعة</div>
+        <div class="login-sub" id="loginSub"></div>
       </div>
 
       <div class="login-body">
         <div class="login-field">
-          <label for="loginSelect">الموظف</label>
           <select id="loginSelect" onchange="handleEmployeeChange()" disabled>
-            <option value="">— اختر —</option>
+            <option value="">اختر اسمك للمتابعة</option>
           </select>
           <div class="login-status warn" id="loginStatus">الإعدادات غير مكتملة — افتح الإعدادات أولاً.</div>
         </div>
 
+        <div class="login-notice" id="loginNotice"></div>
         <div class="login-alert" id="loginAlert"></div>
 
         <div class="pin-zone" id="pinZone">
@@ -1479,6 +1527,13 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
   </div>
 
   <!-- Toast Container -->
+<!-- Idle warning banner — §IDLE-JS (z-index 9000). النص بيتملا من JS. -->
+<div class="idle-warn" id="idleWarn" role="alert">
+  <div id="idleWarnText"></div>
+  <div class="idle-ask" id="idleWarnAsk"></div>
+  <button type="button" onclick="idleStay()">أنا موجود</button>
+</div>
+
   <div class="toast-container" id="toastContainer"></div>
 
 </div>
@@ -1490,7 +1545,7 @@ body { font-family: var(--font-body); font-size: 15px; line-height: 1.55; backgr
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v2.25.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
+const TOOL_VERSION = 'v2.26.0'; // نسخة الواجهة (UI) — بتزيد مع أي تعديل تصميم/واجهة، هيدر+Changelog+شاشة الدخول بتتقرا منه عبر renderVersionUI()
 // نسخة الـ Worker المتوقعة — منفصلة تمامًا عن
 // TOOL_VERSION، بتتحدّث بس لو index.js نفسه اتغيّر فعلاً.
 // (كانت المقارنة قبل كده مباشرة ضد TOOL_VERSION فكانت بتطلع تنبيه خطأ كل مرة نعدّل فيها الواجهة بس بدون
@@ -1502,7 +1557,7 @@ const TOOL_VERSION = 'v2.25.0'; // نسخة الواجهة (UI) — بتزيد �
 // (v2.23.0) رفعت لـ v2.19.0: الواجهة بقت بتقرا حقل `images` جديد من رد
 // find_product، وبتنادي أكشن جديد `set_shopify_type` — الاتنين مش موجودين في
 // أي Worker أقدم من v2.19.0.
-const MIN_WORKER_VERSION = 'v2.19.0';
+const MIN_WORKER_VERSION = 'v2.20.0';
 // رابط الـ Worker **ثابت** مش حقل إعدادات (html-builder v2.2.0 · Standards #28):
 // اسم الـ Worker بيتحدد وقت الإنشاء ومايتغيّرش، والرابط مش سر أصلاً.
 // لو اتعمل rename أو custom domain، السطر ده هو المكان الوحيد اللي يتغيّر.
@@ -1758,12 +1813,24 @@ async function runDiag() {
   box.innerHTML = 'جارٍ الفحص...';
   try {
     const d = await apiGet('diag');
-    const lines = [];
-    lines.push(`<div>${d.env.every(e => e.present) ? '✅' : '❌'} المتغيرات: ${d.env.map(e => `${e.key}${e.present ? '('+e.length+')' : ' ❌ ناقص'}`).join('، ')}</div>`);
-    lines.push(`<div>${d.shopify.error ? '❌' : '✅'} شوبيفاي: ${d.shopify.error || (d.shopify.scopes || []).join(', ')}</div>`);
-    lines.push(`<div>${d.woocommerce.ok ? '✅' : '❌'} WooCommerce: ${d.woocommerce.error || 'متاح'}</div>`);
-    lines.push(`<div>${d.d1.ok ? '✅' : '❌'} D1: ${d.d1.error || 'متاح'}</div>`);
-    lines.push(`<div>${d.origin.allowed ? '✅' : '❌'} Origin: ${d.origin.received || '—'}</div>`);
+    const row = (icon, label, detail) => `<div>${icon} <b>${esc(label)}</b> — ${esc(detail)}</div>`;
+    const lines = [`<div style="margin-bottom:6px;">نسخة الـ Worker: <b>${esc(d.version || '—')}</b></div>`];
+    lines.push(row(d.env.every(e => e.present) ? '✅' : '❌', 'المتغيرات',
+      d.env.map(e => `${e.key}${e.present ? '(' + e.length + ')' : ' ❌ ناقص'}`).join('، ')));
+    lines.push(row(d.shopify.error ? '❌' : '✅', 'شوبيفاي', d.shopify.error || 'OAuth تمام'));
+    // ℹ️ دي معلومة مش نجاح — قايمة الصلاحيات الممنوحة، مش دليل إن المطلوبة موجودة
+    if (!d.shopify.error) lines.push(row('ℹ️', 'الصلاحيات الممنوحة', (d.shopify.scopes || []).join(', ') || '(فاضية)'));
+    const t = d.shopify.throttleStatus;
+    if (t) lines.push(row('ℹ️', 'throttleStatus', `متاح ${t.currentlyAvailable} من ${t.maximumAvailable} · استرجاع ${t.restoreRate}/ث`));
+    const qc = d.shopify.actualQueryCost;
+    if (qc) lines.push(row('ℹ️', 'actualQueryCost', `آخر نداء (${qc.op || '—'}) كلّف ${qc.actual ?? '؟'} نقطة (المطلوب ${qc.requested ?? '؟'})`));
+    lines.push(row(d.woocommerce.ok ? '✅' : '❌', 'WooCommerce', d.woocommerce.error || 'متاح'));
+    if (d.wcLinkProduct) lines.push(row(d.wcLinkProduct.ok ? '✅' : '❌', 'ecommoda/v1/link-product',
+      d.wcLinkProduct.error ? `${d.wcLinkProduct.error}${d.wcLinkProduct.detail ? ' — ' + d.wcLinkProduct.detail : ''}` : 'الراوت شغّال والسر مقبول'));
+    if (d.wcLinkTerms) lines.push(row(d.wcLinkTerms.ok && d.wcLinkTerms.snippetCurrent ? '✅' : '❌', 'نسخة الـ snippet (check-brand)',
+      d.wcLinkTerms.error || (d.wcLinkTerms.snippetCurrent ? `Footwear: ${d.wcLinkTerms.footwear || '—'} · all-products: ${d.wcLinkTerms.allProducts || '—'}` : 'نسخة قديمة — الصق wordpress-snippets/ecommoda-stylebox-link-product-api.php')));
+    lines.push(row(d.d1.ok ? '✅' : '❌', 'D1', d.d1.error || 'متاح'));
+    lines.push(row(d.origin.allowed ? '✅' : '❌', 'Origin', d.origin.received || '—'));
     box.innerHTML = lines.join('');
   } catch (e) {
     box.innerHTML = `<div style="color:var(--red);">⚠️ ${esc(e.message)}</div>`;
@@ -1784,35 +1851,33 @@ let isLoginBusy      = false;
 let autoLoginTimer   = null;
 let cachedEmployees  = []; // ← يتاح كمان لبناء فلتر "الموظف" في تاب السجل
 
-if (typeof playBeep === 'undefined') {
-  let _audioCtx = null;
-  window.playBeep = function(type) {
-    try {
-      if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = _audioCtx.createOscillator(), gain = _audioCtx.createGain();
-      osc.connect(gain); gain.connect(_audioCtx.destination);
-      if (type === 'success') {
-        osc.frequency.setValueAtTime(880,  _audioCtx.currentTime);
-        osc.frequency.setValueAtTime(1100, _audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.3, _audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.25);
-        osc.start(_audioCtx.currentTime); osc.stop(_audioCtx.currentTime + 0.25);
-      } else {
-        osc.frequency.setValueAtTime(300, _audioCtx.currentTime);
-        osc.frequency.setValueAtTime(200, _audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.4, _audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.35);
-        osc.start(_audioCtx.currentTime); osc.stop(_audioCtx.currentTime + 0.35);
-      }
-    } catch {}
-  };
+let _audioCtx = null;
+function playBeep(type) {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = _audioCtx.createOscillator(), gain = _audioCtx.createGain();
+    osc.connect(gain); gain.connect(_audioCtx.destination);
+    if (type === 'success') {
+      osc.frequency.setValueAtTime(880,  _audioCtx.currentTime);
+      osc.frequency.setValueAtTime(1100, _audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, _audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.25);
+      osc.start(_audioCtx.currentTime); osc.stop(_audioCtx.currentTime + 0.25);
+    } else {
+      osc.frequency.setValueAtTime(300, _audioCtx.currentTime);
+      osc.frequency.setValueAtTime(200, _audioCtx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.4, _audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.35);
+      osc.start(_audioCtx.currentTime); osc.stop(_audioCtx.currentTime + 0.35);
+    }
+  } catch {}
 }
 
 async function loadEmployeesList() {
   const sel    = document.getElementById('loginSelect');
   const status = document.getElementById('loginStatus');
   clearLoginAlert();
-  sel.innerHTML = '<option value="">— اختر —</option>';
+  sel.innerHTML = '<option value="">اختر اسمك للمتابعة</option>';
   sel.disabled  = true;
 
   if (!isConfigured()) {
@@ -1838,7 +1903,7 @@ async function loadEmployeesList() {
 
     sel.disabled       = false;
     status.className   = employees.length ? 'login-status info' : 'login-status warn';
-    status.textContent = employees.length ? 'اختر الموظف للمتابعة.' : 'لا يوجد موظفون نشطون.';
+    status.textContent = employees.length ? '' : 'لا يوجد موظفون نشطون.';
 
     // ← تخصيص: تعبئة فلتر "الموظف" في تاب السجل من نفس القائمة (multi-select-filter.md §6)
     msState.emp.items = employees.map(e => ({ value: e.username, label: e.display_name }));
@@ -1895,7 +1960,7 @@ function renderLoginMode(mode) {
   clearLoginAlert();
 
   const sub = document.getElementById('loginSub');
-  if (mode === 'employee') { sub.textContent = 'اختر اسمك للمتابعة'; pinLabel.textContent = 'أدخل الـ PIN'; primary.textContent = 'دخول'; primary.disabled = true; return; }
+  if (mode === 'employee') { sub.textContent = ''; pinLabel.textContent = 'أدخل الـ PIN'; primary.textContent = 'دخول'; primary.disabled = true; return; }
   if (mode === 'existing')  { sub.textContent = 'أدخل الـ PIN'; pinLabel.textContent = 'أدخل الـ PIN'; primary.textContent = 'دخول'; primary.disabled = true; return; }
   if (mode === 'new')       { sub.textContent = 'أول مرة؟ أنشئ PIN من 4 أرقام'; pinLabel.textContent = 'أنشئ PIN جديد'; primary.textContent = 'متابعة'; primary.disabled = true; return; }
   if (mode === 'confirm')   { sub.textContent = 'أعد إدخال الـ PIN للتأكيد'; pinLabel.textContent = 'تأكيد الـ PIN'; primary.textContent = 'تأكيد وتسجيل الدخول'; primary.disabled = true; }
@@ -2008,15 +2073,17 @@ document.addEventListener('keydown', e => {
 async function finishLogin(username, displayName) {
   currentEmployee = { username, displayName };
   document.getElementById('loginOverlay').classList.add('hidden');
+  hideLoginNotice();
+  idleStart();                       // §IDLE-JS — يبدأ عدّاد عدم النشاط (60 د)
   document.getElementById('activeUserBtn').textContent = `👤 ${displayName}`;
   showToast(`أهلاً ${displayName} 👋`, 'success');
   playBeep('success');
   setTimeout(() => document.getElementById('shopifyProductIdInput')?.focus(), 100);
 }
 
-async function doLogout() {
-  if (!currentEmployee) return; // لسه مسجّلش دخول أصلاً
-  if (!confirm('تسجيل الخروج؟')) return;
+// reason: 'manual' | 'idle' — نفس المسار للاتنين (Standards #52)
+function performLogout(reason) {
+  idleStop();
 
   apiGet('log_logout', { username: currentEmployee.username }).catch(() => {});
 
@@ -2041,7 +2108,96 @@ async function doLogout() {
   switchMainTab('sync');
 
   document.getElementById('loginOverlay').classList.remove('hidden');
+  if (reason === 'idle') showLoginNotice('تم تسجيل خروج تلقائي لعدم النشاط');
 }
+
+// ── الخروج اليدوي: فوري بلا أي تأكيد (confirm ممنوع — Standards #52) ──
+// الضغط على اسم الموظف في الهيدر بيطلّع. حارس الدفعة مش تأكيد.
+function doLogout() {
+  if (!currentEmployee) return;
+  if (isIdleBlocked()) {
+    showToast('فيه عملية بتتنفّذ دلوقتي — استنى لحد ما تخلص', 'warning');
+    return;
+  }
+  performLogout('manual');
+}
+
+function showLoginNotice(msg) {
+  const el = document.getElementById('loginNotice');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+function hideLoginNotice() {
+  document.getElementById('loginNotice')?.classList.remove('visible');
+}
+
+// ══════════════════════════════════════════════════════════════
+// §IDLE-JS — الخروج التلقائي لعدم النشاط (Standards #52)
+// القاعدة: 60 دقيقة لكل الأدوات من غير استثناء. التفاصيل: references/idle-logout.md
+// ══════════════════════════════════════════════════════════════
+const IDLE_TIMEOUT_MIN  = 60;     // ← ثابت موحّد — ممنوع تغييره لأداة بعينها
+const IDLE_WARN_SEC     = 60;     // التحذير قبل الخروج بدقيقة
+const IDLE_CHECK_MS     = 30000;  // فحص كل 30 ثانية (مقارنة وقت فعلي — مش setTimeout واحد طويل)
+const IDLE_THROTTLE_MS  = 10000;  // أقصى تكرار لتسجيل النشاط (السكانر بيبعت ضغطات متتالية)
+let   idleLastActivity  = Date.now();
+let   idleTicker        = null;
+let   idleFastTicker    = null;   // عدّ تنازلي كل ثانية طول ما البانر ظاهر
+
+// ← CUSTOMIZE: true طول ما فيه دفعة/عملية شغّالة (isUpdating / setUpdateLock)
+function isIdleBlocked() {
+  return typeof isUpdating !== 'undefined' && !!isUpdating;
+}
+
+function idleMark() {
+  const now = Date.now();
+  if (now - idleLastActivity < IDLE_THROTTLE_MS) return;
+  idleLastActivity = now;
+  idleHideWarn();
+}
+// أحداث حقيقية بس — mousemove ممنوع، والـ polling/network مابيعدّش نشاط
+['keydown', 'pointerdown', 'wheel', 'touchstart', 'scroll'].forEach(ev =>
+  document.addEventListener(ev, idleMark, { capture: true, passive: true })
+);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) idleTick(); });
+window.addEventListener('focus', idleTick);
+
+function idleStart() {
+  idleLastActivity = Date.now();
+  clearInterval(idleTicker);
+  idleTicker = setInterval(idleTick, IDLE_CHECK_MS);
+}
+function idleStop() {
+  clearInterval(idleTicker);
+  idleTicker = null;
+  idleHideWarn();
+}
+function idleStay() {                 // زرار "أنا موجود"
+  idleLastActivity = Date.now();
+  idleHideWarn();
+}
+function idleTick() {
+  if (!currentEmployee) return;
+  const limit = IDLE_TIMEOUT_MIN * 60000;
+  if (isIdleBlocked()) { idleLastActivity = Date.now(); idleHideWarn(); return; }
+  const idleMs = Date.now() - idleLastActivity;
+  if (idleMs >= limit) { performLogout('idle'); return; }
+  const remainMs = limit - idleMs;
+  if (remainMs <= IDLE_WARN_SEC * 1000) idleShowWarn(Math.ceil(remainMs / 1000));
+  else idleHideWarn();
+}
+function idleShowWarn(sec) {
+  document.getElementById('idleWarnText').textContent = `سيتم تسجيل الخروج لعدم النشاط بعد ${sec} ثانية`;
+  document.getElementById('idleWarnAsk').textContent  = `هل أنت موجود يا ${currentEmployee ? currentEmployee.displayName : ''}؟`;
+  document.getElementById('idleWarn').classList.add('visible');
+  if (!idleFastTicker) idleFastTicker = setInterval(idleTick, 1000);
+}
+function idleHideWarn() {
+  document.getElementById('idleWarn')?.classList.remove('visible');
+  clearInterval(idleFastTicker);
+  idleFastTicker = null;
+}
+
 
 function updateLoginSettingsBtn() {
   const btn = document.getElementById('loginSettingsBtn');
@@ -2851,8 +3007,8 @@ function renderSyncResult(data) {
       ${catsRow}
       ${slugRow}
       ${tagRow}
-      ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce (status=publish / _shopify_product_id): ${r.wcProductMetaError}</div>` : ''}
-      ${r.tagError ? `<div class="result-note err">⚠️ فشل إضافة الـ Tag: ${r.tagError}</div>` : ''}
+      ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce — status=publish / _shopify_product_id: ${esc(r.wcProductMetaError)}</div>` : ''}
+      ${r.tagError ? `<div class="result-note err">⚠️ فشل إضافة الـ Tag: ${esc(r.tagError)}</div>` : ''}
       ${data.logged === false || r.logged === false ? `<div class="result-note warn">⚠️ العملية تمت لكن جزء منها ما اتسجلش في السجل (logged: false)</div>` : ''}
     </div>`;
   } else {
@@ -2864,8 +3020,8 @@ function renderSyncResult(data) {
       ${catsRow}
       ${slugRow}
       ${tagRow}
-      ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce (status=publish / _shopify_product_id): ${r.wcProductMetaError}</div>` : ''}
-      ${r.tagError ? `<div class="result-note err">⚠️ فشل إضافة الـ Tag: ${r.tagError}</div>` : ''}
+      ${r.wcProductMetaError ? `<div class="result-note err">⚠️ فشل تحديث WooCommerce — status=publish / _shopify_product_id: ${esc(r.wcProductMetaError)}</div>` : ''}
+      ${r.tagError ? `<div class="result-note err">⚠️ فشل إضافة الـ Tag: ${esc(r.tagError)}</div>` : ''}
     </div>`;
   }
 

@@ -2,7 +2,7 @@
 
 # Ecommoda StyleBox Products Linking (`StyleBox-Products-Linking`)
 
-![version](https://img.shields.io/badge/version-v2.2.0-blue)
+![version](https://img.shields.io/badge/version-v2.3.0-blue)
 
 > ⚠️ **أداة جديدة بالكامل من الصفر (مسار N — §9 في ecommoda-tool-migration-playbook)،
 > مش نقل أداة موجودة من الداشبورد.** الملف `index.js` كان تاريخيًا
@@ -1730,6 +1730,20 @@ v2.0.0 → commit 3234fb1 (آخر commit قبل تعديلات 26-08-2026)
 git checkout 3234fb1 -- index.js index.html
 ```
 
+## مواءمة 18-11-2026 — Worker v2.20.0 · الواجهة v2.26.0
+
+> مواءمة مع المهارات الحالية (`worker-builder` v4.0.0 · `html-builder` v9.1.0 · `woocommerce-sync-helper` v2.1.0 · `constants` v6.0.0 · `shopify-graphql-helper` v3.0.1). **صفر تغيير في منطق الربط.**
+
+| الحاجة | قبل | بعد |
+|---|---|---|
+| إصدار API | `2026-01` | **`2026-10`** — كل وثيقة GraphQL اتفحصت على Shopify MCP |
+| `productUpdate` | `productUpdate(input: ProductInput!)` | **`productUpdate(product: ProductUpdateInput!)`** (القديم مُهمَل) — في `updateProduct` و`setProductType` |
+| `cairoDayBoundsUTC` | بتقيس الإزاحة عند ظهر اليوم (غلط ساعة في يومي التحويل) | **بلوك `constants` §13 القانوني** (`cairoMidnightUTC` + `addDays`) |
+| `getAccessToken` | محاولة واحدة | 3 محاولات + backoff |
+| `diag` | بدون تكلفة | + `throttleStatus` و`actualQueryCost` و`readAllOrders` (معلومة) — والواجهة بقت بتعرض كمان حالة الـ snippet و`link-product` |
+| الـ snippet PHP | بدون `sync()` | + `WC_Product_Variable::sync()` بعد كتابة variations ⚠️ محتاج لصق |
+| الواجهة | `#hex` حرفي ×16 + توكنز ناقصة · `placeholder` · إرشاد الموظف مكرر · خروج بـ`confirm` | صفر `#hex` خارج `:root` · تحذيرات `esc()` · خروج تلقائي 60 د + فوري |
+
 ## بصمة المهارات
 
 > الصيغة والقواعد والمهارات اللي بتدخل الجدول → `ecommoda-skill-versioning`
@@ -1737,11 +1751,11 @@ git checkout 3234fb1 -- index.js index.html
 
 | المهارة | الإصدار وقت آخر تعديل |
 |---|---|
-| ecommoda-worker-builder | v3.7.1 |
-| ecommoda-html-builder | v7.0.0 |
-| woocommerce-sync-helper | v1.0.0 |
-| ecommoda-constants | v3.1.0 |
-| shopify-graphql-helper | v2.1.0 |
+| ecommoda-worker-builder | v4.0.0 |
+| ecommoda-html-builder | v9.1.0 |
+| woocommerce-sync-helper | v2.1.0 |
+| ecommoda-constants | v6.0.0 |
+| shopify-graphql-helper | v3.0.1 |
 
 > ⚠️ الصفّين الأخيرين **ماكانوش في الجدول خالص** لحد 10-09-2026 رغم إن الأداة
 > بتستخدمهم فعليًا (رقم D1 · دومين المتجر · `API 2026-01` · عقد `shopifyGQL` ·
@@ -1766,18 +1780,17 @@ git checkout 3234fb1 -- index.js index.html
   `writeLog` فالحارس مغطّي الاتنين تلقائيًا.
 - `WORKER_VERSION` اترفعت لـ`v2.18.1` (patch — مراقبة بس، صفر تغيير منطقي).
 
-آخر مطابقة: 22-09-2026 · `index.js` v2.18.1 · `index.html` v2.22.0 (الحارس الديناميكي لقيم اللوج — راجع القسم الأول)
+آخر مطابقة: 18-11-2026 · `index.js` v2.20.0 · `index.html` v2.26.0 (مواءمة مع المهارات الحالية — راجع القسم الأول)
 
-آخر مطابقة قبلها: 14-09-2026 · `index.js` v2.18.0 · `index.html` v2.22.0 (تلات كاتيجوريز إلزامية مع كل ربط — راجع القسم الأول)
-🔴 معلّقة: **تسجيل `rejected` كقيمة `type` للأداة دي في `ecommoda-constants` §7.**
-الجلسة اللي نفّذت جولة v2.12.0 **معندهاش وصول لريبو `ecommoda-constants`**، وجدول
-`logs` مشترك بين كل أدوات الستاك فقيمة `type` غير مسجّلة بتنتج **صفوف يتيمة**
-(نفس سابقة `write_external_log` في `cod-payment-center-worker`). فتقسيم `type`
-بالأثر الخارجي (`worker-builder` Step 5A ⑭ — «اتوقف قبل أي محاولة = `rejected`»)
-**اتنفّذ في `extra.result` بس**، والعمود `type` لسه بالقيم المسجّلة.
-**الأثر العملي: صفر** — كل استعلام خط أساس بيفلتر على `extra.result` أصلاً
-(§12). البند مفتوح عشان لما حد يفتح `ecommoda-constants` يسجّل القيمة ويكمّل
-التقسيم، مش لأن حاجة مكسورة دلوقتي.
+آخر مطابقة قبلها: 22-09-2026 · `index.js` v2.18.1 · `index.html` v2.22.0
+
+🔴 معلّقة:
+- 🟡 **شاشة السجل لسه على الشكل القديم (قسم فلاتر فوق الجدول — `S47`) ومن غير تحكم في عرض الأعمدة (`S51`)** — معيار الجداول الجديد (فلاتر في رأس العمود + قايمة `position:fixed` + مقبض سحب العرض، `data-table-standard.md` §2 و§9ب) إعادة تصميم كبيرة لشاشة تشغيل حيّة. اتأجّلت **بقرار مقصود** 18-11-2026 (المهارة نفسها بتصنّفها 🟡 «عند أول فتح، مش في حملة») عشان ما تتغيّرش من غير مراجعة بصرية حقيقية. تتعمل في جلسة مخصصة بـ `templates/24_data-table-section.html` + اختبار Playwright.
+- 🟡 **Build watch paths** (chip لـ`index.js` وchip منفصل لـ`wrangler.toml`) — إعداد في داشبورد Cloudflare مش في الريبو، ماتأكدش منه من الجلسة دي.
+- 🔴 **لصق الـ snippet الجديد على WPCode (مرة واحدة):** `wordpress-snippets/ecommoda-stylebox-link-product-api.php` اتضاف فيه `WC_Product_Variable::sync($id)` بعد كتابة الـ variations (قاعدة `stylebox-mcp-access` Step 6). **لسه ما اتلصقش على `stylebox.online`** — الأداة شغّالة عادي بالنسخة القديمة، بس مدى سعر/مخزون الأب ممكن يتأخر لحد أول حفظ. التحقق: `diag` → `wcLinkTerms.snippetCurrent === true`.
+- ✅ **اتقفل 18-11-2026:** «تسجيل `rejected` كقيمة `type` في `ecommoda-constants` §7» — اتشال من `constants` v3.0.0 (السجل بقى `log-values.json`)، والأداة بتكتب `rejected` في `extra.result` مش في `type`، فمفيش حاجة تتسجّل.
+- ℹ️ **إنذار كاذب مرصود في `skills-sweep`:** `H5-clientside-sort-with-serverside-pages` — الوصفة بتزاوج `applySort` مع `get_logs_count`، والكلمة دي موجودة هنا في نص «عن الأداة» بس. الأداة بتحمّل تاب السجل كله من `get_logs_export` وبترتّب محليًا (مفيش صفحات سيرفر) — فالترتيب المحلي سليم.
+- ⚠️ **اختبار حي لازم بعد النشر:** ربط منتج تجريبي كامل (يغطّي `productUpdate` بالصيغة الجديدة `product: ProductUpdateInput`) + `set_shopify_type`، و🩺 فحص النظام.
 
 > سطر **🔴 معلّقة** = أي بند كاسر **معروف ومتقرر تأجيله**، بسببه.
 > `— لا شيء` معناها مفيش. **بند 🔴 متأجل من غير ما يتكتب هنا = بند ضايع** —
@@ -1877,6 +1890,8 @@ git checkout 3234fb1 -- index.js index.html
   بالكامل من غير أي شغل على جهة ووردبريس.
 
 آخر تحديث: 22-09-2026 — صور المنتج (الرئيسية في صف لوحدها + الجاليري تحتها، بحجم أكبر) بقت معروضة مباشرة في نتيجة البحث من غير زرار مراجعة إلزامي ولا نافذة تأكيد وسيطة (اتشالوا بالكامل v2.24.0)، بدالهم زرارَي "تأكيد المنتج واستكمال الخطوات" (بيطوي خطوة ② تلقائيًا من v2.25.0)/"إلغاء" (بلون أحمر من v2.25.0). وحارس `type_category_missing` بقى فيه اختيار مباشر من الأقسام المسموحة بيحدّث حقل Type على شوبيفاي (أكشن `set_shopify_type`) ويكمّل الربط تلقائيًا من غير أي زرار فتح صفحة الكاتيجوريز على ستايل بوكس (Worker v2.19.0 · الواجهة v2.25.0 — راجع القسم الأول)
+
+آخر تحديث: 18-11-2026 — 23:51 — مواءمة مع المهارات الحالية (API 2026-10 · productUpdate · §13 · خروج تلقائي)
 
 آخر تحديث قبله: 14-09-2026 — تلات كاتيجوريز (`product_cat`) بتتضاف لكل منتج بيتربط، وكل واحدة حارس بيوقف الربط لو مش موجودة: باسم البراند · القسم من حقل `Type` على شوبيفاي (تحت Footwear) · `all-products`. وبند الكاتيجوريز اتشال من نافذة المراجعة. **الـ WPCode snippet لازم يتعاد لصقه** (Worker v2.18.0 · الواجهة v2.22.0 — راجع القسم الأول)
 
